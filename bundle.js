@@ -1,6 +1,6 @@
 ﻿(function autoPurgeOldSiteCache() {
   try {
-    var oldGas = "AKfycbylo1VU2SibsBmrxeCmWDCSm521HnW";
+    var oldGas = "AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw";
     for (var i = localStorage.length - 1; i >= 0; i--) {
       var k = localStorage.key(i);
       if (!k) continue;
@@ -761,7 +761,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "rating": 4.9,
     "image": "https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products/PROD_MUM6JQTW8C/image",
     "warranty": "Bảo Hành 1 Đổi 1",
-    "description": "Bạn đang cần nguồn Proxy IPv6 Nhật Bản (Japan) chất lượng cao, IP cố định, xài riêng (Dedicated Private) để phục vụ nuôi tài khoản, chạy tool MMO, làm khảo sát, cày game hoặc quản lý gian hàng quốc tế mà không lo bị trùng IP hay giới hạn tốc độ?\n\nGói PROXY IPv6 – JAPAN NHẬT (CỐ ĐỊNH) – XÀI RIÊNG tại sàn MUABANTAIKHOANMMO chính là sự lựa chọn số 1 dành cho anh em làm MMO chuyên nghiệp!\n\n💎 Ưu điểm nổi bật của Proxy IPv6 Japan (Nhật Bản):\n- 100% Xài Riêng (Dedicated Private): 1 người 1 IP riêng biệt trong suốt chu kỳ sử dụng, tuyệt đối không share chung hay dùng lại của người khác.\n- IP Cố Định 30 Ngày (Static IP): Giữ nguyên dải IP chuẩn Nhật trong suốt thời gian thuê, cực kỳ phù hợp để nuôi nick, giữ phiên đăng nhập không bị checkpoint hay đổi địa chỉ mạng.\n- Tốc Độ Cao & Băng Thông Không Giới Hạn: Hạ tầng máy chủ đặt tại Datacenter Tokyo / Osaka với đường truyền gigabit siêu nhanh, độ trễ cực thấp, ping mượt mà.\n- Đa Năng & Đa Giao Thức: Hỗ trợ cả 2 giao thức HTTP/HTTPS và SOCKS5, định dạng chuẩn IP:Port:User:Pass dễ dàng tích hợp vào mọi phần mềm.\n- Tương Thích Mọi Nền Tảng & Tool: Hoạt động hoàn hảo trên các trình duyệt ẩn danh (Gologin, AdsPower, Hidemyacc, Genlogin, MoreLogin...) và các công cụ tự động (FPlus, Ninja, MaxCare, nuôi TikTok, khảo sát Nhật, crypto/forex...).\n\n🛠️ Chính sách bảo hành & Giao nhận:\n🛡️ Bảo hành 1 Đổi 1: Đổi ngay IP mới nếu lỗi kết nối hoặc die trong quá trình sử dụng.\n⚡ Giao hàng tự động 24/7: Nhận thông tin IP ngay sau khi thanh toán thành công.\n🔒 Bảo mật tuyệt đối: Cam kết IP sạch, uy tín, không blacklist.\n\n💡 Mẹo sử dụng: Khuyến nghị gắn proxy vào trình duyệt ẩn danh (Anti-detect browser) kèm múi giờ (Asia/Tokyo) và ngôn ngữ tiếng Nhật để đạt độ trust tối đa cho tài khoản!",
+    "description": "Bạn đang cần nguồn Proxy IPv6 Nhật Bản (Japan) chất lượng cao, IP cố định, xài riêng (Dedicated Private) để phục vụ nuôi tài khoản, chạy tool MMO, làm khảo sát, cày game hoặc quản lý gian hàng quốc tế mà không lo bị trùng IP hay giới hạn tốc độ?\n\nGói PROXY IPv6 – JAPAN NHẬT (CỐ ĐỊNH) – XÀI RIÊNG tại sàn KHO TÀI KHOẢN SỐ chính là sự lựa chọn số 1 dành cho anh em làm MMO chuyên nghiệp!\n\n💎 Ưu điểm nổi bật của Proxy IPv6 Japan (Nhật Bản):\n- 100% Xài Riêng (Dedicated Private): 1 người 1 IP riêng biệt trong suốt chu kỳ sử dụng, tuyệt đối không share chung hay dùng lại của người khác.\n- IP Cố Định 30 Ngày (Static IP): Giữ nguyên dải IP chuẩn Nhật trong suốt thời gian thuê, cực kỳ phù hợp để nuôi nick, giữ phiên đăng nhập không bị checkpoint hay đổi địa chỉ mạng.\n- Tốc Độ Cao & Băng Thông Không Giới Hạn: Hạ tầng máy chủ đặt tại Datacenter Tokyo / Osaka với đường truyền gigabit siêu nhanh, độ trễ cực thấp, ping mượt mà.\n- Đa Năng & Đa Giao Thức: Hỗ trợ cả 2 giao thức HTTP/HTTPS và SOCKS5, định dạng chuẩn IP:Port:User:Pass dễ dàng tích hợp vào mọi phần mềm.\n- Tương Thích Mọi Nền Tảng & Tool: Hoạt động hoàn hảo trên các trình duyệt ẩn danh (Gologin, AdsPower, Hidemyacc, Genlogin, MoreLogin...) và các công cụ tự động (FPlus, Ninja, MaxCare, nuôi TikTok, khảo sát Nhật, crypto/forex...).\n\n🛠️ Chính sách bảo hành & Giao nhận:\n🛡️ Bảo hành 1 Đổi 1: Đổi ngay IP mới nếu lỗi kết nối hoặc die trong quá trình sử dụng.\n⚡ Giao hàng tự động 24/7: Nhận thông tin IP ngay sau khi thanh toán thành công.\n🔒 Bảo mật tuyệt đối: Cam kết IP sạch, uy tín, không blacklist.\n\n💡 Mẹo sử dụng: Khuyến nghị gắn proxy vào trình duyệt ẩn danh (Anti-detect browser) kèm múi giờ (Asia/Tokyo) và ngôn ngữ tiếng Nhật để đạt độ trust tối đa cho tài khoản!",
     "variants": [
       {
         "name": "PROXY IPv6 - JAPAN NHẬT 30 ngày",
@@ -4388,7 +4388,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       }
 
       // 3. Telegram
-      let rawTele = String(s.telegram || s.tele || "https://t.me/groupmmoshop").trim();
+      let rawTele = String(s.telegram || s.tele || "https://t.me/admin_yourshop").trim();
       let teleUrl = rawTele;
       if (!teleUrl.startsWith("http://") && !teleUrl.startsWith("https://")) {
         teleUrl = "https://" + teleUrl.replace(/^@/, "t.me/");
@@ -9504,7 +9504,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
         }
       }
       const priceStr = (typeof formatVND === "function") ? formatVND(window.currentSelectedPrice || (p && p.price) || 0) : "";
-      const title = (p && p.name) ? (p.name + (priceStr ? (" - " + priceStr) : "") + " | MUABANTAIKHOANMMO.COM") : "MUABANTAIKHOANMMO.COM - Mua Bán Tài Khoản MMO";
+      const title = (p && p.name) ? (p.name + (priceStr ? (" - " + priceStr) : "") + " | khotaikhoanso.net") : "khotaikhoanso.net - Mua Bán Tài Khoản MMO";
 
       if (platform === "facebook") {
         window.open("https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(shareUrl), "_blank", "width=600,height=500,menubar=no,toolbar=no");
@@ -21730,16 +21730,16 @@ function syncAllOpenViewsStock(changedProdId) {
 
     function loadGeneralSettingsUI() {
       const s = getGeneralSettings();
-      if (document.getElementById("setSiteName")) document.getElementById("setSiteName").value = s.siteName || "MUABANTAIKHOANMMO";
+      if (document.getElementById("setSiteName")) document.getElementById("setSiteName").value = s.siteName || "KHO TÀI KHOẢN SỐ";
       if (document.getElementById("setGoogleClientId")) document.getElementById("setGoogleClientId").value = s.googleClientId || "788131580065-qev157n8l1422785caijnksf16rg1rq3.apps.googleusercontent.com";
       if (document.getElementById("setAffiliateRate")) document.getElementById("setAffiliateRate").value = s.affiliateRate || 10;
       if (document.getElementById("setHotline")) document.getElementById("setHotline").value = s.hotline || "0123456789";
-      if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = s.telegram || "https://t.me/groupmmoshop";
+      if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = s.telegram || "https://t.me/admin_yourshop";
       
       // Marquee text
       const marqueeInp = document.getElementById("setMarqueeText");
       if (marqueeInp) {
-        marqueeInp.value = (s.marqueeText !== undefined && s.marqueeText !== null && s.marqueeText !== "") ? s.marqueeText : "🎉 Chào mừng bạn đến với MUABANTAIKHOANMMO.COM - Hệ thống mua bán tài khoản MMO, Gmail, TikTok, Facebook, Rom & Tools uy tín số 1. Nạp tiền tự động qua SePay 24/7. Hỗ trợ bảo hành 1-đổi-1 siêu tốc!";
+        marqueeInp.value = (s.marqueeText !== undefined && s.marqueeText !== null && s.marqueeText !== "") ? s.marqueeText : "🎉 Chào mừng bạn đến với khotaikhoanso.net - Hệ thống mua bán tài khoản MMO, Gmail, TikTok, Facebook, Rom & Tools uy tín số 1. Nạp tiền tự động qua SePay 24/7. Hỗ trợ bảo hành 1-đổi-1 siêu tốc!";
       }
 
       // Google Apps Script Web App URL - Chống rỗng, fallback URL thật
@@ -21762,12 +21762,12 @@ function syncAllOpenViewsStock(changedProdId) {
       });
 
       // Logo URL & Preview
-      const logoUrl = (s.brandLogo && s.brandLogo.trim()) ? s.brandLogo.trim() : "https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/images/img_1790888969056_z00fh5.png";
+      const logoUrl = (s.brandLogo && s.brandLogo.trim()) ? s.brandLogo.trim() : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
       if (document.getElementById("setSiteLogoUrl")) document.getElementById("setSiteLogoUrl").value = logoUrl;
       previewBrandUrl(logoUrl, "setSiteLogoPreview", "setSiteLogoHint", "btnResetLogo");
 
       // Favicon URL & Preview
-      const faviconUrl = (s.brandFavicon && s.brandFavicon.trim()) ? s.brandFavicon.trim() : "https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/images/img_1790888988353_677lyw.png";
+      const faviconUrl = (s.brandFavicon && s.brandFavicon.trim()) ? s.brandFavicon.trim() : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
       if (document.getElementById("setSiteFaviconUrl")) document.getElementById("setSiteFaviconUrl").value = faviconUrl;
       previewBrandUrl(faviconUrl, "setSiteFaviconPreview", "setSiteFaviconHint", "btnResetFavicon");
 
@@ -21842,11 +21842,11 @@ function syncAllOpenViewsStock(changedProdId) {
         if (e.stopPropagation) e.stopPropagation();
       }
       try {
-        const siteName = document.getElementById("setSiteName") ? document.getElementById("setSiteName").value.trim() : "MUABANTAIKHOANMMO";
+        const siteName = document.getElementById("setSiteName") ? document.getElementById("setSiteName").value.trim() : "KHO TÀI KHOẢN SỐ";
         const googleClientId = document.getElementById("setGoogleClientId") ? document.getElementById("setGoogleClientId").value.trim() : "788131580065-qev157n8l1422785caijnksf16rg1rq3.apps.googleusercontent.com";
         const affiliateRate = parseInt(document.getElementById("setAffiliateRate") ? document.getElementById("setAffiliateRate").value : 10) || 10;
         const hotline = document.getElementById("setHotline") ? document.getElementById("setHotline").value.trim() : "0123456789";
-        const telegram = document.getElementById("setTelegram") ? document.getElementById("setTelegram").value.trim() : "https://t.me/groupmmoshop";
+        const telegram = document.getElementById("setTelegram") ? document.getElementById("setTelegram").value.trim() : "https://t.me/admin_yourshop";
         
         // Marquee text (lấy đúng giá trị người dùng vừa gõ vào ô)
         const marqueeInput = document.getElementById("setMarqueeText");
@@ -21863,13 +21863,13 @@ function syncAllOpenViewsStock(changedProdId) {
         // Brand Assets (Logo, Favicon, OG Image) - Chống rỗng
         let brandLogo = document.getElementById("setSiteLogoUrl") ? document.getElementById("setSiteLogoUrl").value.trim() : "";
         if (!brandLogo || brandLogo === "https://iili.io/nFV4Rln.png") {
-          brandLogo = "https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/images/img_1790888969056_z00fh5.png";
+          brandLogo = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
           if (document.getElementById("setSiteLogoUrl")) document.getElementById("setSiteLogoUrl").value = brandLogo;
         }
 
         let brandFavicon = document.getElementById("setSiteFaviconUrl") ? document.getElementById("setSiteFaviconUrl").value.trim() : "";
         if (!brandFavicon || brandFavicon === "https://iili.io/nFV4Rln.png") {
-          brandFavicon = "https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/images/img_1790888988353_677lyw.png";
+          brandFavicon = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
           if (document.getElementById("setSiteFaviconUrl")) document.getElementById("setSiteFaviconUrl").value = brandFavicon;
         }
 
@@ -22129,13 +22129,13 @@ function syncAllOpenViewsStock(changedProdId) {
         let url = teleUrl;
         if (!url) {
           const s = (typeof getGeneralSettings === "function") ? getGeneralSettings() : {};
-          url = (s && s.telegram) ? s.telegram.trim() : "https://t.me/groupmmoshop";
+          url = (s && s.telegram) ? s.telegram.trim() : "https://t.me/admin_yourshop";
         }
         url = (url || "").trim();
         if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
           url = "https://" + url;
         }
-        if (!url) url = "https://t.me/groupmmoshop";
+        if (!url) url = "https://t.me/admin_yourshop";
 
         const sel = "a[href*='t.me'], a[href*='telegram'], .btn-telegram, .connect-card-box[href*='t.me'], .mmo-tele-link";
         document.querySelectorAll(sel).forEach(function(el) {
@@ -22159,7 +22159,7 @@ function syncAllOpenViewsStock(changedProdId) {
         let notice = text;
         if (notice === undefined || notice === null) {
           const s = (typeof getGeneralSettings === "function") ? getGeneralSettings() : {};
-          notice = (s && s.marqueeText !== undefined && s.marqueeText !== null) ? s.marqueeText : "🎉 Chào mừng bạn đến với MUABANTAIKHOANMMO.COM - Hệ thống mua bán tài khoản MMO, Gmail, TikTok, Facebook, Rom & Tools uy tín số 1. Nạp tiền tự động qua SePay 24/7. Hỗ trợ bảo hành 1-đổi-1 siêu tốc!";
+          notice = (s && s.marqueeText !== undefined && s.marqueeText !== null) ? s.marqueeText : "🎉 Chào mừng bạn đến với khotaikhoanso.net - Hệ thống mua bán tài khoản MMO, Gmail, TikTok, Facebook, Rom & Tools uy tín số 1. Nạp tiền tự động qua SePay 24/7. Hỗ trợ bảo hành 1-đổi-1 siêu tốc!";
         }
         const wrap = document.getElementById("homeMarqueeWrap");
         const track = document.getElementById("homeMarqueeTrack");
@@ -22282,7 +22282,7 @@ function syncAllOpenViewsStock(changedProdId) {
         const sys = typeof getGeneralSettings === "function" ? getGeneralSettings() : {};
         if (sys && sys.gasUrl && sys.gasUrl.trim()) {
           const u = sys.gasUrl.trim();
-          if (!u.includes("AKfycbylo1VU2SibsBmrxeCmWDCSm521HnW") && !u.includes("your-shop-api")) {
+          if (!u.includes("AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw") && !u.includes("your-shop-api")) {
             return u;
           }
         }
@@ -24796,7 +24796,7 @@ function syncAllOpenViewsStock(changedProdId) {
       // [FIX MÔ TẢ PROXY NHẬT BỊ GẮN NHẦM TELEGRAM]: Tự động nhận diện và khôi phục chuẩn xác
       if (p && (p.id === "PROD_MUM6JQTW8C" || (p.name && p.name.includes("JAPAN") && p.name.includes("NHẬT")))) {
         if (!p.description || p.description.includes("Telegram")) {
-          p.description = "Bạn đang cần nguồn Proxy IPv4 Nhật Bản (Japan) chất lượng cao, IP cố định, xài riêng (Dedicated Private) để phục vụ nuôi tài khoản, chạy tool MMO, làm khảo sát, cày game hoặc quản lý gian hàng quốc tế mà không lo bị trùng IP hay giới hạn tốc độ?\n\nGói PROXY IPv4 – JAPAN NHẬT (CỐ ĐỊNH) – XÀI RIÊNG tại sàn MUABANTAIKHOANMMO chính là sự lựa chọn số 1 dành cho anh em làm MMO chuyên nghiệp!\n\n💎 Ưu điểm nổi bật của Proxy IPv4 Japan (Nhật Bản):\n- 100% Xài Riêng (Dedicated Private): 1 người 1 IP riêng biệt trong suốt chu kỳ sử dụng, tuyệt đối không share chung hay dùng lại của người khác.\n- IP Cố Định 30 Ngày (Static IP): Giữ nguyên dải IP chuẩn Nhật trong suốt thời gian thuê, cực kỳ phù hợp để nuôi nick, giữ phiên đăng nhập không bị checkpoint hay đổi địa chỉ mạng.\n- Tốc Độ Cao & Băng Thông Không Giới Hạn: Hạ tầng máy chủ đặt tại Datacenter Tokyo / Osaka với đường truyền gigabit siêu nhanh, độ trễ cực thấp, ping mượt mà.\n- Đa Năng & Đa Giao Thức: Hỗ trợ cả 2 giao thức HTTP/HTTPS và SOCKS5, định dạng chuẩn IP:Port:User:Pass dễ dàng tích hợp vào mọi phần mềm.\n- Tương Thích Mọi Nền Tảng & Tool: Hoạt động hoàn hảo trên các trình duyệt ẩn danh (Gologin, AdsPower, Hidemyacc, Genlogin, MoreLogin...) và các công cụ tự động (FPlus, Ninja, MaxCare, nuôi TikTok, khảo sát Nhật, crypto/forex...).\n\n🛠️ Chính sách bảo hành & Giao nhận:\n🛡️ Bảo hành 1 Đổi 1: Đổi ngay IP mới nếu lỗi kết nối hoặc die trong quá trình sử dụng.\n⚡ Giao hàng tự động 24/7: Nhận thông tin IP ngay sau khi thanh toán thành công.\n🔒 Bảo mật tuyệt đối: Cam kết IP sạch, uy tín, không blacklist.\n\n💡 Mẹo sử dụng: Khuyến nghị gắn proxy vào trình duyệt ẩn danh (Anti-detect browser) kèm múi giờ (Asia/Tokyo) và ngôn ngữ tiếng Nhật để đạt độ trust tối đa cho tài khoản!";
+          p.description = "Bạn đang cần nguồn Proxy IPv4 Nhật Bản (Japan) chất lượng cao, IP cố định, xài riêng (Dedicated Private) để phục vụ nuôi tài khoản, chạy tool MMO, làm khảo sát, cày game hoặc quản lý gian hàng quốc tế mà không lo bị trùng IP hay giới hạn tốc độ?\n\nGói PROXY IPv4 – JAPAN NHẬT (CỐ ĐỊNH) – XÀI RIÊNG tại sàn KHO TÀI KHOẢN SỐ chính là sự lựa chọn số 1 dành cho anh em làm MMO chuyên nghiệp!\n\n💎 Ưu điểm nổi bật của Proxy IPv4 Japan (Nhật Bản):\n- 100% Xài Riêng (Dedicated Private): 1 người 1 IP riêng biệt trong suốt chu kỳ sử dụng, tuyệt đối không share chung hay dùng lại của người khác.\n- IP Cố Định 30 Ngày (Static IP): Giữ nguyên dải IP chuẩn Nhật trong suốt thời gian thuê, cực kỳ phù hợp để nuôi nick, giữ phiên đăng nhập không bị checkpoint hay đổi địa chỉ mạng.\n- Tốc Độ Cao & Băng Thông Không Giới Hạn: Hạ tầng máy chủ đặt tại Datacenter Tokyo / Osaka với đường truyền gigabit siêu nhanh, độ trễ cực thấp, ping mượt mà.\n- Đa Năng & Đa Giao Thức: Hỗ trợ cả 2 giao thức HTTP/HTTPS và SOCKS5, định dạng chuẩn IP:Port:User:Pass dễ dàng tích hợp vào mọi phần mềm.\n- Tương Thích Mọi Nền Tảng & Tool: Hoạt động hoàn hảo trên các trình duyệt ẩn danh (Gologin, AdsPower, Hidemyacc, Genlogin, MoreLogin...) và các công cụ tự động (FPlus, Ninja, MaxCare, nuôi TikTok, khảo sát Nhật, crypto/forex...).\n\n🛠️ Chính sách bảo hành & Giao nhận:\n🛡️ Bảo hành 1 Đổi 1: Đổi ngay IP mới nếu lỗi kết nối hoặc die trong quá trình sử dụng.\n⚡ Giao hàng tự động 24/7: Nhận thông tin IP ngay sau khi thanh toán thành công.\n🔒 Bảo mật tuyệt đối: Cam kết IP sạch, uy tín, không blacklist.\n\n💡 Mẹo sử dụng: Khuyến nghị gắn proxy vào trình duyệt ẩn danh (Anti-detect browser) kèm múi giờ (Asia/Tokyo) và ngôn ngữ tiếng Nhật để đạt độ trust tối đa cho tài khoản!";
         }
       }
 
@@ -26933,7 +26933,7 @@ function syncAllOpenViewsStock(changedProdId) {
               "@id": blogCanonicalUrl + "#article",
               "headline": b.title,
               "alternativeHeadline": b.title + " - Hướng Dẫn & Cẩm Nang Kiếm Tiền MMO",
-              "description": b.snippet || (b.title + " - Chia sẻ kinh nghiệm kiếm tiền MMO tại MUABANTAIKHOANMMO.COM"),
+              "description": b.snippet || (b.title + " - Chia sẻ kinh nghiệm kiếm tiền MMO tại khotaikhoanso.net"),
               "url": blogCanonicalUrl,
               "mainEntityOfPage": {
                 "@type": "WebPage",
@@ -26949,7 +26949,7 @@ function syncAllOpenViewsStock(changedProdId) {
               },
               "publisher": {
                 "@type": "Organization",
-                "name": "MUABANTAIKHOANMMO.COM",
+                "name": "KHO TÀI KHOẢN SỐ",
                 "logo": {
                   "@type": "ImageObject",
                   "url": "https://iili.io/nFV4Rln.png"
@@ -33251,7 +33251,7 @@ function getProductSchemaReviews(p, idx) {
               "sku": curP.id,
               "mpn": curP.id,
               "identifier_exists": "false",
-              "brand": { "@type": "Brand", "name": "MUABANTAIKHOANMMO" },
+              "brand": { "@type": "Brand", "name": "KHO TÀI KHOẢN SỐ" },
               "category": curP.category || "Tài Khoản MMO",
               "offers": {
                 "@type": "Offer",
@@ -33262,7 +33262,7 @@ function getProductSchemaReviews(p, idx) {
                 "validFrom": "2026-01-01",
                 "availability": (curP.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
                 "itemCondition": "https://schema.org/NewCondition",
-                "seller": { "@type": "Organization", "name": "MUABANTAIKHOANMMO.COM" },
+                "seller": { "@type": "Organization", "name": "KHO TÀI KHOẢN SỐ" },
                 "shippingDetails": prodShippingDetails,
                 "hasMerchantReturnPolicy": prodReturnPolicy
               },
@@ -33293,21 +33293,21 @@ function getProductSchemaReviews(p, idx) {
               "@type": "WebSite",
               "@id": siteUrl + "#website",
               "url": siteUrl,
-              "name": "MUABANTAIKHOANMMO.COM",
+              "name": "KHO TÀI KHOẢN SỐ",
               "description": "He thong mua ban tai khoan mang xa hoi, cong cu MMO, proxy tu dong 24/7 uy tin so 1 Viet Nam",
               "publisher": { "@id": siteUrl + "#organization" }
             },
             {
               "@type": "Organization",
               "@id": siteUrl + "#organization",
-              "name": "MUABANTAIKHOANMMO.COM",
+              "name": "KHO TÀI KHOẢN SỐ",
               "url": siteUrl,
               "logo": { "@type": "ImageObject", "url": "https://iili.io/nFV4Rln.png" }
             },
             {
               "@type": "ItemList",
               "@id": siteUrl + "#productlist",
-              "name": "Danh Sach San Pham Tai Khoan MMO - MUABANTAIKHOANMMO.COM",
+              "name": "Danh Sach San Pham Tai Khoan MMO - khotaikhoanso.net",
               "numberOfItems": visibleProds.length,
               "itemListElement": visibleProds.map((p, idx) => {
                 const prodUrl = baseUrl + "/search?q=" + encodeURIComponent(p.id);
@@ -33327,7 +33327,7 @@ function getProductSchemaReviews(p, idx) {
                     "sku": p.id,
                     "mpn": p.id,
                     "identifier_exists": "false",
-                    "brand": { "@type": "Brand", "name": "MUABANTAIKHOANMMO" },
+                    "brand": { "@type": "Brand", "name": "KHO TÀI KHOẢN SỐ" },
                     "category": p.category || "Tai Khoan MMO",
                     "offers": {
                       "@type": "Offer",
@@ -33338,7 +33338,7 @@ function getProductSchemaReviews(p, idx) {
                       "validFrom": "2026-01-01",
                       "availability": (p.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
                       "itemCondition": "https://schema.org/NewCondition",
-                      "seller": { "@type": "Organization", "name": "MUABANTAIKHOANMMO.COM" },
+                      "seller": { "@type": "Organization", "name": "KHO TÀI KHOẢN SỐ" },
                       "shippingDetails": prodShippingDetails,
                       "hasMerchantReturnPolicy": prodReturnPolicy
                     },
@@ -34555,7 +34555,7 @@ function getProductSchemaReviews(p, idx) {
       } else if (lower.includes("nạp") || lower.includes("tiền") || lower.includes("nap tien") || lower.includes("chuyển khoản")) {
         replyText = "💰 Về nạp tiền tự động: Hệ thống SePay quét giao dịch 24/7 trong 1-5 giây. Nếu quá 3 phút chưa thấy tiền vào ví, bạn vui lòng gửi hình ảnh bill hoặc mã giao dịch để Admin cộng tay ngay nhé!";
       } else if (lower.includes("chào") || lower.includes("alo") || lower.includes("hello") || lower.includes("hi")) {
-        replyText = "Dạ chào bạn! Shop MUABANTAIKHOANMMO luôn sẵn sàng phục vụ. Bạn cần hỗ trợ bảo hành sản phẩm hay tư vấn mua hàng ạ?";
+        replyText = "Dạ chào bạn! Shop KHO TÀI KHOẢN SỐ luôn sẵn sàng phục vụ. Bạn cần hỗ trợ bảo hành sản phẩm hay tư vấn mua hàng ạ?";
       }
 
       if (replyText) {
@@ -42235,7 +42235,7 @@ function getStoredNotifications(userEmail) {
   var systemDefaults = [
     {
       id: "SYS_NOTIF_WELCOME",
-      title: "Chào mừng bạn đến với MUABANTAIKHOANMMO",
+      title: "Chào mừng bạn đến với KHO TÀI KHOẢN SỐ",
       message: "Hệ thống mua bán tài khoản MMO, Gmail, TikTok, Facebook uy tín số 1. Giao dịch tự động 24/7 tức thì.",
       type: "INFO",
       read: true,
