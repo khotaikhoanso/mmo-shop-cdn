@@ -1,4 +1,4 @@
-﻿/**
+/**
  * =========================================================================
  * BẢN THƯƠNG MẠI - TỆP CẤU HÌNH CLIENT (CONFIG.JS)
  * =========================================================================
@@ -36,6 +36,6 @@ window.MMO_SHOP_CONFIG = {
   SEPAY_API_KEY: "spsk_live_YOUR_SEPAY_API_KEY",
 
   // 6. BACKEND API CLOUDFLARE WORKER & GOOGLE APPS SCRIPT
-  WORKER_API_URL: "https://mmo-shop-api.muabantaikhoanmmo.workers.dev",
+  WORKER_API_URL: "https://mmo-shop-api.khotaikhoanso-net.workers.dev",
   GAS_BACKEND_URL: "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec"
 };
