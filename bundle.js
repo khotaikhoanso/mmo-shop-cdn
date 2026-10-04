@@ -4151,7 +4151,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     // =========================================================================
     // CORE SYSTEM: USER DATABASE & REGISTERED MEMBERS SYSTEM
     // =========================================================================
-    const ROOT_ADMIN_EMAIL = (window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.ROOT_ADMIN_EMAIL) || "admin@yourshop.com";
+    const ROOT_ADMIN_EMAIL = (window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.ROOT_ADMIN_EMAIL) || "khotaikhoanso.net@gmail.com";
     const DEFAULT_REGISTERED_USERS = [
       { name: "Admin Shop", email: ROOT_ADMIN_EMAIL, role: "Quản Trị Viên", balance: 0, created: "01/01/2026", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=admin" }
     ];
@@ -4236,8 +4236,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     function isUserLocked(email) {
       if (!email) return false;
       const cleanEmail = String(email).trim().toLowerCase();
-      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "admin@yourshop.com").toLowerCase().trim();
-      if (cleanEmail === rootEmail || cleanEmail === "admin@yourshop.com") return false;
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
+      if (cleanEmail === rootEmail || cleanEmail === "khotaikhoanso.net@gmail.com") return false;
 
       // Ưu tiên kiểm tra danh sách thành viên thực tế
       if (typeof getRegisteredUsers === "function") {
@@ -4276,8 +4276,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     async function checkUserLockedFromCloud(email) {
       if (!email) return false;
       const cleanEmail = String(email).trim().toLowerCase();
-      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "admin@yourshop.com").toLowerCase().trim();
-      if (cleanEmail === rootEmail || cleanEmail === "admin@yourshop.com") return false;
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
+      if (cleanEmail === rootEmail || cleanEmail === "khotaikhoanso.net@gmail.com") return false;
 
       // 1. TRUY VẤN TRỰC TIẾP TỪ CLOUDFLARE WORKER TURSO DATABASE (SSOT 24/7)
       try {
@@ -4382,9 +4382,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       }
 
       // 2. Email hỗ trợ chính thức
-      let email = String(s.email || s.supportEmail || s.adminEmail || s.contactEmail || "admin@yourshop.com").trim().toLowerCase();
-      if (!email || !email.includes("@") || email === "admin@yourshop.com" || email.includes("your_usernamevtc")) {
-        email = "admin@yourshop.com";
+      let email = String(s.email || s.supportEmail || s.adminEmail || s.contactEmail || "khotaikhoanso.net@gmail.com").trim().toLowerCase();
+      if (!email || !email.includes("@") || email === "khotaikhoanso.net@gmail.com" || email.includes("khotaikhoanso")) {
+        email = "khotaikhoanso.net@gmail.com";
       }
 
       // 3. Telegram
@@ -4566,7 +4566,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     // ROOT_ADMIN_EMAIL already declared above
     const DEFAULT_ADMIN_EMAILS = [
       ROOT_ADMIN_EMAIL,
-      "admin@yourshop.com"
+      "khotaikhoanso.net@gmail.com"
     ];
 
     function getAdminEmails() {
@@ -4577,7 +4577,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           if (Array.isArray(list) && list.length > 0) return list;
         }
       } catch (e) {}
-      const initial = [ROOT_ADMIN_EMAIL, "admin@yourshop.com"];
+      const initial = [ROOT_ADMIN_EMAIL, "khotaikhoanso.net@gmail.com"];
       try { localStorage.setItem("mmo_admin_emails", JSON.stringify(initial)); } catch(e) {}
       return initial;
     }
@@ -4931,13 +4931,13 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
       const pageUsers = users.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "admin@yourshop.com").toLowerCase().trim();
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
 
       tbody.innerHTML = pageUsers.map(u => {
         const emailLower = (u.email || "").toLowerCase().trim();
         const isCurrent = currentUser && (currentUser.email || "").toLowerCase().trim() === emailLower;
         const displayBalance = isCurrent && currentUser.balance !== undefined ? Number(currentUser.balance) : (Number(u.balance) || 0);
-        const isAdm = (emailLower === rootEmail || emailLower === "admin@yourshop.com" || (typeof isAdminUser === "function" && isAdminUser(u)) || u.role === "Quản Trị Viên");
+        const isAdm = (emailLower === rootEmail || emailLower === "khotaikhoanso.net@gmail.com" || (typeof isAdminUser === "function" && isAdminUser(u)) || u.role === "Quản Trị Viên");
         const roleHtml = isAdm ? '<span class="badge-trust" style="font-size:0.7rem; background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.4);">Quản Trị Viên</span>' : '<span class="badge-verified" style="font-size:0.7rem;">' + (u.role || "Thành Viên") + '</span>';
         
         const isLocked = (typeof isUserLocked === "function") ? isUserLocked(u.email) : !!u.isLocked;
@@ -6716,128 +6716,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     // - Khắc phục tình trạng chỉ hiện trừ tiền mua hàng mà không hiện giao dịch nạp tiền
     // - Tự động đối soát, truy xuất Google Apps Script & VietQR SePay thời gian thực
     // =========================================================================
-    const INITIAL_COMPLETED_DEPOSITS = [
-      {
-        orderId: "DH5281561978",
-        id: "DH5281561978",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (TimeKP TK)",
-        amount: 21000,
-        email: "nguyenqhanduyhung@gmail.com",
-        userEmail: "nguyenqhanduyhung@gmail.com",
-        userName: "TimeKP TK",
-        status: "COMPLETED",
-        note: "Đã cộng 21.000 VNĐ vào ví (VietQR / SePay)",
-        time: "15:54:58 3/10/2026",
-        date: "15:54:58 3/10/2026",
-        type: "Nạp tiền VietQR / SePay"
-      },
-      {
-        orderId: "DH1607454715",
-        id: "DH1607454715",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (TimeKP TK)",
-        amount: 99000,
-        email: "nguyenqhanduyhung@gmail.com",
-        userEmail: "nguyenqhanduyhung@gmail.com",
-        userName: "TimeKP TK",
-        status: "COMPLETED",
-        note: "Đã cộng 99.000 VNĐ vào ví (VietQR / SePay)",
-        time: "15:52:04 3/10/2026",
-        date: "15:52:04 3/10/2026",
-        type: "Nạp tiền VietQR / SePay"
-      },
-      {
-        orderId: "DH6079947553",
-        id: "DH6079947553",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (digimarketmmo)",
-        amount: 20000,
-        email: "digimarketmmo@gmail.com",
-        userEmail: "digimarketmmo@gmail.com",
-        userName: "digimarketmmo",
-        status: "COMPLETED",
-        note: "Đã cộng 20.000 VNĐ vào ví (VietQR / SePay)",
-        time: "21:33:04 2/10/2026",
-        date: "21:33:04 2/10/2026",
-        type: "Nạp tiền VietQR / SePay"
-      },
-      {
-        orderId: "DH1493871010",
-        id: "DH1493871010",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (digimarketmmo)",
-        amount: 20000,
-        email: "digimarketmmo@gmail.com",
-        userEmail: "digimarketmmo@gmail.com",
-        userName: "digimarketmmo",
-        status: "COMPLETED",
-        note: "Đã cộng 20.000 VNĐ vào ví (VietQR / SePay)",
-        time: "14:40:48 29/9/2026",
-        date: "14:40:48 29/9/2026",
-        type: "Nạp tiền VietQR / SePay"
-      },
-      {
-        orderId: "DH1687713622",
-        id: "DH1687713622",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (digimarketmmo)",
-        amount: 20000,
-        email: "digimarketmmo@gmail.com",
-        userEmail: "digimarketmmo@gmail.com",
-        userName: "digimarketmmo",
-        status: "COMPLETED",
-        note: "Đã cộng 20.000 VNĐ vào ví (VietQR / SePay)",
-        time: "13:19:42 29/9/2026",
-        date: "13:19:42 29/9/2026",
-        type: "Nạp tiền VietQR / SePay"
-      },
-      {
-        orderId: "DH6415660631",
-        id: "DH6415660631",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (Mạnh Đông Academy)",
-        amount: 20000,
-        email: "your_usernameacademy@gmail.com",
-        userEmail: "your_usernameacademy@gmail.com",
-        userName: "Mạnh Đông Academy",
-        status: "COMPLETED",
-        note: "Đã cộng 20.000 VNĐ vào ví (VietQR / SePay)",
-        time: "19:23:41 22/9/2026",
-        date: "19:23:41 22/9/2026",
-        type: "Nạp tiền VietQR / SePay"
-      },
-      {
-        orderId: "DH6389081312",
-        id: "DH6389081312",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (hoangtuananh0968)",
-        amount: 20000,
-        email: "hoangtuananh0968@gmail.com",
-        userEmail: "hoangtuananh0968@gmail.com",
-        userName: "hoangtuananh0968",
-        status: "COMPLETED",
-        note: "Đã cộng 20.000 VNĐ vào ví (VietQR / SePay)",
-        time: "22:56:43 21/9/2026",
-        date: "22:56:43 21/9/2026",
-        type: "Nạp tiền VietQR / SePay"
-      },
-      {
-        orderId: "DH8810818210",
-        id: "DH8810818210",
-        prodId: "NAP_VI",
-        prodName: "Nạp tiền vào ví điện tử (digimarketmmo)",
-        amount: 20000,
-        email: "digimarketmmo@gmail.com",
-        userEmail: "digimarketmmo@gmail.com",
-        userName: "digimarketmmo",
-        status: "COMPLETED",
-        note: "Đã cộng 20.000 VNĐ vào ví (VietQR / SePay)",
-        time: "22:52:04 21/9/2026",
-        date: "22:52:04 21/9/2026",
-        type: "Nạp tiền VietQR / SePay"
-      }
-    ];
+    const INITIAL_COMPLETED_DEPOSITS = [];
 
 
     // =========================================================================
@@ -6995,12 +6874,8 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
         if (curUserRaw) {
           try {
             const u = JSON.parse(curUserRaw);
-            if (u && (u.email || "").toLowerCase().trim() === "admin@yourshop.com") {
-              if (u.balance > 1000000 || u.balance !== 205500) {
-                u.balance = 205500;
-                localStorage.setItem("mmo_user", JSON.stringify(u));
-                if (typeof currentUser !== "undefined" && currentUser) currentUser.balance = 205500;
-              }
+            if (u && (u.email || "").toLowerCase().trim() === "khotaikhoanso.net@gmail.com") {
+              // balance check bypassed
             }
           } catch(e) {}
         }
@@ -7467,7 +7342,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
                 amount: -wAmt,
                 balanceAfter: null,
                 note: isApproved 
-                  ? ("Duyệt & Chuyển QR bởi Admin: " + (w.handledBy || "Mạnh Đồng Official") + " | STK: " + w.bankAcc + " (" + w.bankName + ")")
+                  ? ("Duyệt & Chuyển QR bởi Admin: " + (w.handledBy || "Admin Sàn") + " | STK: " + w.bankAcc + " (" + w.bankName + ")")
                   : ("Mã rút " + w.id + " - Đang chờ duyệt | STK: " + w.bankAcc + " (" + w.bankName + ")")
               });
             }
@@ -10249,7 +10124,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
 
       // Đồng bộ ngầm lên Google Apps Script backend: Dual-path sync
       const targetUser = users[idx];
-      const adminEmail = (currentUser && currentUser.email) ? currentUser.email : "admin@yourshop.com";
+      const adminEmail = (currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
       const apiUrl = typeof getBackendApiUrl === "function" ? getBackendApiUrl() : "";
 
       function applyNewBalance(em, nBal) {
@@ -10827,7 +10702,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
         sessionStorage.setItem("mmo_forgot_time", String(Date.now()));
       } catch(e) {}
 
-      // Gửi mã OTP vào Email người dùng qua Google Apps Script (gửi từ admin@yourshop.com)
+      // Gửi mã OTP vào Email người dùng qua Google Apps Script (gửi từ khotaikhoanso.net@gmail.com)
       const ACTIVE_GAS_OTP_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
       let gasRes = null;
       try {
@@ -12306,7 +12181,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       if (typeof existingImg === "string" && existingImg.trim() !== "") {
         let trimmed = existingImg.trim();
         if (trimmed.includes("your-shop-api.workers.dev")) {
-          trimmed = trimmed.replace(/your_usernamevtc\.workers\.dev/g, "your-shop-api.workers.dev");
+          trimmed = trimmed.replace(/khotaikhoanso\.workers\.dev/g, "your-shop-api.workers.dev");
         }
         if (trimmed.startsWith("data:image/") || (trimmed.startsWith("data:") && trimmed.length > 50)) {
           return trimmed;
@@ -21354,10 +21229,10 @@ function syncAllOpenViewsStock(changedProdId) {
             if (!merged.hotline || !String(merged.hotline).trim() || merged.hotline.includes("0123456789") || merged.hotline.includes("0988.888.888")) {
               merged.hotline = defaultSettings.hotline;
             }
-            if (!merged.email || !String(merged.email).trim() || String(merged.email).toLowerCase().includes("your_usernamevtc")) {
+            if (!merged.email || !String(merged.email).trim() || String(merged.email).toLowerCase().includes("khotaikhoanso")) {
               merged.email = defaultSettings.email;
             }
-            if (!merged.supportEmail || !String(merged.supportEmail).trim() || String(merged.supportEmail).toLowerCase().includes("your_usernamevtc")) {
+            if (!merged.supportEmail || !String(merged.supportEmail).trim() || String(merged.supportEmail).toLowerCase().includes("khotaikhoanso")) {
               merged.supportEmail = defaultSettings.supportEmail;
             }
             if (!merged.gasUrl || !String(merged.gasUrl).trim()) {
@@ -21580,7 +21455,7 @@ function syncAllOpenViewsStock(changedProdId) {
         if (settings.siteName) {
           const siteNameEl = document.getElementById("headerSiteName");
           if (siteNameEl) siteNameEl.innerText = settings.siteName;
-          document.title = settings.siteName + " - Sàn Sản Phẩm Số & Dịch Vụ MMO Uy Tín";
+          document.title = settings.siteName + " - Kho Sản Phẩm Số & Dịch Vụ MMO Uy Tín";
         }
 
         // 2. Logo Header, Footer, Drawer & Toàn Bộ Trang
@@ -21962,7 +21837,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
         // Đồng bộ lưu lên Google Apps Script / Google Sheets nếu có cấu hình
         if (typeof callGasApi === "function") {
-          const callerEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : ((typeof getAdminEmails === "function" && getAdminEmails()[0]) || "admin@yourshop.com");
+          const callerEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : ((typeof getAdminEmails === "function" && getAdminEmails()[0]) || "khotaikhoanso.net@gmail.com");
           callGasApi("adminSaveSettings", {
             adminEmail: callerEmail,
             settings: {
@@ -22099,8 +21974,8 @@ function syncAllOpenViewsStock(changedProdId) {
     // ĐỒNG BỘ EMAIL LIÊN HỆ ĐẾN TẤT CẢ LIÊN KẾT & TEXT TRÊN TRANG
     function syncEmailLinks(emailStr) {
       try {
-        const contact = (typeof getSystemContactInfo === "function") ? getSystemContactInfo() : { email: "admin@yourshop.com" };
-        const finalEmail = (emailStr || contact.email || "admin@yourshop.com").trim().toLowerCase();
+        const contact = (typeof getSystemContactInfo === "function") ? getSystemContactInfo() : { email: "khotaikhoanso.net@gmail.com" };
+        const finalEmail = (emailStr || contact.email || "khotaikhoanso.net@gmail.com").trim().toLowerCase();
 
         document.querySelectorAll("a[href^='mailto:'], .mmo-contact-email-link").forEach(function(el) {
           el.href = "mailto:" + finalEmail;
@@ -22383,7 +22258,7 @@ function syncAllOpenViewsStock(changedProdId) {
         }
         return;
       }
-      const adminEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "admin@yourshop.com";
+      const adminEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
       try {
         if (showNotification) showToast("Đang đồng bộ dữ liệu thành viên từ Google Sheet...", "info");
         const data = await callGasApi("adminGetUsers", { adminEmail: adminEmail });
@@ -31131,7 +31006,7 @@ function syncAllOpenViewsStock(changedProdId) {
       if (!window._mmoLockedUserPollTimer) {
         window._mmoLockedUserPollTimer = setInterval(function() {
           if (typeof currentUser !== "undefined" && currentUser && currentUser.email && !document.hidden) {
-            const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "admin@yourshop.com").toLowerCase().trim();
+            const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
             if (currentUser.email.toLowerCase().trim() !== rootEmail) {
               if (typeof checkUserLockedFromCloud === "function") {
                 checkUserLockedFromCloud(currentUser.email).then(isLocked => {
@@ -31687,7 +31562,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
     // ==================== MEMBER LOCK & DELETE SYSTEM ====================
     function toggleLockUser(email) {
-      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "admin@yourshop.com").toLowerCase().trim();
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
       const targetEmail = (email || "").toLowerCase().trim();
       if (targetEmail === rootEmail) {
         showToast("Không thể khóa tài khoản Root Admin!", "warning");
@@ -31768,7 +31643,7 @@ function syncAllOpenViewsStock(changedProdId) {
     }
 
     function deleteUser(email) {
-      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "admin@yourshop.com").toLowerCase().trim();
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
       const targetEmail = (email || "").toLowerCase().trim();
 
       if (targetEmail === rootEmail) {
@@ -37758,7 +37633,7 @@ function getProductSchemaReviews(p, idx) {
             if (!m) continue;
             if ((m.orderData && (m.orderData.orderId === cleanId || m.orderData.id === cleanId)) || (m.text && m.text.includes(cleanId))) {
               const em = (m.orderData && (m.orderData.email || m.orderData.userEmail)) || m.senderEmail || m.userEmail || m.email || (m.sender && m.sender.includes("@") ? m.sender : "");
-              if (!isInvalidEmail(em) && !em.toLowerCase().includes("admin") && em.toLowerCase() !== "admin@yourshop.com" && em.toLowerCase() !== "your_usernamedz@gmail.com") {
+              if (!isInvalidEmail(em) && !em.toLowerCase().includes("admin") && em.toLowerCase() !== "khotaikhoanso.net@gmail.com" && em.toLowerCase() !== "your_usernamedz@gmail.com") {
                 foundEmail = em.trim();
                 if (m.sender && !m.sender.includes("@")) foundName = m.sender;
                 break;
@@ -37796,7 +37671,7 @@ function getProductSchemaReviews(p, idx) {
           const curU = storedUser ? JSON.parse(storedUser) : (typeof currentUser !== "undefined" ? currentUser : null);
           if (curU && !isInvalidEmail(curU.email)) {
             const curEm = curU.email.toLowerCase().trim();
-            if (curEm !== "admin@yourshop.com" && curEm !== "your_usernamedz@gmail.com") {
+            if (curEm !== "khotaikhoanso.net@gmail.com" && curEm !== "your_usernamedz@gmail.com") {
               foundEmail = curU.email.trim();
               foundName = curU.name || curU.username || foundName;
             }
@@ -37810,7 +37685,7 @@ function getProductSchemaReviews(p, idx) {
           const registered = typeof getRegisteredUsers === "function" ? getRegisteredUsers() : [];
           const customers = registered.filter(u => {
             const em = (u.email || "").toLowerCase().trim();
-            return em && em.includes("@") && em !== "admin@yourshop.com" && em !== "your_usernamedz@gmail.com" && !em.includes("khachhang@gmail.com") && !em.includes("test@gmail.com");
+            return em && em.includes("@") && em !== "khotaikhoanso.net@gmail.com" && em !== "your_usernamedz@gmail.com" && !em.includes("khachhang@gmail.com") && !em.includes("test@gmail.com");
           });
           if (customers.length > 0) {
             const activeCust = customers.find(c => (Number(c.balance) || 0) > 0) || customers[0];
@@ -38831,7 +38706,7 @@ async function confirmRefundOrder() {
 
       // 5. Đồng bộ số dư và đơn hàng lên Google Sheets: Dual-path sync
       const targetUser = users[uIdx];
-      const adminEmail = (currentUser && currentUser.email) ? currentUser.email : "admin@yourshop.com";
+      const adminEmail = (currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
       const apiUrl = typeof getBackendApiUrl === "function" ? getBackendApiUrl() : "";
 
       function syncRefundToWebhook() {
