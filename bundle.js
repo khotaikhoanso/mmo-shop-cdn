@@ -21276,6 +21276,32 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.previewBrandUrl = previewBrandUrl;
 
+    
+    async function uploadBase64ToCdn(dataUrl, name) {
+      if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return dataUrl;
+      try {
+        const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const tId = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch(e){} }, 4000) : null;
+        const res = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/upload-image", {
+          method: "POST",
+          signal: ctrl ? ctrl.signal : undefined,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            image: dataUrl,
+            mimeType: dataUrl.indexOf("data:image/png") !== -1 ? "image/png" : "image/jpeg",
+            name: name || "brand_asset.png"
+          })
+        });
+        if (tId) clearTimeout(tId);
+        const d = await res.json();
+        if (d && d.success && d.url) return d.url;
+      } catch(e) {
+        console.warn("Upload base64 to CDN notice:", e);
+      }
+      return dataUrl;
+    }
+    window.uploadBase64ToCdn = uploadBase64ToCdn;
+
     function handleUploadBrandFile(e, inputId, previewId, hintId, resetBtnId) {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
@@ -21361,10 +21387,15 @@ function syncAllOpenViewsStock(changedProdId) {
                 try { localStorage.setItem("mmo_settings_permanent_backup", JSON.stringify(curSettings)); } catch(e3) {}
 
                 // Lưu lên Turso Cloud Worker SSOT
+                const ktsBrandPayload = {
+                  kts_brandLogo: isLogo ? finalImgUrl : (curSettings.brandLogo || ""),
+                  kts_brandFavicon: isFavicon ? finalImgUrl : (curSettings.brandFavicon || ""),
+                  kts_brandOgImage: (!isLogo && !isFavicon) ? finalImgUrl : (curSettings.brandOgImage || "")
+                };
                 fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/admin/settings", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ settings: curSettings })
+                  body: JSON.stringify({ settings: ktsBrandPayload })
                 }).catch(function() {});
 
                 // Áp dụng ngay lập tức lên Header, Footer và toàn trang
@@ -21526,73 +21557,68 @@ function syncAllOpenViewsStock(changedProdId) {
               }
             }
           });
-          const gasInp = document.getElementById("setGasUrl");
-          if (cs.gasUrl && gasInp && (!gasInp.value || gasInp.value.trim() === "")) {
-            gasInp.value = cs.gasUrl;
-          }
 
-          // ĐỒNG BỘ THƯƠNG HIỆU TỪ TURSO CLOUD DATABASE SSOT VÀO LOCAL & GIAO DIỆN
+          // ĐỒNG BỘ THƯƠNG HIỆU TỪ NAMESPACE CÁCH LY kts_* TRÊN TURSO CLOUD DATABASE
           const curSettings = getGeneralSettings();
           let settingsChanged = false;
 
-          if (cs.brandLogo && cs.brandLogo.trim() && cs.brandLogo.trim() !== "https://iili.io/nFV4Rln.png") {
-            curSettings.brandLogo = cs.brandLogo.trim();
+          if (cs.kts_brandLogo && cs.kts_brandLogo.trim()) {
+            curSettings.brandLogo = cs.kts_brandLogo.trim();
             settingsChanged = true;
             const logoInp = document.getElementById("setSiteLogoUrl");
             if (logoInp) logoInp.value = curSettings.brandLogo;
             previewBrandUrl(curSettings.brandLogo, "setSiteLogoPreview", "setSiteLogoHint", "btnResetLogo");
           }
-          if (cs.brandFavicon && cs.brandFavicon.trim() && cs.brandFavicon.trim() !== "https://iili.io/nFV4Rln.png") {
-            curSettings.brandFavicon = cs.brandFavicon.trim();
+          if (cs.kts_brandFavicon && cs.kts_brandFavicon.trim()) {
+            curSettings.brandFavicon = cs.kts_brandFavicon.trim();
             settingsChanged = true;
             const favInp = document.getElementById("setSiteFaviconUrl");
             if (favInp) favInp.value = curSettings.brandFavicon;
             previewBrandUrl(curSettings.brandFavicon, "setSiteFaviconPreview", "setSiteFaviconHint", "btnResetFavicon");
           }
-          if (cs.brandOgImage && cs.brandOgImage.trim()) {
-            curSettings.brandOgImage = cs.brandOgImage.trim();
+          if (cs.kts_brandOgImage && cs.kts_brandOgImage.trim()) {
+            curSettings.brandOgImage = cs.kts_brandOgImage.trim();
             settingsChanged = true;
             const ogInp = document.getElementById("setSiteOgImageUrl");
             if (ogInp) ogInp.value = curSettings.brandOgImage;
             previewBrandUrl(curSettings.brandOgImage, "setSiteOgImagePreview", "setSiteOgImageHint", "btnResetOgImage");
           }
-          if (cs.siteName && cs.siteName.trim()) {
-            curSettings.siteName = cs.siteName.trim();
+          if (cs.kts_siteName && cs.kts_siteName.trim()) {
+            curSettings.siteName = cs.kts_siteName.trim();
             settingsChanged = true;
             const nameInp = document.getElementById("setSiteName");
             if (nameInp) nameInp.value = curSettings.siteName;
           }
-          if (cs.hotline && cs.hotline.trim()) {
-            curSettings.hotline = cs.hotline.trim();
+          if (cs.kts_hotline && cs.kts_hotline.trim()) {
+            curSettings.hotline = cs.kts_hotline.trim();
             settingsChanged = true;
             const hotInp = document.getElementById("setHotline");
             if (hotInp && document.activeElement !== hotInp) hotInp.value = curSettings.hotline;
           }
-          if (cs.email && cs.email.trim()) {
-            curSettings.email = cs.email.trim();
-            settingsChanged = true;
-          }
-          if (cs.supportEmail && cs.supportEmail.trim()) {
-            curSettings.supportEmail = cs.supportEmail.trim();
-            settingsChanged = true;
-          }
-          if (cs.telegram && cs.telegram.trim()) {
-            curSettings.telegram = cs.telegram.trim();
+          if (cs.kts_telegram && cs.kts_telegram.trim()) {
+            curSettings.telegram = cs.kts_telegram.trim();
             settingsChanged = true;
             const teleInp = document.getElementById("setTelegram");
             if (teleInp && document.activeElement !== teleInp) teleInp.value = curSettings.telegram;
           }
-          if (cs.marqueeText && cs.marqueeText.trim()) {
-            curSettings.marqueeText = cs.marqueeText.trim();
+          if (cs.kts_marqueeText && cs.kts_marqueeText.trim()) {
+            curSettings.marqueeText = cs.kts_marqueeText.trim();
             settingsChanged = true;
             const marqInp = document.getElementById("setMarqueeText");
             if (marqInp && document.activeElement !== marqInp) marqInp.value = curSettings.marqueeText;
+          }
+          if (cs.kts_gasUrl && cs.kts_gasUrl.trim()) {
+            curSettings.gasUrl = cs.kts_gasUrl.trim();
+            settingsChanged = true;
+            const gasInp = document.getElementById("setGasUrl");
+            if (gasInp && (!gasInp.value || gasInp.value.trim() === "")) gasInp.value = curSettings.gasUrl;
           }
 
           if (settingsChanged) {
             try { localStorage.setItem("mmo_system_settings", JSON.stringify(curSettings)); } catch(e1) {}
             try { localStorage.setItem("mmo_general_settings", JSON.stringify(curSettings)); } catch(e2) {}
             try { localStorage.setItem("mmo_settings_permanent_backup", JSON.stringify(curSettings)); } catch(e3) {}
+            try { localStorage.setItem("khotaikhoanso_settings", JSON.stringify(curSettings)); } catch(e4) {}
           }
           applyBrandCustomizations(curSettings);
           if (typeof syncContactInfoToUI === "function") {
@@ -21606,23 +21632,23 @@ function syncAllOpenViewsStock(changedProdId) {
     function loadGeneralSettingsUI() {
       const s = getGeneralSettings();
       if (document.getElementById("setSiteName")) document.getElementById("setSiteName").value = s.siteName || "KHO TÀI KHOẢN SỐ";
-      if (document.getElementById("setGoogleClientId")) document.getElementById("setGoogleClientId").value = s.googleClientId || "788131580065-qev157n8l1422785caijnksf16rg1rq3.apps.googleusercontent.com";
+      if (document.getElementById("setGoogleClientId")) document.getElementById("setGoogleClientId").value = s.googleClientId || "";
       if (document.getElementById("setAffiliateRate")) document.getElementById("setAffiliateRate").value = s.affiliateRate || 10;
-      if (document.getElementById("setHotline")) document.getElementById("setHotline").value = s.hotline || "0123456789";
+      if (document.getElementById("setHotline")) document.getElementById("setHotline").value = s.hotline || "0988.888.888";
       if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = s.telegram || "https://t.me/admin_yourshop";
       
       // Marquee text
       const marqueeInp = document.getElementById("setMarqueeText");
       if (marqueeInp) {
-        marqueeInp.value = (s.marqueeText !== undefined && s.marqueeText !== null && s.marqueeText !== "") ? s.marqueeText : "🎉 Chào mừng bạn đến với khotaikhoanso.net - Hệ thống mua bán tài khoản MMO, Gmail, TikTok, Facebook, Rom & Tools uy tín số 1. Nạp tiền tự động qua SePay 24/7. Hỗ trợ bảo hành 1-đổi-1 siêu tốc!";
+        marqueeInp.value = (s.marqueeText !== undefined && s.marqueeText !== null && s.marqueeText !== "") ? s.marqueeText : "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Shop mua bán tài khoản MMO uy tín 24/7!";
       }
 
-      // Google Apps Script Web App URL - Chống rỗng, fallback URL thật
+      // Google Apps Script Web App URL
       const defaultGas = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
       const gasVal = (s.gasUrl && s.gasUrl.trim()) ? s.gasUrl.trim() : defaultGas;
       if (document.getElementById("setGasUrl")) document.getElementById("setGasUrl").value = gasVal;
 
-      // AI API Keys - Tự động nạp và bảo vệ chống mất dữ liệu đa tầng (Anti-Key-Loss Shield)
+      // AI API Keys
       const _aiProviders = ['groq', 'cerebras', 'openrouter', 'gemini', 'nvidia', 'mistral'];
       _aiProviders.forEach(function(p) {
         const el = document.getElementById('setAiKey' + p.charAt(0).toUpperCase() + p.slice(1));
@@ -21636,20 +21662,26 @@ function syncAllOpenViewsStock(changedProdId) {
         if (el) el.value = val || '';
       });
 
-      // Logo URL & Preview
-      const logoUrl = (s.brandLogo && s.brandLogo.trim()) ? s.brandLogo.trim() : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+      // Logo URL & Preview (Giữ nguyên logo thực của người dùng, không bao giờ ép về avatar mặc định)
+      const logoUrl = (s.brandLogo && s.brandLogo.trim()) ? s.brandLogo.trim() : "";
       if (document.getElementById("setSiteLogoUrl")) document.getElementById("setSiteLogoUrl").value = logoUrl;
-      previewBrandUrl(logoUrl, "setSiteLogoPreview", "setSiteLogoHint", "btnResetLogo");
+      if (logoUrl) {
+        previewBrandUrl(logoUrl, "setSiteLogoPreview", "setSiteLogoHint", "btnResetLogo");
+      }
 
       // Favicon URL & Preview
-      const faviconUrl = (s.brandFavicon && s.brandFavicon.trim()) ? s.brandFavicon.trim() : "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+      const faviconUrl = (s.brandFavicon && s.brandFavicon.trim()) ? s.brandFavicon.trim() : "";
       if (document.getElementById("setSiteFaviconUrl")) document.getElementById("setSiteFaviconUrl").value = faviconUrl;
-      previewBrandUrl(faviconUrl, "setSiteFaviconPreview", "setSiteFaviconHint", "btnResetFavicon");
+      if (faviconUrl) {
+        previewBrandUrl(faviconUrl, "setSiteFaviconPreview", "setSiteFaviconHint", "btnResetFavicon");
+      }
 
-      // OG Image URL & Preview (Đảm bảo dùng link CDN công khai cho Facebook / Zalo / Telegram)
+      // OG Image URL & Preview
       const ogUrl = (s.brandOgImage && s.brandOgImage.trim()) ? s.brandOgImage.trim() : "https://iili.io/nFV4Rln.png";
       if (document.getElementById("setSiteOgImageUrl")) document.getElementById("setSiteOgImageUrl").value = ogUrl;
-      previewBrandUrl(ogUrl, "setSiteOgImagePreview", "setSiteOgImageHint", "btnResetOgImage");
+      if (ogUrl) {
+        previewBrandUrl(ogUrl, "setSiteOgImagePreview", "setSiteOgImageHint", "btnResetOgImage");
+      }
 
       // Đồng bộ từ Turso Cloud Worker
       syncSettingsFromCloud();
@@ -21711,46 +21743,56 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.saveAllAiApiKeysFromSystem = saveAllAiApiKeysFromSystem;
 
-    function handleSaveGeneralSettings(e) {
+    async function handleSaveGeneralSettings(e) {
       if (e) {
         if (e.preventDefault) e.preventDefault();
         if (e.stopPropagation) e.stopPropagation();
       }
-      try {
-        const siteName = document.getElementById("setSiteName") ? document.getElementById("setSiteName").value.trim() : "KHO TÀI KHOẢN SỐ";
-        const googleClientId = document.getElementById("setGoogleClientId") ? document.getElementById("setGoogleClientId").value.trim() : "788131580065-qev157n8l1422785caijnksf16rg1rq3.apps.googleusercontent.com";
-        const affiliateRate = parseInt(document.getElementById("setAffiliateRate") ? document.getElementById("setAffiliateRate").value : 10) || 10;
-        const hotline = document.getElementById("setHotline") ? document.getElementById("setHotline").value.trim() : "0123456789";
-        const telegram = document.getElementById("setTelegram") ? document.getElementById("setTelegram").value.trim() : "https://t.me/admin_yourshop";
-        
-        // Marquee text (lấy đúng giá trị người dùng vừa gõ vào ô)
-        const marqueeInput = document.getElementById("setMarqueeText");
-        const marqueeText = marqueeInput ? marqueeInput.value.trim() : "";
+      let saveBtn = e && e.target ? (e.target.closest("button") || e.target) : null;
+      if (!saveBtn) {
+        saveBtn = document.querySelector("#tabAdmGeneral button[type='submit'], #tabAdmGeneral .btn-primary");
+      }
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i> Đang lưu...";
+      }
 
-        // Google Apps Script Web App URL - Chống rỗng, fallback URL thật
+      try {
+        const curSettings = getGeneralSettings();
+        const siteName = document.getElementById("setSiteName") ? document.getElementById("setSiteName").value.trim() : (curSettings.siteName || "KHO TÀI KHOẢN SỐ");
+        const googleClientId = document.getElementById("setGoogleClientId") ? document.getElementById("setGoogleClientId").value.trim() : (curSettings.googleClientId || "");
+        const affiliateRate = parseInt(document.getElementById("setAffiliateRate") ? document.getElementById("setAffiliateRate").value : 10) || 10;
+        const hotline = document.getElementById("setHotline") ? document.getElementById("setHotline").value.trim() : (curSettings.hotline || "0988.888.888");
+        const telegram = document.getElementById("setTelegram") ? document.getElementById("setTelegram").value.trim() : (curSettings.telegram || "https://t.me/admin_yourshop");
+        
+        // Marquee text
+        const marqueeInput = document.getElementById("setMarqueeText");
+        const marqueeText = marqueeInput ? marqueeInput.value.trim() : (curSettings.marqueeText || "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Shop mua bán tài khoản MMO uy tín 24/7!");
+
+        // Google Apps Script Web App URL
         const defaultGas = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
         let gasUrl = document.getElementById("setGasUrl") ? document.getElementById("setGasUrl").value.trim() : "";
-        if (!gasUrl) {
+        if (!gasUrl || gasUrl.includes("AKfycbylo1VU")) {
           gasUrl = defaultGas;
           if (document.getElementById("setGasUrl")) document.getElementById("setGasUrl").value = gasUrl;
         }
         
-        // Brand Assets (Logo, Favicon, OG Image) - Chống rỗng
-        let brandLogo = document.getElementById("setSiteLogoUrl") ? document.getElementById("setSiteLogoUrl").value.trim() : "";
-        if (!brandLogo || brandLogo === "https://iili.io/nFV4Rln.png") {
-          brandLogo = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        // Brand Assets (Logo, Favicon, OG Image)
+        let brandLogo = document.getElementById("setSiteLogoUrl") ? document.getElementById("setSiteLogoUrl").value.trim() : (curSettings.brandLogo || "");
+        let brandFavicon = document.getElementById("setSiteFaviconUrl") ? document.getElementById("setSiteFaviconUrl").value.trim() : (curSettings.brandFavicon || "");
+        let brandOgImage = document.getElementById("setSiteOgImageUrl") ? document.getElementById("setSiteOgImageUrl").value.trim() : (curSettings.brandOgImage || "");
+
+        // Tự động chuyển Base64 thành link CDN cực nhẹ, chống tràn bộ nhớ và chống treo tab
+        if (brandLogo && brandLogo.startsWith("data:image/")) {
+          brandLogo = await uploadBase64ToCdn(brandLogo, "logo.png");
           if (document.getElementById("setSiteLogoUrl")) document.getElementById("setSiteLogoUrl").value = brandLogo;
         }
-
-        let brandFavicon = document.getElementById("setSiteFaviconUrl") ? document.getElementById("setSiteFaviconUrl").value.trim() : "";
-        if (!brandFavicon || brandFavicon === "https://iili.io/nFV4Rln.png") {
-          brandFavicon = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        if (brandFavicon && brandFavicon.startsWith("data:image/")) {
+          brandFavicon = await uploadBase64ToCdn(brandFavicon, "favicon.png");
           if (document.getElementById("setSiteFaviconUrl")) document.getElementById("setSiteFaviconUrl").value = brandFavicon;
         }
-
-        let brandOgImage = document.getElementById("setSiteOgImageUrl") ? document.getElementById("setSiteOgImageUrl").value.trim() : "";
-        if (!brandOgImage) {
-          brandOgImage = "https://iili.io/nFV4Rln.png";
+        if (brandOgImage && brandOgImage.startsWith("data:image/")) {
+          brandOgImage = await uploadBase64ToCdn(brandOgImage, "og_image.png");
           if (document.getElementById("setSiteOgImageUrl")) document.getElementById("setSiteOgImageUrl").value = brandOgImage;
         }
 
@@ -21786,84 +21828,89 @@ function syncAllOpenViewsStock(changedProdId) {
           }
         });
 
-        try {
-          localStorage.setItem("mmo_system_settings", JSON.stringify(settings));
-        } catch(eSet1) {
-          console.warn("Storage warning mmo_system_settings:", eSet1);
-        }
-        try {
-          localStorage.setItem("mmo_general_settings", JSON.stringify(settings));
-        } catch(eSet2) {
-          console.warn("Storage warning mmo_general_settings:", eSet2);
-        }
-
-        // Lưu bản backup độc lập vĩnh viễn không thể bị ghi đè
+        // 1. Lưu LocalStorage đa tầng an toàn vĩnh viễn
+        try { localStorage.setItem("mmo_system_settings", JSON.stringify(settings)); } catch(e1) {}
+        try { localStorage.setItem("mmo_general_settings", JSON.stringify(settings)); } catch(e2) {}
+        try { localStorage.setItem("khotaikhoanso_settings", JSON.stringify(settings)); } catch(e3) {}
         try {
           const permBackup = JSON.parse(localStorage.getItem('mmo_settings_permanent_backup') || '{}');
           Object.assign(permBackup, settings);
           localStorage.setItem('mmo_settings_permanent_backup', JSON.stringify(permBackup));
-        } catch(eSet3) {
-          console.warn("Storage warning mmo_settings_permanent_backup:", eSet3);
-        }
+        } catch(e4) {}
 
-        // Đồng bộ lưu lên Turso Cloud Worker
-        try {
-          fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/admin/settings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ settings: settings })
-          }).then(function() {
-            if (typeof showToast === "function") showToast("🎉 Đã lưu cài đặt hệ thống & thương hiệu lên máy chủ thành công!", "success");
-          }).catch(function() {
-            if (typeof showToast === "function") showToast("✅ Đã lưu cài đặt hệ thống!", "success");
-          });
-        } catch(e) {
-          if (typeof showToast === "function") showToast("✅ Đã lưu cài đặt hệ thống!", "success");
-        }
-
-        // Áp dụng ngay lập tức lên toàn bộ giao diện
+        // 2. Cập nhật DOM ngay lập tức
         applyBrandCustomizations(settings);
         if (typeof syncZaloLinks === "function") syncZaloLinks(settings.hotline);
         if (typeof syncTelegramLinks === "function") syncTelegramLinks(settings.telegram);
         if (typeof syncMarqueeNotice === "function") syncMarqueeNotice(settings.marqueeText);
 
-        // Phát sóng đa tab (BroadcastChannel) để cập nhật tức thì mọi tab đang mở
+        // 3. Đồng bộ lên Turso Cloud Worker với namespace kts_ (CHỐNG GHI ĐÈ WEB CŨ)
+        const ktsPayload = {
+          kts_siteName: siteName,
+          kts_googleClientId: googleClientId,
+          kts_affiliateRate: affiliateRate,
+          kts_hotline: hotline,
+          kts_telegram: telegram,
+          kts_marqueeText: marqueeText,
+          kts_gasUrl: gasUrl,
+          kts_brandLogo: brandLogo,
+          kts_brandFavicon: brandFavicon,
+          kts_brandOgImage: brandOgImage,
+          khotaikhoanso_settings: JSON.stringify(settings)
+        };
+        try {
+          fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/admin/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ settings: ktsPayload })
+          }).catch(function(eWorker) { console.warn("Worker save notice:", eWorker); });
+        } catch(e) {}
+
+        // 4. Phát sóng đa tab (BroadcastChannel)
         try {
           if (typeof BroadcastChannel !== "undefined") {
             const bc = new BroadcastChannel("mmo_settings_channel");
             bc.postMessage({ type: "SETTINGS_UPDATED", settings: settings });
           }
-        } catch(e) {}
+        } catch(eBc) {}
 
-        // Đồng bộ lưu lên Google Apps Script / Google Sheets nếu có cấu hình
-        if (typeof callGasApi === "function") {
-          const callerEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : ((typeof getAdminEmails === "function" && getAdminEmails()[0]) || "khotaikhoanso.net@gmail.com");
-          callGasApi("adminSaveSettings", {
-            adminEmail: callerEmail,
-            settings: {
-              tickerText: marqueeText,
-              TICKER_TEXT: marqueeText,
-              siteName: siteName,
-              SITE_NAME: siteName,
-              hotline: hotline,
-              HOTLINE: hotline,
-              telegram: telegram,
-              TELEGRAM: telegram,
-              googleClientId: googleClientId,
-              GOOGLE_CLIENT_ID: googleClientId
-            }
-          }).then(function(res) {
-            console.log("Đã đồng bộ thông báo & cài đặt lên máy chủ:", res);
-          }).catch(function(e) { console.warn("Lỗi đồng bộ cấu hình lên Google Sheets:", e); });
-        }
+        // 5. Đồng bộ lên Google Apps Script với Timeout 2.5s (Chống treo tab)
+        try {
+          const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+          const tId = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch(e){} }, 2500) : null;
+          fetch(gasUrl, {
+            method: "POST",
+            mode: "no-cors",
+            signal: ctrl ? ctrl.signal : undefined,
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+              action: "adminSaveSettings",
+              adminEmail: "khotaikhoanso.net@gmail.com",
+              settings: {
+                siteName: siteName,
+                hotline: hotline,
+                telegram: telegram,
+                tickerText: marqueeText,
+                brandLogo: brandLogo.startsWith("data:") ? "" : brandLogo,
+                brandFavicon: brandFavicon.startsWith("data:") ? "" : brandFavicon,
+                googleClientId: googleClientId
+              }
+            })
+          }).catch(function(){}).finally(function(){ if (tId) clearTimeout(tId); });
+        } catch(eGas) {}
 
         if (typeof showToast === "function") {
-          showToast("🎉 Lưu cài đặt hệ thống, thương hiệu & thông báo thành công!", "success");
+          showToast("🎉 Lưu cài đặt hệ thống & thương hiệu thành công!", "success");
         }
       } catch(errSave) {
         console.error("handleSaveGeneralSettings error:", errSave);
         if (typeof showToast === "function") {
           showToast("⚠️ Có lỗi khi lưu: " + errSave.message, "danger");
+        }
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = "<i class='fa-solid fa-floppy-disk'></i> Lưu Cài Đặt Hệ Thống";
         }
       }
       return false;
