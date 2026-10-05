@@ -1,4 +1,4 @@
-﻿(function autoPurgeOldSiteCache() {
+(function autoPurgeOldSiteCache() {
   try {
     var oldGas = "AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw";
     for (var i = localStorage.length - 1; i >= 0; i--) {
@@ -11406,6 +11406,13 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
         if (profAvatarEl) profAvatarEl.src = currentUser.avatar || ("https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(currentUser.email));
         if (profBalanceEl) profBalanceEl.innerText = balStr;
 
+        const admNameEl = document.getElementById("admSidebarName");
+        const admEmailEl = document.getElementById("admSidebarEmail");
+        const admAvatarEl = document.getElementById("admSidebarAvatar");
+        if (admNameEl) admNameEl.innerText = (currentUser.name && !currentUser.name.includes("Mạnh Đồng")) ? currentUser.name : "KHO TÀI KHOẢN SỐ (Admin)";
+        if (admEmailEl) admEmailEl.innerText = (currentUser.email && !currentUser.email.includes("yourshop.com")) ? currentUser.email : "khotaikhoanso.net@gmail.com";
+        if (admAvatarEl) admAvatarEl.src = currentUser.avatar || ("https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(currentUser.email));
+
       } else {
         if (document.body) document.body.classList.remove("is-admin");
         if (headerWalletBalance) headerWalletBalance.innerText = "0 đ";
@@ -21208,24 +21215,32 @@ function syncAllOpenViewsStock(changedProdId) {
         siteName: cfg.SITE_NAME || "KHO TÀI KHOẢN SỐ",
         googleClientId: "788131580065-qev157n8l1422785caijnksf16rg1rq3.apps.googleusercontent.com",
         affiliateRate: 10,
-        hotline: cfg.HOTLINE || "0988.888.888",
+        hotline: cfg.HOTLINE || "0346508659",
         email: cfg.ROOT_ADMIN_EMAIL || "khotaikhoanso.net@gmail.com",
         supportEmail: cfg.ROOT_ADMIN_EMAIL || "khotaikhoanso.net@gmail.com",
-        telegram: cfg.TELEGRAM_URL || "https://t.me/admin_yourshop",
+        telegram: cfg.TELEGRAM_URL || "https://t.me/longnguyen1az",
+        telegramGroup: cfg.TELEGRAM_GROUP_URL || "https://t.me/longnguyen1az",
         marqueeText: cfg.TICKER_TEXT || "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Mua bán tài khoản MMO tự động 24/7!",
         gasUrl: cfg.GAS_BACKEND_URL || "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec",
-        brandLogo: cfg.SITE_LOGO_URL || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-        brandFavicon: cfg.SITE_FAVICON_URL || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
+        brandLogo: cfg.SITE_LOGO_URL || "",
+        brandFavicon: cfg.SITE_FAVICON_URL || "",
         brandOgImage: "https://iili.io/nFV4Rln.png"
       };
       try {
-        let stored = localStorage.getItem("mmo_system_settings");
+        let stored = localStorage.getItem("khotaikhoanso_settings");
+        if (!stored) stored = localStorage.getItem("mmo_system_settings");
         if (!stored) stored = localStorage.getItem("mmo_general_settings");
         if (!stored) stored = localStorage.getItem("mmo_settings_permanent_backup");
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed && typeof parsed === "object") {
             const merged = Object.assign({}, defaultSettings, parsed);
+            if (merged.brandLogo === "https://cdn-icons-png.flaticon.com/512/3135/3135715.png") {
+              merged.brandLogo = "";
+            }
+            if (merged.brandFavicon === "https://cdn-icons-png.flaticon.com/512/3135/3135715.png") {
+              merged.brandFavicon = "";
+            }
             if (!merged.hotline || !String(merged.hotline).trim() || merged.hotline.includes("0123456789") || merged.hotline.includes("0988.888.888")) {
               merged.hotline = defaultSettings.hotline;
             }
@@ -21595,6 +21610,12 @@ function syncAllOpenViewsStock(changedProdId) {
             const hotInp = document.getElementById("setHotline");
             if (hotInp && document.activeElement !== hotInp) hotInp.value = curSettings.hotline;
           }
+          if (cs.kts_telegramGroup && cs.kts_telegramGroup.trim()) {
+            curSettings.telegramGroup = cs.kts_telegramGroup.trim();
+            settingsChanged = true;
+            const teleGrpInp = document.getElementById("setTelegramGroup");
+            if (teleGrpInp && document.activeElement !== teleGrpInp) teleGrpInp.value = curSettings.telegramGroup;
+          }
           if (cs.kts_telegram && cs.kts_telegram.trim()) {
             curSettings.telegram = cs.kts_telegram.trim();
             settingsChanged = true;
@@ -21635,7 +21656,8 @@ function syncAllOpenViewsStock(changedProdId) {
       if (document.getElementById("setGoogleClientId")) document.getElementById("setGoogleClientId").value = s.googleClientId || "";
       if (document.getElementById("setAffiliateRate")) document.getElementById("setAffiliateRate").value = s.affiliateRate || 10;
       if (document.getElementById("setHotline")) document.getElementById("setHotline").value = s.hotline || "0988.888.888";
-      if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = s.telegram || "https://t.me/admin_yourshop";
+      if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = s.telegram || "https://t.me/longnguyen1az";
+      if (document.getElementById("setTelegramGroup")) document.getElementById("setTelegramGroup").value = s.telegramGroup || s.telegram || "https://t.me/longnguyen1az";
       
       // Marquee text
       const marqueeInp = document.getElementById("setMarqueeText");
@@ -21763,7 +21785,8 @@ function syncAllOpenViewsStock(changedProdId) {
         const googleClientId = document.getElementById("setGoogleClientId") ? document.getElementById("setGoogleClientId").value.trim() : (curSettings.googleClientId || "");
         const affiliateRate = parseInt(document.getElementById("setAffiliateRate") ? document.getElementById("setAffiliateRate").value : 10) || 10;
         const hotline = document.getElementById("setHotline") ? document.getElementById("setHotline").value.trim() : (curSettings.hotline || "0988.888.888");
-        const telegram = document.getElementById("setTelegram") ? document.getElementById("setTelegram").value.trim() : (curSettings.telegram || "https://t.me/admin_yourshop");
+        const telegram = document.getElementById("setTelegram") ? document.getElementById("setTelegram").value.trim() : (curSettings.telegram || "https://t.me/longnguyen1az");
+        const telegramGroup = document.getElementById("setTelegramGroup") ? document.getElementById("setTelegramGroup").value.trim() : (curSettings.telegramGroup || telegram);
         
         // Marquee text
         const marqueeInput = document.getElementById("setMarqueeText");
@@ -21802,6 +21825,7 @@ function syncAllOpenViewsStock(changedProdId) {
           affiliateRate: affiliateRate,
           hotline: hotline,
           telegram: telegram,
+          telegramGroup: telegramGroup,
           marqueeText: marqueeText,
           gasUrl: gasUrl,
           brandLogo: brandLogo,
@@ -21841,7 +21865,7 @@ function syncAllOpenViewsStock(changedProdId) {
         // 2. Cập nhật DOM ngay lập tức
         applyBrandCustomizations(settings);
         if (typeof syncZaloLinks === "function") syncZaloLinks(settings.hotline);
-        if (typeof syncTelegramLinks === "function") syncTelegramLinks(settings.telegram);
+        if (typeof syncTelegramLinks === "function") syncTelegramLinks(settings.telegram, settings.telegramGroup);
         if (typeof syncMarqueeNotice === "function") syncMarqueeNotice(settings.marqueeText);
 
         // 3. Đồng bộ lên Turso Cloud Worker với namespace kts_ (CHỐNG GHI ĐÈ WEB CŨ)
@@ -21851,6 +21875,7 @@ function syncAllOpenViewsStock(changedProdId) {
           kts_affiliateRate: affiliateRate,
           kts_hotline: hotline,
           kts_telegram: telegram,
+          kts_telegramGroup: telegramGroup,
           kts_marqueeText: marqueeText,
           kts_gasUrl: gasUrl,
           kts_brandLogo: brandLogo,
@@ -21972,48 +21997,17 @@ function syncAllOpenViewsStock(changedProdId) {
     // ĐỒNG BỘ SỐ HOTLINE & LINK ZALO TỰ ĐỘNG ĐẾN TOÀN BỘ WEBSITE
     function syncZaloLinks(zaloPhone) {
       try {
-        const contact = (typeof getSystemContactInfo === "function") ? getSystemContactInfo() : { phone: "0123456789", formattedPhone: "0988.888.888", zaloUrl: "https://zalo.me/0123456789" };
-        const cleanPhone = (zaloPhone && String(zaloPhone).replace(/[^0-9]/g, "")) || contact.phone;
-        const formattedPhone = (zaloPhone ? (cleanPhone.length === 10 ? cleanPhone.slice(0, 4) + "." + cleanPhone.slice(4, 7) + "." + cleanPhone.slice(7) : cleanPhone) : contact.formattedPhone);
+        const cleanPhone = (zaloPhone && String(zaloPhone).replace(/[^0-9]/g, "")) || "0346508659";
         const zaloUrl = "https://zalo.me/" + cleanPhone;
 
-        // 1. Cập nhật tất cả các thẻ a Zalo (loại trừ link chia sẻ zalo.me/share)
-        const selLinks = "a[href*='zalo.me'], .btn-chat-live, .mmo-zalo-link";
+        const selLinks = "a[href*='zalo.me'], .btn-chat-live, .mmo-zalo-link, #footerZaloLink";
         document.querySelectorAll(selLinks).forEach(function(el) {
-          if (el.href && el.href.includes("zalo.me/share")) return;
           el.href = zaloUrl;
           el.setAttribute("target", "_blank");
           el.setAttribute("rel", "noopener noreferrer");
-          el.onclick = function(ev) {
-            ev.preventDefault();
-            window.open(zaloUrl, "_blank");
-          };
         });
-
-        // 2. Cập nhật tất cả các vị trí hiển thị text số điện thoại
-        document.querySelectorAll(".mmo-zalo-phone-display").forEach(function(el) {
-          el.innerText = formattedPhone;
-        });
-
-        // 3. Cập nhật text trong sơ đồ sitemap
-        const sitemapZaloEl = document.getElementById("sitemapZaloText");
-        if (sitemapZaloEl) {
-          sitemapZaloEl.innerHTML = "Trung Tâm Hỗ Trợ 24/7 (Zalo: <span class='mmo-zalo-phone-display'>" + formattedPhone + "</span>)";
-        }
-
-        // 4. Cập nhật text trong chính sách bảo mật
-        const policyHotlineEl = document.getElementById("policyHotlineText");
-        if (policyHotlineEl) {
-          policyHotlineEl.innerText = formattedPhone;
-        }
-
-        // 5. Cập nhật ô input trong Admin nếu có và không đang focus
-        const inputHotline = document.getElementById("setHotline");
-        if (inputHotline && document.activeElement !== inputHotline) {
-          inputHotline.value = cleanPhone;
-        }
       } catch(e) {
-        console.error("syncZaloLinks error:", e);
+        console.warn("syncZaloLinks notice:", e);
       }
     }
     window.syncZaloLinks = syncZaloLinks;
@@ -22046,31 +22040,35 @@ function syncAllOpenViewsStock(changedProdId) {
     window.syncContactInfoToUI = syncContactInfoToUI;
 
     // ĐỒNG BỘ LINK TELEGRAM ĐẾN TẤT CẢ NÚT/LIÊN KẾT TRÊN TRANG
-    function syncTelegramLinks(teleUrl) {
+    function syncTelegramLinks(teleUrl, groupUrl) {
       try {
         let url = teleUrl;
-        if (!url) {
+        let grp = groupUrl;
+        if (!url || !grp) {
           const s = (typeof getGeneralSettings === "function") ? getGeneralSettings() : {};
-          url = (s && s.telegram) ? s.telegram.trim() : "https://t.me/admin_yourshop";
+          if (!url) url = (s && s.telegram) ? s.telegram.trim() : "https://t.me/longnguyen1az";
+          if (!grp) grp = (s && s.telegramGroup) ? s.telegramGroup.trim() : (url || "https://t.me/longnguyen1az");
         }
         url = (url || "").trim();
-        if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
-          url = "https://" + url;
-        }
-        if (!url) url = "https://t.me/admin_yourshop";
+        grp = (grp || url).trim();
+        if (url && !url.startsWith("http://") && !url.startsWith("https://")) url = "https://" + url;
+        if (grp && !grp.startsWith("http://") && !grp.startsWith("https://")) grp = "https://" + grp;
 
-        const sel = "a[href*='t.me'], a[href*='telegram'], .btn-telegram, .connect-card-box[href*='t.me'], .mmo-tele-link";
-        document.querySelectorAll(sel).forEach(function(el) {
+        // Cập nhật Nhóm Telegram (Cộng đồng)
+        document.querySelectorAll(".connect-card-box, #footerCommunityLink").forEach(function(el) {
+          el.href = grp;
+          el.setAttribute("target", "_blank");
+          el.setAttribute("rel", "noopener noreferrer");
+        });
+
+        // Cập nhật Kênh Telegram / CSKH Telegram
+        document.querySelectorAll(".btn-telegram, #footerTelegramLink, .mmo-tele-link, a[href*='t.me']:not(.connect-card-box):not(#footerCommunityLink)").forEach(function(el) {
           el.href = url;
           el.setAttribute("target", "_blank");
           el.setAttribute("rel", "noopener noreferrer");
-          el.onclick = function(ev) {
-            ev.preventDefault();
-            window.open(url, "_blank");
-          };
         });
       } catch(e) {
-        console.error("syncTelegramLinks error:", e);
+        console.warn("syncTelegramLinks notice:", e);
       }
     }
     window.syncTelegramLinks = syncTelegramLinks;
