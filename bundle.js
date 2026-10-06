@@ -1,6 +1,6 @@
 (function autoPurgeOldSiteCache() {
   try {
-    var oldGas = "AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw";
+    var oldGas = "AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T";
     for (var i = localStorage.length - 1; i >= 0; i--) {
       var k = localStorage.key(i);
       if (!k) continue;
@@ -89,7 +89,7 @@ function checkAndApplyNetworkUpdate() {
         
         // 1. Cập nhật CSS theme
         var curCss = document.getElementById("mmoCdnThemeCss");
-        var newCssUrl = (data.theme_url || "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/theme.min.css");
+        var newCssUrl = (data.theme_url || "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/theme.min.css");
         if (curCss) {
           curCss.href = newCssUrl;
         } else {
@@ -104,7 +104,7 @@ function checkAndApplyNetworkUpdate() {
         var existingNewScript = document.getElementById("mmoCdnBundleJs_latest");
         if (existingNewScript) existingNewScript.remove();
         
-        var newJsUrl = (data.bundle_url || "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/bundle.min.js");
+        var newJsUrl = (data.bundle_url || "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/bundle.min.js");
         var nextScript = document.createElement("script");
         nextScript.id = "mmoCdnBundleJs_latest";
         nextScript.src = newJsUrl;
@@ -270,7 +270,7 @@ if (typeof window !== "undefined") {
     window.adminOrdersStatusFilter = "ALL";
   
 
-const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec";
 
     const MOCK_DATA = {
       categories: ["Tất cả","AI & Video","Facebook","Gmail","Rom & Tools","TikTok","HOT MAIL","Intagram","Chatgpt","Phone Farm","VPN Proxy","Capcut","Canva","Khác","YOUTUBE"],
@@ -318,7 +318,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "views": "4.2k",
     "image": "https://blogger.googleusercontent.com/img/a/AVvXsEio_0p9vUfwdaQG-D234HmskZadsOjGmXdeaHUl7vcK-2ywDE0LQYz9qx9DihftNmgF9w3uO-S41YoEygQuHY2u_phofQsZwImxmhm4GR1hhi242GA-UYBL-rZ3nIxr4oAL14SDsUtaokwj0zTlzFXiu-vFtijx6inp3NLdRKUF96i40P-sVasomckijZs=s1600",
     "snippet": "Chào bạn! Bạn đang tìm kiếm những cơ hội để bắt đầu kiếm tiền online tại nhà nhưng chưa biết bắt đầu từ đâu? Trong thời đại số hiện nay, cách kiếm tiền trên mạng đã trở nên phổ biế...",
-    "content": "Chào bạn! Bạn đang tìm kiếm những cơ hội để bắt đầu kiếm tiền online tại nhà nhưng chưa biết bắt đầu từ đâu? Trong thời đại số hiện nay, cách kiếm tiền trên mạng đã trở nên phổ biến hơn bao giờ hết, đặc biệt là đối với những ai muốn làm freelancer tại nhà để tự chủ thời gian. Một trong những \"vũ khí\" bí mật giúp bạn rút ngắn con đường đến thành công chính là sở hữu các tài khoản uy tín, chất lượng. Bài viết này sẽ hướng dẫn bạn chi tiết cách mua tài khoản tại cuahangcuaban.com để tối ưu hóa công việc của mình.\n\n<h2>Tại sao cần mua tài khoản MMO để làm freelancer tại nhà?</h2>\n\nKhi mới bắt đầu sự nghiệp tự do (freelancing), việc sở hữu các tài khoản có độ tin cậy cao (trust cao) là vô cùng quan trọng. Thay vì mất hàng tháng trời để \"nuôi\" tài khoản, đối mặt với rủi ro bị khóa hoặc hạn chế tính năng, nhiều người chọn cách mua tài khoản đã được xác minh.\n\nViệc mua tài khoản giúp bạn:\n<ul>\n    <li>Tiết kiệm thời gian \"vượt ải\" kiểm duyệt của các nền tảng.</li>\n    <li>Tiếp cận ngay với các tính năng nâng cao, hỗ trợ chạy quảng cáo hoặc làm dịch vụ.</li>\n    <li>Tăng khả năng cạnh tranh khi bắt đầu các dự án lớn.</li>\n</ul><div><div class=\"separator\" style=\"clear: both; text-align: center;\"><a href=\"https://blogger.googleusercontent.com/img/a/AVvXsEio_0p9vUfwdaQG-D234HmskZadsOjGmXdeaHUl7vcK-2ywDE0LQYz9qx9DihftNmgF9w3uO-S41YoEygQuHY2u_phofQsZwImxmhm4GR1hhi242GA-UYBL-rZ3nIxr4oAL14SDsUtaokwj0zTlzFXiu-vFtijx6inp3NLdRKUF96i40P-sVasomckijZs\" style=\"margin-left: 1em; margin-right: 1em;\"><img data-original-height=\"893\" data-original-width=\"1870\" height=\"306\" src=\"https://blogger.googleusercontent.com/img/a/AVvXsEio_0p9vUfwdaQG-D234HmskZadsOjGmXdeaHUl7vcK-2ywDE0LQYz9qx9DihftNmgF9w3uO-S41YoEygQuHY2u_phofQsZwImxmhm4GR1hhi242GA-UYBL-rZ3nIxr4oAL14SDsUtaokwj0zTlzFXiu-vFtijx6inp3NLdRKUF96i40P-sVasomckijZs=w640-h306\" width=\"640\" /></a></div><br /><br /></div>\n\n<h2>Hướng dẫn chi tiết cách mua tài khoản tại cuahangcuaban.com</h2>\n\nMuabantaikhoanmmo.com là một trong những nền tảng được cộng đồng MMO tin tưởng nhờ sự minh bạch và hỗ trợ khách hàng nhanh chóng. Dưới đây là các bước thực hiện:\n\n<h3>Bước 1: Truy cập và đăng ký tài khoản</h3>\nĐầu tiên, bạn hãy truy cập vào trang web chính thức của cuahangcuaban.com. Tại đây, hãy tạo cho mình một tài khoản thành viên. Việc đăng ký rất đơn giản, chỉ cần email và mật khẩu là bạn đã có thể bắt đầu trải nghiệm dịch vụ.\n\n<h3>Bước 2: Tìm kiếm loại tài khoản phù hợp</h3>\nSau khi đăng nhập, hãy sử dụng thanh tìm kiếm để tìm loại tài khoản bạn cần. Có thể là tài khoản Facebook Ads, tài khoản Gmail cổ, tài khoản sàn TMĐT, hoặc các tài khoản phục vụ mục đích kiếm tiền online tại nhà**. Hãy đọc kỹ mô tả về độ \"cổ\", quốc gia, và các đặc tính của tài khoản đó.<div><br /><div><div class=\"separator\" style=\"clear: both; text-align: center;\"><a href=\"https://blogger.googleusercontent.com/img/a/AVvXsEjazdNeqcyriQ0ZJjx-NX44mA854ZDRZSNE4AXX_whEi4AFRgjveM0HQNSmrP3e54Zn6FIfD3V2OAZXS-T4KUlsi3buHUO7aydtGMMpRgCOUrm1ChNfUfxgqqNsu26Rn3aKfJFeaJO4O9bskuw4vx2RJdmji66911_RLv-fssurnnkQM0yqgnfUvREOQcI\" style=\"margin-left: 1em; margin-right: 1em;\"><img data-original-height=\"766\" data-original-width=\"1710\" height=\"286\" src=\"https://blogger.googleusercontent.com/img/a/AVvXsEjazdNeqcyriQ0ZJjx-NX44mA854ZDRZSNE4AXX_whEi4AFRgjveM0HQNSmrP3e54Zn6FIfD3V2OAZXS-T4KUlsi3buHUO7aydtGMMpRgCOUrm1ChNfUfxgqqNsu26Rn3aKfJFeaJO4O9bskuw4vx2RJdmji66911_RLv-fssurnnkQM0yqgnfUvREOQcI=w640-h286\" width=\"640\" /></a></div></div><div><h3>Bước 3: Chọn phương thức thanh toán và hoàn tất đơn hàng</h3>\nSau khi đã chọn được sản phẩm ưng ý, bạn nhấn \"Thêm vào giỏ hàng\" hoặc \"Mua ngay\". Hệ thống sẽ cung cấp cho bạn các phương thức thanh toán như chuyển khoản ngân hàng, ví điện tử hoặc tiền điện tử. Sau khi thanh toán thành công, thông tin tài khoản sẽ được gửi đến email hoặc hiển thị trong mục \"Lịch sử đơn hàng\" của bạn.\n\n<h2>Những lưu ý vàng khi mua tài khoản để làm MMO</h2>\n\nDù việc mua tài khoản mang lại nhiều lợi ích, bạn cũng cần trang bị kiến thức để bảo vệ chính mình:\n\n<ul>\n    <li><strong>Kiểm tra thông tin ngay lập tức:</strong> Ngay sau khi nhận tài khoản, hãy đăng nhập và kiểm tra lại toàn bộ thông tin. Nếu có bất kỳ vấn đề gì về mật khẩu hoặc quyền truy cập, hãy liên hệ ngay với đội ngũ support của website.</li>\n    <li><strong>Thay đổi thông tin bảo mật:</strong> Hãy đổi ngay mật khẩu, email khôi phục và bật xác thực 2 lớp (2FA) để đảm bảo tài khoản thuộc quyền sở hữu duy nhất của bạn.</li>\n    <li><strong>Sử dụng Proxy/VPN sạch:</strong> Khi mới mua tài khoản về, hãy sử dụng các IP sạch (Proxy) để đăng nhập, tránh tình trạng tài khoản bị \"checkpoint\" do thay đổi thiết bị hoặc địa chỉ IP đột ngột.</li>\n</ul>\n\nViệc sở hữu công cụ tốt là bước đệm hoàn hảo để bạn bắt đầu hành trình cách kiếm tiền trên mạng một cách chuyên nghiệp. Đừng để những khó khăn kỹ thuật ban đầu làm chùn bước chân của bạn. Với sự hỗ trợ từ cuahangcuaban.com, bạn sẽ có nhiều thời gian hơn để tập trung vào việc sáng tạo nội dung, tối ưu chiến dịch và gia tăng thu nhập mỗi ngày.\n\nHy vọng hướng dẫn này đã giúp bạn tự tin hơn trong việc lựa chọn và mua tài khoản phục vụ công việc. Nếu bạn đã sẵn sàng, hãy truy cập ngay cuahangcuaban.com để chọn cho mình những tài khoản chất lượng nhất và bắt đầu hành trình chinh phục thu nhập số ngay hôm nay!</div></div>"
+    "content": "Chào bạn! Bạn đang tìm kiếm những cơ hội để bắt đầu kiếm tiền online tại nhà nhưng chưa biết bắt đầu từ đâu? Trong thời đại số hiện nay, cách kiếm tiền trên mạng đã trở nên phổ biến hơn bao giờ hết, đặc biệt là đối với những ai muốn làm freelancer tại nhà để tự chủ thời gian. Một trong những \"vũ khí\" bí mật giúp bạn rút ngắn con đường đến thành công chính là sở hữu các tài khoản uy tín, chất lượng. Bài viết này sẽ hướng dẫn bạn chi tiết cách mua tài khoản tại cuahangcuaban.com để tối ưu hóa công việc của mình.\n\n<h2>Tại sao cần mua tài khoản MMO để làm freelancer tại nhà?</h2>\n\nKhi mới bắt đầu sự nghiệp tự do (freelancing), việc sở hữu các tài khoản có độ tin cậy cao (trust cao) là vô cùng quan trọng. Thay vì mất hàng tháng trời để \"nuôi\" tài khoản, đối mặt với rủi ro bị khóa hoặc hạn chế tính năng, nhiều người chọn cách mua tài khoản đã được xác minh.\n\nViệc mua tài khoản giúp bạn:\n<ul>\n    <li>Tiết kiệm thời gian \"vượt ải\" kiểm duyệt của các nền tảng.</li>\n    <li>Tiếp cận ngay với các tính năng nâng cao, hỗ trợ chạy quảng cáo hoặc làm dịch vụ.</li>\n    <li>Tăng khả năng cạnh tranh khi bắt đầu các dự án lớn.</li>\n</ul><div><div class=\"separator\" style=\"clear: both; text-align: center;\"><a href=\"https://blogger.googleusercontent.com/img/a/AVvXsEio_0p9vUfwdaQG-D234HmskZadsOjGmXdeaHUl7vcK-2ywDE0LQYz9qx9DihftNmgF9w3uO-S41YoEygQuHY2u_phofQsZwImxmhm4GR1hhi242GA-UYBL-rZ3nIxr4oAL14SDsUtaokwj0zTlzFXiu-vFtijx6inp3NLdRKUF96i40P-sVasomckijZs\" style=\"margin-left: 1em; margin-right: 1em;\"><img data-original-height=\"893\" data-original-width=\"1870\" height=\"306\" src=\"https://blogger.googleusercontent.com/img/a/AVvXsEio_0p9vUfwdaQG-D234HmskZadsOjGmXdeaHUl7vcK-2ywDE0LQYz9qx9DihftNmgF9w3uO-S41YoEygQuHY2u_phofQsZwImxmhm4GR1hhi242GA-UYBL-rZ3nIxr4oAL14SDsUtaokwj0zTlzFXiu-vFtijx6inp3NLdRKUF96i40P-sVasomckijZs=w640-h306\" width=\"640\" /></a></div><br /><br /></div>\n\n<h2>Hướng dẫn chi tiết cách mua tài khoản tại cuahangcuaban.com</h2>\n\nkhotaikhoanso.net là một trong những nền tảng được cộng đồng MMO tin tưởng nhờ sự minh bạch và hỗ trợ khách hàng nhanh chóng. Dưới đây là các bước thực hiện:\n\n<h3>Bước 1: Truy cập và đăng ký tài khoản</h3>\nĐầu tiên, bạn hãy truy cập vào trang web chính thức của cuahangcuaban.com. Tại đây, hãy tạo cho mình một tài khoản thành viên. Việc đăng ký rất đơn giản, chỉ cần email và mật khẩu là bạn đã có thể bắt đầu trải nghiệm dịch vụ.\n\n<h3>Bước 2: Tìm kiếm loại tài khoản phù hợp</h3>\nSau khi đăng nhập, hãy sử dụng thanh tìm kiếm để tìm loại tài khoản bạn cần. Có thể là tài khoản Facebook Ads, tài khoản Gmail cổ, tài khoản sàn TMĐT, hoặc các tài khoản phục vụ mục đích kiếm tiền online tại nhà**. Hãy đọc kỹ mô tả về độ \"cổ\", quốc gia, và các đặc tính của tài khoản đó.<div><br /><div><div class=\"separator\" style=\"clear: both; text-align: center;\"><a href=\"https://blogger.googleusercontent.com/img/a/AVvXsEjazdNeqcyriQ0ZJjx-NX44mA854ZDRZSNE4AXX_whEi4AFRgjveM0HQNSmrP3e54Zn6FIfD3V2OAZXS-T4KUlsi3buHUO7aydtGMMpRgCOUrm1ChNfUfxgqqNsu26Rn3aKfJFeaJO4O9bskuw4vx2RJdmji66911_RLv-fssurnnkQM0yqgnfUvREOQcI\" style=\"margin-left: 1em; margin-right: 1em;\"><img data-original-height=\"766\" data-original-width=\"1710\" height=\"286\" src=\"https://blogger.googleusercontent.com/img/a/AVvXsEjazdNeqcyriQ0ZJjx-NX44mA854ZDRZSNE4AXX_whEi4AFRgjveM0HQNSmrP3e54Zn6FIfD3V2OAZXS-T4KUlsi3buHUO7aydtGMMpRgCOUrm1ChNfUfxgqqNsu26Rn3aKfJFeaJO4O9bskuw4vx2RJdmji66911_RLv-fssurnnkQM0yqgnfUvREOQcI=w640-h286\" width=\"640\" /></a></div></div><div><h3>Bước 3: Chọn phương thức thanh toán và hoàn tất đơn hàng</h3>\nSau khi đã chọn được sản phẩm ưng ý, bạn nhấn \"Thêm vào giỏ hàng\" hoặc \"Mua ngay\". Hệ thống sẽ cung cấp cho bạn các phương thức thanh toán như chuyển khoản ngân hàng, ví điện tử hoặc tiền điện tử. Sau khi thanh toán thành công, thông tin tài khoản sẽ được gửi đến email hoặc hiển thị trong mục \"Lịch sử đơn hàng\" của bạn.\n\n<h2>Những lưu ý vàng khi mua tài khoản để làm MMO</h2>\n\nDù việc mua tài khoản mang lại nhiều lợi ích, bạn cũng cần trang bị kiến thức để bảo vệ chính mình:\n\n<ul>\n    <li><strong>Kiểm tra thông tin ngay lập tức:</strong> Ngay sau khi nhận tài khoản, hãy đăng nhập và kiểm tra lại toàn bộ thông tin. Nếu có bất kỳ vấn đề gì về mật khẩu hoặc quyền truy cập, hãy liên hệ ngay với đội ngũ support của website.</li>\n    <li><strong>Thay đổi thông tin bảo mật:</strong> Hãy đổi ngay mật khẩu, email khôi phục và bật xác thực 2 lớp (2FA) để đảm bảo tài khoản thuộc quyền sở hữu duy nhất của bạn.</li>\n    <li><strong>Sử dụng Proxy/VPN sạch:</strong> Khi mới mua tài khoản về, hãy sử dụng các IP sạch (Proxy) để đăng nhập, tránh tình trạng tài khoản bị \"checkpoint\" do thay đổi thiết bị hoặc địa chỉ IP đột ngột.</li>\n</ul>\n\nViệc sở hữu công cụ tốt là bước đệm hoàn hảo để bạn bắt đầu hành trình cách kiếm tiền trên mạng một cách chuyên nghiệp. Đừng để những khó khăn kỹ thuật ban đầu làm chùn bước chân của bạn. Với sự hỗ trợ từ cuahangcuaban.com, bạn sẽ có nhiều thời gian hơn để tập trung vào việc sáng tạo nội dung, tối ưu chiến dịch và gia tăng thu nhập mỗi ngày.\n\nHy vọng hướng dẫn này đã giúp bạn tự tin hơn trong việc lựa chọn và mua tài khoản phục vụ công việc. Nếu bạn đã sẵn sàng, hãy truy cập ngay cuahangcuaban.com để chọn cho mình những tài khoản chất lượng nhất và bắt đầu hành trình chinh phục thu nhập số ngay hôm nay!</div></div>"
   },
   {
     "id": "BLOGGER_7454928304007290377",
@@ -867,7 +867,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
           "sourceProdId": "125564",
           "sourceProdName": "API CODEX 10M Tokens - 1 DAYS",
           "sourcePrice": 54337.5,
@@ -885,7 +885,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
       "sourceProdId": "125564",
       "sourceProdName": "API CODEX 10M Tokens - 1 DAYS",
       "sourcePrice": 54337.5,
@@ -963,7 +963,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
           "sourceProdId": "128006",
           "sourceProdName": "Threads Random Veri Phone",
           "sourcePrice": 47840,
@@ -981,7 +981,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
       "sourceProdId": "128006",
       "sourceProdName": "Threads Random Veri Phone",
       "sourcePrice": 47840,
@@ -1059,7 +1059,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
           "sourceProdId": "129177",
           "sourceProdName": "Telegram +27 South Africa 2FA Veri Phone Tạo 3+ Ngày",
           "sourcePrice": 44160,
@@ -1077,7 +1077,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
       "sourceProdId": "129177",
       "sourceProdName": "Telegram +27 South Africa 2FA Veri Phone Tạo 3+ Ngày",
       "sourcePrice": 44160,
@@ -1132,7 +1132,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
           "sourceProdId": "119457",
           "sourceProdName": "0. INSTAGRAM ĐÃ QUA SỬ DỤNG - RANDOM IP - NAME RANDOM",
           "sourcePrice": 3036,
@@ -1150,7 +1150,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
       "sourceProdId": "119457",
       "sourceProdName": "0. INSTAGRAM ĐÃ QUA SỬ DỤNG - RANDOM IP - NAME RANDOM",
       "sourcePrice": 3036,
@@ -1420,7 +1420,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
           "sourceProdId": "122260",
           "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
           "sourcePrice": 2818,
@@ -1438,7 +1438,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
       "sourceProdId": "122260",
       "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
       "sourcePrice": 2818,
@@ -1504,7 +1504,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/capcut_team_1m.jpg",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/capcut_team_1m.jpg",
     "warranty": "Bảo Hành 7 Ngày",
     "description": "Bạn là TikToker, Editor, nhà sáng tạo nội dung hay Marketer đang cần kho hiệu ứng Pro, công cụ AI đỉnh cao và bộ lọc màu độc quyền của Capcut Pro để thỏa sức sáng tạo cả tháng nhưng muốn tối ưu chi phí tối đa? Gói Capcut Pro Team 1 Tháng tại shop chính là lựa chọn hoàn hảo nhất dành cho bạn!\n\n✨ Ưu điểm vượt trội của gói Capcut Pro Team:\n🔓 Mở khóa trọn vẹn toàn bộ tính năng Pro: Thỏa sức sử dụng kho hiệu ứng chuyển cảnh độc quyền, công cụ AI thông minh, tách nền mượt mà, keyframe nâng cao và bộ lọc màu điện ảnh.\n\n💰 Tiết kiệm siêu hời: Trải nghiệm đầy đủ tính năng cao cấp suốt 30 ngày với mức giá rẻ hơn rất nhiều so với mua lẻ cá nhân chính hãng.\n\n💻 Sử dụng đa nền tảng: Dùng mượt mà trên cả Điện thoại (iOS/Android) lẫn Máy tính (PC/Laptop).\n\n🛠️ Cam kết chất lượng từ shop:\n🛡️ Bảo hành Full 1 đổi 1 trong suốt thời gian 1 tháng sử dụng. An tâm tuyệt đối không lo mất quyền lợi giữa chừng.\n\n🚀 Bàn giao tài khoản siêu tốc ngay sau khi thanh toán, hướng dẫn sử dụng chi tiết từ A-Z.\n\n🤝 Hỗ trợ tận tình 24/7 nếu gặp bất kỳ vấn đề gì trong quá trình thao tác.\n\n💡 Phù hợp cho: Anh em làm content dài hạn trong tháng, làm video ngắn đăng TikTok, Reels, YouTube Shorts với tần suất cao mà vẫn muốn tiết kiệm ngân sách tối đa!\n\n🛒 SỞ HỮU NGAY HÔM NAY!\n💬 Inbox trực tiếp ngay cho shop hoặc bình luận [ . ] bên dưới để chốt đơn và nhận tài khoản dùng ngay trong 1 nốt nhạc!\n\n📞 Hotline / Zalo / Telegram",
     "variants": [
@@ -1660,7 +1660,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
           "sourceProdId": "122260",
           "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
           "sourcePrice": 2817.5,
@@ -1678,7 +1678,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
       "sourceProdId": "122260",
       "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
       "sourcePrice": 2817.5,
@@ -1792,7 +1792,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_not8_android10.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_not8_android10.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom Androi 10 Not8 N950 mod ADB",
     "variants": [
@@ -2119,7 +2119,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
           "sourceProdId": "128981",
           "sourceProdName": "ig qua sử dụng nofa",
           "sourcePrice": 2846,
@@ -2137,7 +2137,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "YOUR_NGUYENLIEUMMO_API_KEY",
+      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
       "sourceProdId": "128981",
       "sourceProdName": "ig qua sử dụng nofa",
       "sourcePrice": 2846,
@@ -2203,7 +2203,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_j7_plus.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_j7_plus.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "rom gốc mod adb j7 plush",
     "variants": [
@@ -2235,7 +2235,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_j7_prime.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_j7_prime.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom androi 10 mod adb j7 prime",
     "variants": [
@@ -2260,7 +2260,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_s7_android10.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_s7_android10.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom androi 10 s7 mod adb",
     "variants": [
@@ -2292,7 +2292,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_s8_android10.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_s8_android10.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom androi 10 s8 mod adb",
     "variants": [
@@ -2338,7 +2338,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_s9_android10.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_s9_android10.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom androi 10 s9 mod adb cài bằng TW",
     "variants": [
@@ -2363,7 +2363,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_s10_android12.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_s10_android12.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom androi 12 s10 mod adb",
     "variants": [
@@ -2416,7 +2416,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_not8_android10.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_not8_android10.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom Not8 androi 10 mod adb",
     "variants": [
@@ -2448,7 +2448,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_not9_android10.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_not9_android10.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom androi 10 mod adb galaxy not 9",
     "variants": [
@@ -2480,7 +2480,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_s22_android12.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_s22_android12.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom Androi 12 galaxy s22 mod adb",
     "variants": [
@@ -2505,7 +2505,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/rom_not10_android12.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/rom_not10_android12.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Rom androi 12 mod adb galaxy not 10 G975FDS",
     "variants": [
@@ -2569,7 +2569,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/tiktok_vietnam.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/tiktok_vietnam.png",
     "warranty": "Bảo Hành Login",
     "description": "Tiktok việt reg trên 4 tháng",
     "variants": [
@@ -2695,7 +2695,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/hma_vpn.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/hma_vpn.png",
     "warranty": "Bảo Hành Login Lần Đầu",
     "description": "Bạn đang cần nguồn VPN chất lượng cao, tốc độ ổn định để đổi IP sang hàng trăm quốc gia, vượt rào kiểm duyệt, bảo mật toàn diện hoặc chạy các tác vụ MMO trên cả máy tính và điện thoại nhưng không muốn mua gói năm đắt đỏ?\n\nKey HMA (HideMyAss) VPN gói 20 - 30 ngày (Dùng cùng lúc 5 thiết bị) tại shop chính là giải pháp tiết kiệm và hiệu quả tối ưu dành cho bạn!\n\n💎 Điểm vượt trội của Key HMA VPN:\n🌐 Kho server khủng toàn cầu: Kết nối mượt mà tới hàng nghìn máy chủ tại hơn 200 quốc gia và vùng lãnh thổ trên thế giới, dễ dàng fake IP sang bất kỳ quốc gia nào bạn muốn.\n\n💻📱 Dùng cùng lúc 5 thiết bị: 1 Key có thể đăng nhập và bảo vệ đồng thời trên 5 thiết bị (PC, Laptop, Android, iOS...), cực kỳ tiện lợi cho anh em làm việc nhiều máy hoặc chia sẻ cùng bạn bè.\n\n🚀 Tốc độ cao, ổn định: Tối ưu hóa cho việc xem phim 4K, chơi game quốc tế, tải file nặng hoặc chạy các tool MMO không lo giật lag hay rớt kết nối.\n\n🔒 Ẩn danh tuyệt đối: Mã hóa toàn bộ lưu lượng truy cập, ẩn địa chỉ IP thực, bảo vệ thông tin cá nhân an toàn trước mọi mối đe dọa mạng.\n\n🛠️ Cam kết dịch vụ từ shop:\n🛡️ Bảo hành Full thời gian sử dụng key trong suốt hạn 20 - 30 ngày.\n\n⚡ Cấp phát siêu tốc ngay sau khi thanh toán, nhận key kích hoạt dùng ngay lập tức.\n\n💬 Hỗ trợ kỹ thuật 24/7, hướng dẫn cài đặt chi tiết trên cả PC và điện thoại.\n\n💡 Phù hợp cho: Dân MMO cần đổi IP sạch liên tục, anh em làm việc với hệ thống quốc tế, game thủ hoặc bất kỳ ai cần giải pháp VPN uy tín, ngắn hạn với chi phí siêu hời!",
     "variants": [
@@ -2743,7 +2743,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/capcut_canhan_rieng.jpg",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/capcut_canhan_rieng.jpg",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Bạn đang cần gấp các hiệu ứng Pro, bộ lọc màu điện ảnh hay công cụ AI thông minh để hoàn thành video ngắn (TikTok, Reels, YouTube Shorts) nhưng chưa muốn mua gói dài hạn đắt đỏ? Gói Capcut Pro Cá Nhân 7 Ngày tại shop chính là lựa chọn nhanh - gọn - tiết kiệm nhất cho bạn!\n\n✨ Điểm nổi bật của gói:\n👤 Tài khoản cá nhân riêng biệt: Sử dụng độc lập, bảo mật tuyệt đối, không lo bị tranh chấp hay gián đoạn giữa chừng.\n\n🔓 Mở khóa toàn bộ tính năng Pro: Trải nghiệm trọn vẹn kho hiệu ứng chuyển cảnh, công cụ tự động, tách nền mượt mà và các công cụ AI cao cấp.\n\n⏱️ Tiết kiệm chi phí tối đa: Phù hợp cho anh em có nhu cầu làm video gấp trong tuần hoặc muốn trải nghiệm thử trước khi nâng cấp dài hạn.\n\n🛠️ Cam kết dịch vụ:\n🛡️ Bảo hành Full 1 đổi 1 trong suốt 7 ngày sử dụng.\n\n🚀 Bàn giao siêu tốc ngay sau khi thanh toán, đăng nhập và dùng ngay trên cả Điện thoại lẫn PC.",
     "variants": [
@@ -2791,7 +2791,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/facebook_via.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/facebook_via.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Via Việt 2014 - 2019  ACC CỔ - ACC SPAM - SEEDING",
     "variants": [
@@ -2823,7 +2823,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/express_vpn.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/express_vpn.png",
     "warranty": "Bảo Hành Login",
     "description": "Dưới đây là mẫu bài viết bán ExpressVPN gói 2-3 ngày giá rẻ, thiết kế ngắn gọn, tập trung vào tốc độ đỉnh cao và chi phí siêu hạt dẻ cho anh em cần dùng gấp trong thời gian ngắn:\n\n⚡ EXPRESSVPN Gói 2-3 Ngày (Giá Rẻ) – Tốc Độ Thần Sốc, Đổi IP Cực Mạnh Cho Mọi Tác Vụ Gấp!\nBạn đang cần gấp nguồn VPN cao cấp nhất thị trường (ExpressVPN) để chạy các tác vụ ngắn hạn, test tool, verify dịch vụ, vượt rào kiểm duyệt hay đổi IP sang các quốc gia lớn với tốc độ mượt mà nhất mà không muốn tốn tiền mua gói tháng đắt đỏ?\n\nGói ExpressVPN 2-3 ngày giá rẻ tại shop chính là giải pháp \"chữaáy\" nhanh gọn, tiết kiệm và hiệu quả tối đa dành cho bạn!\n\n🚀 Điểm vượt trội của ExpressVPN:\n⚡ Tốc độ đỉnh cao số 1: Tốc độ kết nối và truyền tải dữ liệu cực nhanh, không lo giật lag, tối ưu hoàn hảo cho việc xem video 4K, chơi game quốc tế hay chạy các tool MMO nặng.\n\n🌍 Server toàn cầu siêu rộng: Dễ dàng fake IP sang hàng nghìn máy chủ tại hơn 90 quốc gia với độ ổn định tuyệt đối, không bị quét hay lộ IP thực.\n\n⏱️ Linh hoạt thời gian (2-3 ngày): Phù hợp hoàn hảo cho anh em cần dùng gấp trong vài ngày để xử lý công việc phát sinh, test hệ thống hoặc chạy chiến dịch ngắn hạn.\n\n🛠️ Cam kết dịch vụ từ shop:\n🛡️ Bảo hành toàn bộ thời gian sử dụng (2-3 ngày), dùng mượt mà đến phút cuối cùng.\n\n⚡ Cấp phát siêu tốc ngay sau khi thanh toán, nhận tài khoản đăng nhập dùng ngay trong 1 nốt nhạc.\n\n💬 Hỗ trợ nhiệt tình 24/7, hướng dẫn chi tiết cách kết nối nhanh chóng.\n\n💡 Phù hợp cho: Dân MMO cần ẩn danh gấp, anh em test tool, làm việc với server nước ngoài hoặc cần một dịch vụ VPN cao cấp trong thời gian ngắn với chi phí cực kỳ hời!",
     "variants": [
@@ -2871,7 +2871,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/canva_pro.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/canva_pro.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Bạn đang tìm kiếm công cụ thiết kế đồ họa chuyên nghiệp để làm slide thuyết trình, thiết kế poster, banner, video ngắn hay hình ảnh quảng cáo nhưng muốn chọn gói thời gian ngắn hạn vừa vặn với nhu cầu?\n\nShop cung cấp đầy đủ các gói Canva Pro linh hoạt (1 Tháng, 3 Tháng, 6 Tháng), đáp ứng trọn vẹn mọi nhu cầu của bạn với chi phí tiết kiệm nhất!\n\n✨ Kho tính năng đỉnh cao mở khóa trọn gói:\n🔓 Kho tài nguyên khổng lồ: Truy cập hàng triệu mẫu thiết kế (Templates) độc quyền, Font chữ cao cấp, hình ảnh, video và hiệu ứng đồ họa không giới hạn.\n\n🤖 Bộ công cụ AI thông minh: Tự động xóa nền, Magic Resize (đổi kích thước ma thuật), biến văn bản thành hình ảnh chỉ trong một nốt nhạc.\n\n💻 Đa nền tảng: Sử dụng mượt mà trên cả Điện thoại (iOS/Android) và Máy tính (Trình duyệt/App).\n\n📊 Bảng giá và lựa chọn gói linh hoạt:\n⏱️ Gói 1 Tháng: Phù hợp để làm project ngắn hạn, chạy chiến dịch gấp hoặc trải nghiệm tính năng Pro.\n\n⏱️ Gói 3 Tháng: Tiết kiệm hơn, vừa đủ cho một học kỳ hoặc quý kinh doanh hiệu quả.\n\n⏱️ Gói 6 Tháng: Lựa chọn tối ưu chi phí nhất cho anh em làm content, Marketer hoặc Designer cần ổn định nửa năm.\n\n🛠️ Cam kết dịch vụ từ shop:\n🛡️ Bảo hành Full 1 đổi 1 trong suốt thời gian sử dụng của gói.\n\n⚡ Nâng cấp siêu tốc chỉ mất vài phút sau khi nhận thông tin.\n\n💬 Hỗ trợ nhiệt tình 24/7, uy tín đặt lên hàng đầu.\n\n💡 Phù hợp cho: Học sinh, sinh viên, giáo viên, nhân viên văn phòng, nhà sáng tạo nội dung hoặc bất kỳ ai cần thiết kế chuyên nghiệp mà không phải mua gói 1 năm dài đắt đỏ!\n\n🛒 CHỌN GÓI NGAY – NÂNG CẤP LIỀN TAY!\n💬 Inbox trực tiếp ngay cho shop hoặc để lại dấu chấm [ . ] kèm theo gói bạn muốn chọn (1, 3 hay 6 tháng) để được chốt đơn nhanh nhất!\n\n📞 Hotline / Zalo / Telegram",
     "variants": [
@@ -2919,7 +2919,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/facebook_fanpage.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/facebook_fanpage.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Page Facebook cổ 2019 - chạy ADS - Bật kiếm tiền - làm Affiliate",
     "variants": [
@@ -2944,7 +2944,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/tiktok_beta.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/tiktok_beta.png",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "TK TikTok US Chuẩn Bật Kiếm Tiền Beta 2024-2025",
     "variants": [
@@ -3015,7 +3015,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/capcut_canhan_20k.jpg",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/capcut_canhan_20k.jpg",
     "warranty": "Bảo Hành 1 Đổi 1",
     "description": "Bạn đang cần gấp các hiệu ứng Pro, bộ lọc màu điện ảnh hay công cụ AI thông minh để hoàn thành video ngắn (TikTok, Reels, YouTube Shorts) nhưng chưa muốn mua gói dài hạn đắt đỏ? Gói Capcut Pro Cá Nhân 7 Ngày tại shop chính là lựa chọn nhanh - gọn - tiết kiệm nhất cho bạn!\n\n✨ Điểm nổi bật của gói:\n👤 Tài khoản cá nhân riêng biệt: Sử dụng độc lập, bảo mật tuyệt đối, không lo bị tranh chấp hay gián đoạn giữa chừng.\n\n🔓 Mở khóa toàn bộ tính năng Pro: Trải nghiệm trọn vẹn kho hiệu ứng chuyển cảnh, công cụ tự động, tách nền mượt mà và các công cụ AI cao cấp.\n\n⏱️ Tiết kiệm chi phí tối đa: Phù hợp cho anh em có nhu cầu làm video gấp trong tuần hoặc muốn trải nghiệm thử trước khi nâng cấp dài hạn.\n\n🛠️ Cam kết dịch vụ:\n🛡️ Bảo hành Full 1 đổi 1 trong suốt 7 ngày sử dụng.\n\n🚀 Bàn giao siêu tốc ngay sau khi thanh toán, đăng nhập và dùng ngay trên cả Điện thoại lẫn PC.",
     "variants": [
@@ -3063,7 +3063,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     "sold": 0,
     "buffSold": 0,
     "rating": 4.9,
-    "image": "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/hotmail_outlook.png",
+    "image": "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/hotmail_outlook.png",
     "warranty": "Bảo hành 24h",
     "description": "Dưới đây là mẫu bài viết bán Hotmail độ Trust cao, Live trâu, được thiết kế mạnh mẽ, chuyên nghiệp, tối ưu hóa tuyệt đối cho anh em làm MMO, đăng ký tài khoản dịch vụ, nuôi via hoặc chạy hệ thống số lượng lớn:\n\n🔥 HOTMAIL ĐỘ TRUST CAO, LIVE TRÂU – SIÊU PHẨM NUÔI NÍCH & NHẬN MÃ OTP CHO DÂN MMO!\nBạn đang đau đầu vì tình trạng mua Hotmail/Outlook giá rẻ, vừa đăng nhập, đổi IP hoặc nhận vài mã code là dính checkpoint, khóa tài khoản hoặc bị yêu cầu xác minh số điện thoại phiền toái?\n\nDòng sản phẩm Hotmail Độ Trust Cao, Live Trâu tại shop chính là giải pháp tối ưu giúp bạn giải quyết triệt để vấn đề này, chiến mượt mà mọi chiến dịch!\n\n💎 Ưu điểm vượt trội của dòng Hotmail Trust cao:\n🛡️ Độ tín nhiệm (Trust) cực cao: Tài khoản có thời gian ngâm lâu hoặc được nuôi dưỡng qua luồng tự nhiên, vượt qua các bộ lọc bảo mật khắt khe của Microsoft dễ dàng.\n\n💪 Live trâu, bền bỉ theo thời gian: Hạn chế tối đa tình trạng chết vặt, khóa ngầm hay block tài khoản khi thay đổi thiết bị hoặc đăng nhập trên môi trường IP mới.\n\n⚡ Nhận mã OTP / Verify siêu tốc: Tương thích hoàn hảo với mọi nền tảng mạng xã hội, sàn thương mại điện tử, game hoặc các dịch vụ trực tuyến cần tạo tài khoản hàng loạt.\n\n🔌 Hỗ trợ đa định dạng, dễ tích hợp: Sẵn sàng kết nối mượt mà với các phần mềm quản lý mail, tool automation hoặc trình duyệt ẩn danh (Antidetect Browser).\n\n🛠️ Cam kết dịch vụ từ shop:\n🛡️️ Bảo hành lỗi đăng nhập 1 đổi 1 ngay lập tức trong lần nhận tài khoản đầu tiên.\n\n🚀 Bàn giao siêu tốc đúng định dạng chuẩn xác, sạch sẽ ngay sau khi thanh toán.\n\n🔒 Bảo mật thông tin tuyệt đối, không qua sử dụng cá nhân trước đó.\n\n💡 Mẹo sử dụng bền lâu: Nên kết hợp sử dụng Proxy chất lượng cao và trình duyệt sạch khi đăng nhập số lượng lớn để duy trì độ \"trâu bò\" và tuổi thọ tối đa cho tài khoản!",
     "variants": [
@@ -10703,7 +10703,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       } catch(e) {}
 
       // Gửi mã OTP vào Email người dùng qua Google Apps Script (gửi từ khotaikhoanso.net@gmail.com)
-      const ACTIVE_GAS_OTP_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
+      const ACTIVE_GAS_OTP_URL = "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec";
       let gasRes = null;
       try {
         const otpUrl = ACTIVE_GAS_OTP_URL + "?action=sendPasswordResetOtp&email=" + encodeURIComponent(email) + "&otp=" + encodeURIComponent(otpCode);
@@ -10800,7 +10800,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       try { localStorage.setItem("mmo_registered_users", JSON.stringify(users)); } catch(e) {}
 
       // Đồng bộ mật khẩu mới lên Cloud
-      const ACTIVE_GAS_OTP_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
+      const ACTIVE_GAS_OTP_URL = "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec";
       try {
         const resetUrl = ACTIVE_GAS_OTP_URL + "?action=resetPassword&email=" + encodeURIComponent(email) + "&newPassword=" + encodeURIComponent(newPass);
         await fetch(resetUrl, { method: "GET" });
@@ -10844,8 +10844,13 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
     // OFFICIAL GOOGLE SIGN-IN SYSTEM (GIS & OAUTH2 POPUP)
     // =========================================================================
     function getGoogleClientId() {
+      const cfg = (typeof window !== "undefined" && window.MMO_SHOP_CONFIG) ? window.MMO_SHOP_CONFIG : {};
       const sys = typeof getGeneralSettings === "function" ? getGeneralSettings() : {};
-      return (sys && sys.googleClientId ? sys.googleClientId.trim() : "") || "788131580065-qev157n8l1422785caijnksf16rg1rq3.apps.googleusercontent.com";
+      let id = (sys && sys.googleClientId ? sys.googleClientId.trim() : "") || (cfg && cfg.GOOGLE_CLIENT_ID ? cfg.GOOGLE_CLIENT_ID.trim() : "");
+      if (!id || id.includes("788131580065") || id.includes("qev157n8l1422785caijnksf16rg1rq3")) {
+        id = "13759436270-5peopcde7tukahn48025d43ap1e78iad.apps.googleusercontent.com";
+      }
+      return id;
     }
 
     function initGoogleAuth() {
@@ -12203,7 +12208,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0Mgl
       const idUpper = pId.toUpperCase();
       const name = String((typeof p === "object" && p.name) || "").toLowerCase();
       const cat = String((typeof p === "object" && p.category) || "").toLowerCase();
-      const cdnBase = "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/";
+      const cdnBase = "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/";
 
       const KNOWN_CDN_MAP = {
         "PROD_MUJV1YHQ6N": cdnBase + "canva_edu.jpg",
@@ -15462,8 +15467,8 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "sellmmo.vn",
         badgeColor: "#38bdf8",
         baseUrl: "https://sellmmo.vn",
-        apiKey: "YOUR_SELLMMO_API_KEY",
-        username: "your_username",
+        apiKey: "7e55799ad28e716dd5880e74155d5cafZ7DdjFriLgwzOvlKocfA0Mh9V8lCSqn2",
+        username: "LONGNGUYENMMO",
         rechargeUrl: "https://sellmmo.vn/recharge"
       },
       nguyenlieummo: {
@@ -15471,8 +15476,8 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "nguyenlieummo.com.vn",
         badgeColor: "#f59e0b",
         baseUrl: "https://nguyenlieummo.com.vn",
-        apiKey: "YOUR_NGUYENLIEUMMO_API_KEY",
-        username: "your_username",
+        apiKey: "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+        username: "LONGNGUYENMMO",
         rechargeUrl: "https://nguyenlieummo.com.vn/client/wallet"
       },
       selltainguyenmmo: {
@@ -15480,8 +15485,8 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "selltainguyenmmo.com",
         badgeColor: "#8b5cf6",
         baseUrl: "https://selltainguyenmmo.com",
-        apiKey: "YOUR_SELLTAINGUYENMMO_API_KEY",
-        username: "your_username",
+        apiKey: "e2c95231992c02fe582a536f59177052ILMCTW7NGJcxUFD1uiApZqnXg4d6mPt0",
+        username: "LONGNGUYEN",
         rechargeUrl: "https://selltainguyenmmo.com/client/wallet"
       },
       shop1989nd: {
@@ -15499,10 +15504,10 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "ultrammo.com",
         badgeColor: "#6366f1",
         baseUrl: "https://ultrammo.com",
-        apiKey: "YOUR_ULTRAMMO_API_KEY",
-        username: "your_username",
+        apiKey: "cae2aa742168bcfecb2eae858bc7812c0yZx8elVaJYn2lgzktEcdvXb7mRAqfoU",
+        username: "LONGNGUYENMMO",
         password: "your_password",
-        rechargeUrl: "https://ultrammo.com/client/wallet"
+        rechargeUrl: "https://ultrammo.com/document-api"
       }
     };
 
@@ -19492,7 +19497,7 @@ function syncAllOpenViewsStock(changedProdId) {
           product: p,
           prodId: String(p.id),
           prodName: p.name || "Sản phẩm",
-          prodImage: p.image || p.imageUrl || "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/default_product.png",
+          prodImage: p.image || p.imageUrl || "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/default_product.png",
           category: p.category || "MMO",
           provider: prov,
           providerConfig: cfg,
@@ -19752,7 +19757,7 @@ function syncAllOpenViewsStock(changedProdId) {
       pageItems.forEach(function(item) {
         // Cột 1: Ảnh
         const imgCell = '<td style="text-align:center; padding:10px 4px; width:52px; min-width:52px; box-sizing:border-box;">' +
-          '<img src="' + esc(item.prodImage) + '" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #1e293b; background:#070d1e; display:block; margin:0 auto;" onerror="this.src=\'https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/default_product.png\'"/>' +
+          '<img src="' + esc(item.prodImage) + '" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #1e293b; background:#070d1e; display:block; margin:0 auto;" onerror="this.src=\'https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/default_product.png\'"/>' +
         '</td>';
 
         // Cột 2: Tên SP Shop
@@ -19955,7 +19960,7 @@ function syncAllOpenViewsStock(changedProdId) {
       if (nameEl) nameEl.innerText = prod.name || cleanId;
 
       const imgEl = document.getElementById("quickPriceProdImg");
-      if (imgEl) imgEl.src = prod.image || prod.imageUrl || "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/default_product.png";
+      if (imgEl) imgEl.src = prod.image || prod.imageUrl || "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/default_product.png";
 
       const costEl = document.getElementById("quickPriceLiveCost");
       if (costEl) costEl.innerText = formatVND(window.quickPriceLiveCost);
@@ -20383,12 +20388,12 @@ function syncAllOpenViewsStock(changedProdId) {
         const expectedProfit = safePrice - liveCost;
         const sourceName = alert.sourceName || (alert.source ? alert.source.name : "Nguồn API");
         const badgeColor = alert.source && alert.source.badgeColor ? alert.source.badgeColor : "#06b6d4";
-        const prodImg = (prod && prod.image) ? prod.image : "https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/google_gemini_veo3.webp";
+        const prodImg = (prod && prod.image) ? prod.image : "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/google_gemini_veo3.webp";
 
         html += `
           <div style='background:#070d1e; border:1px solid rgba(239,68,68,0.35); border-radius:8px; padding:12px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;'>
             <div style='display:flex; align-items:center; gap:10px; flex:1; min-width:240px;'>
-              <img src='${prodImg}' style='width:44px; height:44px; border-radius:6px; object-fit:cover; border:1px solid #334155;' onerror="this.src='https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/images/google_gemini_veo3.webp'"/>
+              <img src='${prodImg}' style='width:44px; height:44px; border-radius:6px; object-fit:cover; border:1px solid #334155;' onerror="this.src='https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/images/google_gemini_veo3.webp'"/>
               <div style='min-width:0;'>
                 <div style='font-size:0.85rem; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>
                   ${prod.name || prod.id}
@@ -21157,52 +21162,119 @@ function syncAllOpenViewsStock(changedProdId) {
     // 1. PAYMENT & SEPAY SETTINGS
     // =========================================================================
     function getPaymentSettings() {
+      const cfg = (typeof window !== "undefined" && window.MMO_SHOP_CONFIG) ? window.MMO_SHOP_CONFIG : {};
+      const defaultBankCode = cfg.BANK_CODE || "ACB";
+      const defaultBankName = cfg.BANK_NAME_DISPLAY || (defaultBankCode === "ACB" ? "Ngân hàng Á Châu (ACB)" : (defaultBankCode + " Bank"));
+      const defaultBankAcc = cfg.BANK_ACCOUNT_NUMBER || "33011557";
+      const defaultBankOwner = cfg.BANK_ACCOUNT_NAME || "NGUYEN THI KIM LONG";
+      const defaultPrefix = cfg.ORDER_PREFIX || "DH";
+      const defaultSepayKey = cfg.SEPAY_API_KEY || "G9DEXF5SZAU4XFLGHDCWZYMWY1S9MIWMISLNMY4T87SWXRFJKCZOTR25Q0EEPP2Q";
+
       try {
         const stored = localStorage.getItem("mmo_payment_settings");
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed && typeof parsed === "object") {
-            if (!parsed.bankAccount || parsed.bankAccount === "0123456789") parsed.bankAccount = "0123456789";
-            return parsed;
+            const accNum = parsed.bankAccount || parsed.accountNumber;
+            const accOwn = parsed.accountName || parsed.accountOwner;
+            // Nếu còn lưu STK cũ mặc định 0123456789 thì cập nhật sang STK ACB mới
+            const finalAcc = (!accNum || accNum === "0123456789") ? defaultBankAcc : accNum;
+            const finalOwner = (!accOwn || accOwn === "NGUYEN VAN A") ? defaultBankOwner : accOwn;
+            const finalBank = (parsed.bankCode === "MB" && defaultBankCode === "ACB") ? defaultBankCode : (parsed.bankCode || defaultBankCode);
+            const finalKey = (!parsed.sepayApiKey || parsed.sepayApiKey === "YOUR_SEPAY_API_KEY" || parsed.sepayApiKey === "spsk_live_YOUR_SEPAY_API_KEY") ? defaultSepayKey : parsed.sepayApiKey;
+            
+            return {
+              bankCode: finalBank,
+              bankName: parsed.bankName || defaultBankName,
+              bankAccount: finalAcc,
+              accountNumber: finalAcc,
+              accountName: finalOwner,
+              accountOwner: finalOwner,
+              depositPrefix: parsed.depositPrefix || defaultPrefix,
+              sepayApiKey: finalKey
+            };
           }
         }
       } catch(e) {}
+
       return {
-        bankCode: "MB",
-        bankAccount: "0123456789",
-        accountName: "NGUYEN VAN A",
-        depositPrefix: "NAP TIEN MMO",
-        sepayApiKey: "YOUR_SEPAY_API_KEY"
+        bankCode: defaultBankCode,
+        bankName: defaultBankName,
+        bankAccount: defaultBankAcc,
+        accountNumber: defaultBankAcc,
+        accountName: defaultBankOwner,
+        accountOwner: defaultBankOwner,
+        depositPrefix: defaultPrefix,
+        sepayApiKey: defaultSepayKey
       };
     }
     window.getPaymentSettings = getPaymentSettings;
 
     function loadPaymentSettingsUI() {
       const s = getPaymentSettings();
-      if (document.getElementById("setBankCode")) document.getElementById("setBankCode").value = s.bankCode || "MB";
-      if (document.getElementById("setBankAccount")) document.getElementById("setBankAccount").value = s.bankAccount || "0123456789";
-      if (document.getElementById("setAccountName")) document.getElementById("setAccountName").value = s.accountName || "NGUYEN VAN A";
-      if (document.getElementById("setDepositPrefix")) document.getElementById("setDepositPrefix").value = s.depositPrefix || "NAP TIEN MMO";
+      if (document.getElementById("setBankCode")) document.getElementById("setBankCode").value = s.bankCode || "ACB";
+      if (document.getElementById("setBankAccount")) document.getElementById("setBankAccount").value = s.bankAccount || s.accountNumber || "33011557";
+      if (document.getElementById("setAccountName")) document.getElementById("setAccountName").value = s.accountName || s.accountOwner || "NGUYEN THI KIM LONG";
+      if (document.getElementById("setDepositPrefix")) document.getElementById("setDepositPrefix").value = s.depositPrefix || "DH";
       if (document.getElementById("setSepayApiKey")) document.getElementById("setSepayApiKey").value = s.sepayApiKey || "";
     }
     window.loadPaymentSettingsUI = loadPaymentSettingsUI;
 
     function handleSavePaymentSettings(e) {
       if (e && e.preventDefault) e.preventDefault();
+      const bCode = document.getElementById("setBankCode") ? document.getElementById("setBankCode").value : "ACB";
+      const bAcc = document.getElementById("setBankAccount") ? document.getElementById("setBankAccount").value.trim() : "33011557";
+      const bOwner = document.getElementById("setAccountName") ? document.getElementById("setAccountName").value.trim().toUpperCase() : "NGUYEN THI KIM LONG";
+      const dPrefix = document.getElementById("setDepositPrefix") ? document.getElementById("setDepositPrefix").value.trim().toUpperCase() : "DH";
+      const sKey = document.getElementById("setSepayApiKey") ? document.getElementById("setSepayApiKey").value.trim() : "";
+
+      const bNameDisplay = (bCode === "ACB") ? "Ngân hàng Á Châu (ACB)" : (bCode + " Bank");
+
       const settings = {
-        bankCode: document.getElementById("setBankCode") ? document.getElementById("setBankCode").value : "MB",
-        bankAccount: document.getElementById("setBankAccount") ? document.getElementById("setBankAccount").value : "0123456789",
-        accountName: document.getElementById("setAccountName") ? document.getElementById("setAccountName").value : "NGUYEN VAN A",
-        depositPrefix: document.getElementById("setDepositPrefix") ? document.getElementById("setDepositPrefix").value : "NAP TIEN MMO",
-        sepayApiKey: document.getElementById("setSepayApiKey") ? document.getElementById("setSepayApiKey").value : ""
+        bankCode: bCode,
+        bankName: bNameDisplay,
+        bankAccount: bAcc,
+        accountNumber: bAcc,
+        accountName: bOwner,
+        accountOwner: bOwner,
+        depositPrefix: dPrefix,
+        sepayApiKey: sKey
       };
       localStorage.setItem("mmo_payment_settings", JSON.stringify(settings));
 
-      if (document.getElementById("depBankName")) document.getElementById("depBankName").innerText = settings.bankCode;
-      if (document.getElementById("depAccountNum")) document.getElementById("depAccountNum").innerText = settings.bankAccount;
-      if (document.getElementById("depAccountName")) document.getElementById("depAccountName").innerText = settings.accountName;
+      const depNameEl = document.getElementById("depositBankName") || document.getElementById("depBankName");
+      const depAccEl = document.getElementById("depositBankAcc") || document.getElementById("depAccountNum");
+      const depOwnerEl = document.getElementById("depositBankOwner") || document.getElementById("depAccountName");
 
-      showToast("🎉 Lưu cấu hình thanh toán SePay & Ngân Hàng thành công!", "success");
+      if (depNameEl) depNameEl.innerText = bNameDisplay;
+      if (depAccEl) depAccEl.innerText = bAcc;
+      if (depOwnerEl) depOwnerEl.innerText = bOwner;
+
+      // Đồng bộ thông số nạp tiền lên Google Apps Script nếu có backend
+      const cfg = (typeof window !== "undefined" && window.MMO_SHOP_CONFIG) ? window.MMO_SHOP_CONFIG : {};
+      const gasUrl = cfg.GAS_BACKEND_URL || (typeof getGeneralSettings === "function" ? getGeneralSettings().gasUrl : "");
+      if (gasUrl) {
+        try {
+          fetch(gasUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify({
+              action: "adminSaveSettings",
+              adminEmail: "khotaikhoanso.net@gmail.com",
+              settings: {
+                BANK_ID: bCode,
+                ACCOUNT_NO: bAcc,
+                ACCOUNT_NAME: bOwner,
+                ORDER_PREFIX: dPrefix,
+                SEPAY_API_KEY: sKey
+              }
+            })
+          }).catch(function(){});
+        } catch(eGas) {}
+      }
+
+      showToast("🎉 Lưu cấu hình ngân hàng & SePay API thành công!", "success");
     }
     window.handleSavePaymentSettings = handleSavePaymentSettings;
 
@@ -21213,7 +21285,7 @@ function syncAllOpenViewsStock(changedProdId) {
       const cfg = (typeof window !== "undefined" && window.MMO_SHOP_CONFIG) ? window.MMO_SHOP_CONFIG : {};
       const defaultSettings = {
         siteName: cfg.SITE_NAME || "KHO TÀI KHOẢN SỐ",
-        googleClientId: "788131580065-qev157n8l1422785caijnksf16rg1rq3.apps.googleusercontent.com",
+        googleClientId: (cfg.GOOGLE_CLIENT_ID || "13759436270-5peopcde7tukahn48025d43ap1e78iad.apps.googleusercontent.com").trim(),
         affiliateRate: 10,
         hotline: cfg.HOTLINE || "0346508659",
         email: cfg.ROOT_ADMIN_EMAIL || "khotaikhoanso.net@gmail.com",
@@ -21221,7 +21293,7 @@ function syncAllOpenViewsStock(changedProdId) {
         telegram: cfg.TELEGRAM_URL || "https://t.me/longnguyen1az",
         telegramGroup: cfg.TELEGRAM_GROUP_URL || "https://t.me/longnguyen1az",
         marqueeText: cfg.TICKER_TEXT || "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Mua bán tài khoản MMO tự động 24/7!",
-        gasUrl: cfg.GAS_BACKEND_URL || "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec",
+        gasUrl: cfg.GAS_BACKEND_URL || "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec",
         brandLogo: cfg.SITE_LOGO_URL || "",
         brandFavicon: cfg.SITE_FAVICON_URL || "",
         brandOgImage: "https://iili.io/nFV4Rln.png"
@@ -21501,7 +21573,7 @@ function syncAllOpenViewsStock(changedProdId) {
         if (settings.siteName) {
           const siteNameEl = document.getElementById("headerSiteName");
           if (siteNameEl) siteNameEl.innerText = settings.siteName;
-          document.title = settings.siteName + " - Kho Sản Phẩm Số & Dịch Vụ MMO Uy Tín";
+          document.title = settings.siteName + " - Kho Tài Khoản Số & Dịch Vụ MMO Uy Tín";
         }
 
         // 2. Logo Header, Footer, Drawer & Toàn Bộ Trang
@@ -21666,7 +21738,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       // Google Apps Script Web App URL
-      const defaultGas = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
+      const defaultGas = "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec";
       const gasVal = (s.gasUrl && s.gasUrl.trim()) ? s.gasUrl.trim() : defaultGas;
       if (document.getElementById("setGasUrl")) document.getElementById("setGasUrl").value = gasVal;
 
@@ -21793,7 +21865,7 @@ function syncAllOpenViewsStock(changedProdId) {
         const marqueeText = marqueeInput ? marqueeInput.value.trim() : (curSettings.marqueeText || "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Shop mua bán tài khoản MMO uy tín 24/7!");
 
         // Google Apps Script Web App URL
-        const defaultGas = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
+        const defaultGas = "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec";
         let gasUrl = document.getElementById("setGasUrl") ? document.getElementById("setGasUrl").value.trim() : "";
         if (!gasUrl || gasUrl.includes("AKfycbylo1VU")) {
           gasUrl = defaultGas;
@@ -22197,12 +22269,12 @@ function syncAllOpenViewsStock(changedProdId) {
       if (typeof window !== "undefined" && window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.GAS_BACKEND_URL) {
         return window.MMO_SHOP_CONFIG.GAS_BACKEND_URL;
       }
-      const CURRENT_GAS_URL = "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec";
+      const CURRENT_GAS_URL = "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec";
       try {
         const sys = typeof getGeneralSettings === "function" ? getGeneralSettings() : {};
         if (sys && sys.gasUrl && sys.gasUrl.trim()) {
           const u = sys.gasUrl.trim();
-          if (!u.includes("AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw") && !u.includes("your-shop-api")) {
+          if (!u.includes("AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T") && !u.includes("your-shop-api")) {
             return u;
           }
         }
@@ -22707,191 +22779,33 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.recordAndSaveNewOrder = recordAndSaveNewOrder;
 
-    // Tự động khôi phục đơn hàng gần đây (như đơn #MMO615855) vào bộ nhớ nếu chưa tồn tại
-    (function autoRecoverRecentOrder() {
+        // Tự động quét sạch đơn hàng tàn dư của web cũ khỏi bộ nhớ trình duyệt
+    (function autoPurgeLegacySampleOrders() {
       try {
-        const recentRealOrders = [
-          {
-            id: 'MMO730431',
-            orderId: 'MMO730431',
-            orderCode: 'MMO730431',
-            productId: 'PROD_MU2JIBBRH8',
-            productName: 'Tiktok việt reg trên 4 tháng',
-            variant: 'tiktok việt reg trên 4 tháng',
-            variantName: 'tiktok việt reg trên 4 tháng',
-            quantity: 1,
-            qty: 1,
-            price: 5000,
-            total: 5000,
-            totalPrice: 5000,
-            discount: 0,
-            credentials: '33333333333333333',
-            deliveredAccounts: ['33333333333333333'],
-            accounts: ['33333333333333333'],
-            createdTimestamp: 1790253306000,
-            createdAt: 1790253306000,
-            date: '19:35:06 24/09/2026',
-            status: 'COMPLETED',
-            statusText: 'Hoàn thành',
-            type: 'REGULAR',
-            userEmail: 'digimarketmmo@gmail.com',
-            email: 'digimarketmmo@gmail.com',
-            buyerEmail: 'digimarketmmo@gmail.com',
-            username: 'digimarketmmo',
-            buyerUsername: 'digimarketmmo'
-          },
-          {
-            id: 'MMO774463',
-            orderId: 'MMO774463',
-            orderCode: 'MMO774463',
-            productId: 'PROD_MU2JIBBRH8',
-            productName: 'Tiktok việt reg trên 4 tháng',
-            variant: 'tiktok việt reg trên 4 tháng',
-            variantName: 'tiktok việt reg trên 4 tháng',
-            quantity: 1,
-            qty: 1,
-            price: 5000,
-            total: 5000,
-            totalPrice: 5000,
-            discount: 0,
-            credentials: '2222222222222222',
-            deliveredAccounts: ['2222222222222222'],
-            accounts: ['2222222222222222'],
-            createdTimestamp: 1790253071000,
-            createdAt: 1790253071000,
-            date: '19:31:11 24/09/2026',
-            status: 'COMPLETED',
-            statusText: 'Hoàn thành',
-            type: 'REGULAR',
-            userEmail: 'digimarketmmo@gmail.com',
-            email: 'digimarketmmo@gmail.com',
-            buyerEmail: 'digimarketmmo@gmail.com',
-            username: 'digimarketmmo',
-            buyerUsername: 'digimarketmmo'
-          },
-          {
-            id: 'MMO655944',
-            orderId: 'MMO655944',
-            orderCode: 'MMO655944',
-            productId: 'PROD_MU2JIBBRH8',
-            productName: 'Tiktok việt reg trên 4 tháng',
-            variant: 'tiktok việt reg trên 4 tháng',
-            variantName: 'tiktok việt reg trên 4 tháng',
-            quantity: 1,
-            qty: 1,
-            price: 5000,
-            total: 5000,
-            totalPrice: 5000,
-            discount: 0,
-            credentials: '000000000098',
-            deliveredAccounts: ['000000000098'],
-            accounts: ['000000000098'],
-            createdTimestamp: 1790252156000,
-            createdAt: 1790252156000,
-            date: '19:15:56 24/09/2026',
-            status: 'COMPLETED',
-            statusText: 'Hoàn thành',
-            type: 'REGULAR',
-            userEmail: 'digimarketmmo@gmail.com',
-            email: 'digimarketmmo@gmail.com',
-            buyerEmail: 'digimarketmmo@gmail.com',
-            username: 'digimarketmmo',
-            buyerUsername: 'digimarketmmo'
-          },
-          {
-            id: 'MMO445114',
-            orderId: 'MMO445114',
-            orderCode: 'MMO445114',
-            productId: 'PROD_MU2JIBBRH8',
-            productName: 'Tiktok việt reg trên 4 tháng',
-            variant: 'tiktok việt reg trên 4 tháng',
-            variantName: 'tiktok việt reg trên 4 tháng',
-            quantity: 1,
-            qty: 1,
-            price: 5000,
-            total: 5000,
-            totalPrice: 5000,
-            discount: 0,
-            credentials: '888888888888888888888889',
-            deliveredAccounts: ['888888888888888888888889'],
-            accounts: ['888888888888888888888889'],
-            createdTimestamp: 1790252109000,
-            createdAt: 1790252109000,
-            date: '19:15:09 24/09/2026',
-            status: 'COMPLETED',
-            statusText: 'Hoàn thành',
-            type: 'REGULAR',
-            userEmail: 'digimarketmmo@gmail.com',
-            email: 'digimarketmmo@gmail.com',
-            buyerEmail: 'digimarketmmo@gmail.com',
-            username: 'digimarketmmo',
-            buyerUsername: 'digimarketmmo'
-          },
-          {
-            id: 'MMO615855',
-            orderId: 'MMO615855',
-            orderCode: 'MMO615855',
-            productId: 'PROD_MU2JIBBRH8',
-            productName: 'Tiktok việt reg trên 4 tháng',
-            variant: 'tiktok việt reg trên 4 tháng',
-            variantName: 'tiktok việt reg trên 4 tháng',
-            quantity: 1,
-            qty: 1,
-            price: 5000,
-            total: 5000,
-            totalPrice: 5000,
-            discount: 0,
-            credentials: '777777777777',
-            deliveredAccounts: ['777777777777'],
-            accounts: ['777777777777'],
-            createdTimestamp: 1790249942000,
-            createdAt: 1790249942000,
-            date: '18:39:02 24/09/2026',
-            status: 'COMPLETED',
-            statusText: 'Hoàn thành',
-            type: 'REGULAR',
-            userEmail: 'digimarketmmo@gmail.com',
-            email: 'digimarketmmo@gmail.com',
-            buyerEmail: 'digimarketmmo@gmail.com',
-            username: 'digimarketmmo',
-            buyerUsername: 'digimarketmmo'
-          }
-        ];
-
-        let all = [];
-        try { all = JSON.parse(localStorage.getItem('mmo_all_orders') || '[]'); } catch(e) {}
-        let userOrders = [];
-        try { userOrders = JSON.parse(localStorage.getItem('mmo_user_orders') || '[]'); } catch(e) {}
-        let orders = [];
-        try { orders = JSON.parse(localStorage.getItem('mmo_orders') || '[]'); } catch(e) {}
-
-        recentRealOrders.forEach(function(rec) {
-          const cId = rec.id;
-          if (!all.some(o => (o && String(o.id || o.orderId || '').replace('#','').trim() === cId))) {
-            all.unshift(rec);
-          }
-          if (!userOrders.some(o => (o && String(o.id || o.orderId || '').replace('#','').trim() === cId))) {
-            userOrders.unshift(rec);
-          }
-          if (!orders.some(o => (o && String(o.id || o.orderId || '').replace('#','').trim() === cId))) {
-            orders.unshift(rec);
-          }
-          if (!window._mmoInMemoryOrders) window._mmoInMemoryOrders = [];
-          if (!window._mmoInMemoryOrders.some(o => (o && String(o.id || o.orderId || '').replace('#','').trim() === cId))) {
-            window._mmoInMemoryOrders.unshift(rec);
-          }
-        });
-
-        if (typeof safeStorageSet === 'function') {
-          safeStorageSet('mmo_all_orders', all, 250);
-          safeStorageSet('mmo_user_orders', userOrders, 250);
-          safeStorageSet('mmo_orders', orders, 250);
-        } else {
+        const legacyBadKeys = ['mmo_all_orders', 'mmo_user_orders', 'mmo_orders', 'mmo_pre_orders'];
+        legacyBadKeys.forEach(function(k) {
+          const raw = localStorage.getItem(k);
+          if (!raw) return;
           try {
-            localStorage.setItem('mmo_all_orders', JSON.stringify(all));
-            localStorage.setItem('mmo_user_orders', JSON.stringify(userOrders));
-            localStorage.setItem('mmo_orders', JSON.stringify(orders));
+            const arr = JSON.parse(raw);
+            if (!Array.isArray(arr)) return;
+            const filtered = arr.filter(function(o) {
+              if (!o) return false;
+              const em = String(o.userEmail || o.email || o.buyerEmail || '').toLowerCase();
+              const id = String(o.id || o.orderId || o.orderCode || '');
+              if (em.includes('digimarketmmo') || em.includes('muabantaikhoanmmo') || em.includes('manhdong')) return false;
+              if (id.startsWith('MMO730431') || id.startsWith('MMO774463') || id.startsWith('MMO655944') || id.startsWith('MMO445114') || id.startsWith('MMO615855')) return false;
+              return true;
+            });
+            localStorage.setItem(k, JSON.stringify(filtered));
           } catch(e) {}
+        });
+        if (window._mmoInMemoryOrders && Array.isArray(window._mmoInMemoryOrders)) {
+          window._mmoInMemoryOrders = window._mmoInMemoryOrders.filter(function(o) {
+            if (!o) return false;
+            const em = String(o.userEmail || o.email || o.buyerEmail || '').toLowerCase();
+            return !em.includes('digimarketmmo') && !em.includes('muabantaikhoanmmo');
+          });
         }
       } catch(e) {}
     })();
@@ -23221,8 +23135,8 @@ function syncAllOpenViewsStock(changedProdId) {
             if (!rawId) return;
             const cleanId = rawId.startsWith("#") ? rawId.replace("#", "").trim() : rawId;
 
-            // Bỏ qua bản ghi TX_PO_ rác
-            if (rawId.startsWith("TX_PO_") && (!o.credentials && !o.deliveredAccounts) && (!o.total || o.total <= 0)) {
+            // Bỏ qua bản ghi TX_PO_ rác và đơn hàng cũ của web cũ MM
+            if ((rawId.startsWith("TX_PO_") && (!o.credentials && !o.deliveredAccounts) && (!o.total || o.total <= 0)) || rawId.startsWith("MM") || rawId.includes("muabantaikhoanmmo") || (o.date && o.date.includes("24/09/2026"))) {
               return;
             }
 
@@ -36224,7 +36138,7 @@ function getProductSchemaReviews(p, idx) {
       try {
         if (typeof playNotificationSound === "function") playNotificationSound();
         else {
-          const audio = new Audio("https://cdn.jsdelivr.net/gh/digimarketmmo/mmoshop-cdn@main/assets/audio/success.mp3");
+          const audio = new Audio("https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/audio/success.mp3");
           audio.play().catch(function(){});
         }
       } catch(eAudio) {}
@@ -38471,7 +38385,7 @@ function getProductSchemaReviews(p, idx) {
       if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
 
       // 3. Tự động gửi tin nhắn chat đến khách hàng
-      const messageToCustomer = "✅ ADMIN ĐÃ DUYỆT BẢO HÀNH ĐỔI TRẢ 1-ĐỔI-1 CHO ĐƠN HÀNG #" + orderId + "!\n🎁 Tài khoản mới thay thế của bạn:\n" + newCreds + "\nQuý khách vui lòng đăng nhập kiểm tra lại. Cảm ơn bạn đã tin tưởng MuaBanTaiKhoanMMO!";
+      const messageToCustomer = "✅ ADMIN ĐÃ DUYỆT BẢO HÀNH ĐỔI TRẢ 1-ĐỔI-1 CHO ĐƠN HÀNG #" + orderId + "!\n🎁 Tài khoản mới thay thế của bạn:\n" + newCreds + "\nQuý khách vui lòng đăng nhập kiểm tra lại. Cảm ơn bạn đã tin tưởng " + ((window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.SITE_NAME) || "KHO TÀI KHOẢN SỐ") + "!";
       if (targetEmail && targetEmail !== "--" && typeof sendAdminAutoMessage === "function") {
         sendAdminAutoMessage(targetEmail, messageToCustomer);
       }
