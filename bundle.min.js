@@ -523,7 +523,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "32035",
           "sourceProdName": "Capcut Pro 6-7 ngày dùng riêng 2 tb, bảo hành full",
           "sourcePrice": 14000,
@@ -542,7 +542,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "32035",
       "sourceProdName": "Capcut Pro 6-7 ngày dùng riêng 2 tb, bảo hành full",
       "sourcePrice": 14000,
@@ -621,7 +621,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "32822",
           "sourceProdName": "MAIL VIỆT CỔ KÈM KÊNH RANDOM 200x-2026 - GMAIL CỔ KÈM KÊNH CỔ RANDOM 200x-2018 – TRUST CAO, CHƯA QUA DỊCH VỤ | KHÔNG DÍNH SĐT ẨN",
           "sourcePrice": 34000,
@@ -639,7 +639,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "32822",
       "sourceProdName": "MAIL VIỆT CỔ KÈM KÊNH RANDOM 200x-2026 - GMAIL CỔ KÈM KÊNH CỔ RANDOM 200x-2018 – TRUST CAO, CHƯA QUA DỊCH VỤ | KHÔNG DÍNH SĐT ẨN",
       "sourcePrice": 34000,
@@ -669,7 +669,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "26784",
           "sourceProdName": "gmail new ngâm 1- 10 ngày(chỉ log phone)no 2fa",
           "sourcePrice": 13000,
@@ -687,7 +687,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "26784",
       "sourceProdName": "gmail new ngâm 1- 10 ngày(chỉ log phone)no 2fa",
       "sourcePrice": 13000,
@@ -717,7 +717,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "26774",
           "sourceProdName": "Youtube Premium: 3 Tháng",
           "sourcePrice": 80000,
@@ -735,7 +735,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "26774",
       "sourceProdName": "Youtube Premium: 3 Tháng",
       "sourcePrice": 80000,
@@ -765,7 +765,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "33131",
           "sourceProdName": "TIKTOK VIỆT CỔ ĐÃ TẠO 1-3 NĂM HOTMAIL LIVE ( RANDOM ĐẶT ĐƠN ) HÀNG BẤT TỬ",
           "sourcePrice": 2400,
@@ -783,7 +783,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "33131",
       "sourceProdName": "TIKTOK VIỆT CỔ ĐÃ TẠO 1-3 NĂM HOTMAIL LIVE ( RANDOM ĐẶT ĐƠN ) HÀNG BẤT TỬ",
       "sourcePrice": 2400,
@@ -813,7 +813,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "33131",
           "sourceProdName": "TIKTOK VIỆT CỔ ĐÃ TẠO 1-3 NĂM HOTMAIL LIVE ( RANDOM ĐẶT ĐƠN ) HÀNG BẤT TỬ",
           "sourcePrice": 2400,
@@ -831,7 +831,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "33131",
       "sourceProdName": "TIKTOK VIỆT CỔ ĐÃ TẠO 1-3 NĂM HOTMAIL LIVE ( RANDOM ĐẶT ĐƠN ) HÀNG BẤT TỬ",
       "sourcePrice": 2400,
@@ -861,7 +861,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "32088",
           "sourceProdName": "🔥Chat GPT Plus GGPay | 1 tháng - Bảo hành 24h - Chat gqt Plus Riêng tư - Dùng 1 tháng, Bảo hành full",
           "sourcePrice": 172000,
@@ -879,7 +879,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "32088",
       "sourceProdName": "🔥Chat GPT Plus GGPay | 1 tháng - Bảo hành 24h - Chat gqt Plus Riêng tư - Dùng 1 tháng, Bảo hành full",
       "sourcePrice": 172000,
@@ -909,7 +909,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "34324",
           "sourceProdName": "Proxy IPv6 Proxy Nhật (1 tháng)",
           "sourcePrice": 550,
@@ -927,7 +927,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "34324",
       "sourceProdName": "Proxy IPv6 Proxy Nhật (1 tháng)",
       "sourcePrice": 550,
@@ -957,7 +957,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "25460",
           "sourceProdName": "Surfshark VPN (7 Days)",
           "sourcePrice": 7500,
@@ -975,7 +975,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "25460",
       "sourceProdName": "Surfshark VPN (7 Days)",
       "sourcePrice": 7500,
@@ -1005,7 +1005,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+          "apiKey": "",
           "sourceProdId": "125564",
           "sourceProdName": "API CODEX 10M Tokens - 1 DAYS",
           "sourcePrice": 54337.5,
@@ -1023,7 +1023,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+      "apiKey": "",
       "sourceProdId": "125564",
       "sourceProdName": "API CODEX 10M Tokens - 1 DAYS",
       "sourcePrice": 54337.5,
@@ -1053,7 +1053,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "26777",
           "sourceProdName": "Youtube Premium: 1 Tháng",
           "sourcePrice": 30000,
@@ -1071,7 +1071,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "26777",
       "sourceProdName": "Youtube Premium: 1 Tháng",
       "sourcePrice": 30000,
@@ -1101,7 +1101,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+          "apiKey": "",
           "sourceProdId": "128006",
           "sourceProdName": "Threads Random Veri Phone",
           "sourcePrice": 47840,
@@ -1119,7 +1119,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+      "apiKey": "",
       "sourceProdId": "128006",
       "sourceProdName": "Threads Random Veri Phone",
       "sourcePrice": 47840,
@@ -1149,7 +1149,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+          "apiKey": "",
           "sourceProdId": "119457",
           "sourceProdName": "0. INSTAGRAM ĐÃ QUA SỬ DỤNG - RANDOM IP - NAME RANDOM",
           "sourcePrice": 3036,
@@ -1167,7 +1167,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+      "apiKey": "",
       "sourceProdId": "119457",
       "sourceProdName": "0. INSTAGRAM ĐÃ QUA SỬ DỤNG - RANDOM IP - NAME RANDOM",
       "sourcePrice": 3036,
@@ -1197,7 +1197,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "34136",
           "sourceProdName": "Proxy US - 1 ngày",
           "sourcePrice": 792,
@@ -1215,7 +1215,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "34136",
       "sourceProdName": "Proxy US - 1 ngày",
       "sourcePrice": 792,
@@ -1245,7 +1245,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "34136",
           "sourceProdName": "Proxy US - 1 ngày",
           "sourcePrice": 792,
@@ -1263,7 +1263,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "34136",
       "sourceProdName": "Proxy US - 1 ngày",
       "sourcePrice": 792,
@@ -1293,7 +1293,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "17406",
           "sourceProdName": "IG khỏe ngâm trên 6 tháng - IG strong over 6 months",
           "sourcePrice": 7500,
@@ -1311,7 +1311,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "17406",
       "sourceProdName": "IG khỏe ngâm trên 6 tháng - IG strong over 6 months",
       "sourcePrice": 7500,
@@ -1341,7 +1341,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "34234",
           "sourceProdName": "Đổi IP Mobile 4G VinaPhone 5 Phút (1 Ngày)",
           "sourcePrice": 13500,
@@ -1359,7 +1359,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "34234",
       "sourceProdName": "Đổi IP Mobile 4G VinaPhone 5 Phút (1 Ngày)",
       "sourcePrice": 13500,
@@ -1389,7 +1389,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+          "apiKey": "",
           "sourceProdId": "122260",
           "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
           "sourcePrice": 2818,
@@ -1407,7 +1407,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+      "apiKey": "",
       "sourceProdId": "122260",
       "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
       "sourcePrice": 2818,
@@ -1437,7 +1437,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "34238",
           "sourceProdName": "Đổi IP Mobile 4G VinaPhone 5 Phút (30 Ngày)",
           "sourcePrice": 220000,
@@ -1455,7 +1455,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "34238",
       "sourceProdName": "Đổi IP Mobile 4G VinaPhone 5 Phút (30 Ngày)",
       "sourcePrice": 220000,
@@ -1485,7 +1485,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+          "apiKey": "",
           "sourceProdId": "122260",
           "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
           "sourcePrice": 2817.5,
@@ -1503,7 +1503,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+      "apiKey": "",
       "sourceProdId": "122260",
       "sourceProdName": "Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH",
       "sourcePrice": 2817.5,
@@ -1533,7 +1533,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "26784",
           "sourceProdName": "gmail new ngâm 1- 10 ngày(chỉ log phone)no 2fa",
           "sourcePrice": 13000,
@@ -1551,7 +1551,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "26784",
       "sourceProdName": "gmail new ngâm 1- 10 ngày(chỉ log phone)no 2fa",
       "sourcePrice": 13000,
@@ -1581,7 +1581,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "13629",
           "sourceProdName": "TÀI KHOẢN KLING AI 65 CREDIT",
           "sourcePrice": 960,
@@ -1599,7 +1599,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "13629",
       "sourceProdName": "TÀI KHOẢN KLING AI 65 CREDIT",
       "sourcePrice": 960,
@@ -1750,7 +1750,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "13629",
           "sourceProdName": "TÀI KHOẢN KLING AI 65 CREDIT",
           "sourcePrice": 1200,
@@ -1768,7 +1768,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "13629",
       "sourceProdName": "TÀI KHOẢN KLING AI 65 CREDIT",
       "sourcePrice": 1200,
@@ -1798,7 +1798,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "32561",
           "sourceProdName": "Hotmail Trusted Còn skip 7 days (Đã bật Oauth2)",
           "sourcePrice": 325,
@@ -1816,7 +1816,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "32561",
       "sourceProdName": "Hotmail Trusted Còn skip 7 days (Đã bật Oauth2)",
       "sourcePrice": 325,
@@ -1846,7 +1846,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "nguyenlieummo",
           "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+          "apiKey": "",
           "sourceProdId": "128981",
           "sourceProdName": "ig qua sử dụng nofa",
           "sourcePrice": 2846,
@@ -1864,7 +1864,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "nguyenlieummo",
       "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+      "apiKey": "",
       "sourceProdId": "128981",
       "sourceProdName": "ig qua sử dụng nofa",
       "sourcePrice": 2846,
@@ -1968,7 +1968,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "16159",
           "sourceProdName": "Key HMA Android/PC 20-30 Ngày ( Bảo Hành Full )",
           "sourcePrice": 8500,
@@ -1986,7 +1986,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "16159",
       "sourceProdName": "Key HMA Android/PC 20-30 Ngày ( Bảo Hành Full )",
       "sourcePrice": 8500,
@@ -2048,7 +2048,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "25265",
           "sourceProdName": "ExpressVPN (3 Days)",
           "sourcePrice": 6000,
@@ -2066,7 +2066,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "25265",
       "sourceProdName": "ExpressVPN (3 Days)",
       "sourcePrice": 6000,
@@ -2409,7 +2409,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "26001",
           "sourceProdName": "Gmail Domain Cho Thuê live 2h-4h -No Gmail - đọc thư tại 2h.api999api.com/VIEWemail - số lượng tồn kho ảo",
           "sourcePrice": 132,
@@ -2426,7 +2426,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "26001",
       "sourceProdName": "Gmail Domain Cho Thuê live 2h-4h -No Gmail - đọc thư tại 2h.api999api.com/VIEWemail - số lượng tồn kho ảo",
       "sourcePrice": 132,
@@ -2482,7 +2482,7 @@ const API_URL = "";
           "enabled": true,
           "provider": "ultrammo",
           "baseUrl": "https://ultrammo.com",
-          "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+          "apiKey": "",
           "sourceProdId": "34752",
           "sourceProdName": "12h Tiếng Anh",
           "sourcePrice": 225,
@@ -2500,7 +2500,7 @@ const API_URL = "";
       "enabled": true,
       "provider": "ultrammo",
       "baseUrl": "https://ultrammo.com",
-      "apiKey": "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+      "apiKey": "",
       "sourceProdId": "34752",
       "sourceProdName": "12h Tiếng Anh",
       "sourcePrice": 225,
@@ -5811,13 +5811,6 @@ if (typeof productOrId === "object") {
       if (!pCfg) return [];
 
       let apiKey = pCfg.apiKey || (typeof localStorage !== "undefined" ? localStorage.getItem("mmo_source_key_" + provider) : "") || "";
-      if (provider === "ultrammo") {
-        if (!apiKey || apiKey.includes("YOUR") || apiKey.includes("0yZx8elVa") || apiKey.length < 50) {
-          apiKey = "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU";
-          pCfg.apiKey = apiKey;
-          try { localStorage.setItem("mmo_source_key_ultrammo", apiKey); } catch(e) {}
-        }
-      }
 
       const countSpan = document.getElementById("admSourceSearchCount") || document.getElementById("admProdApiSourceCount");
       if (countSpan) {
@@ -6777,8 +6770,7 @@ if (typeof productOrId === "object") {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "Authorization": "Bearer MMO_ADMIN_SECURE_TOKEN_2026",
-                  "x-admin-token": "MMO_ADMIN_SECURE_TOKEN_2026"
+                  "Authorization": "Bearer " + ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "")), "x-admin-token": ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || ""))
                 },
                 body: JSON.stringify({
                   email: cleanEmail,
@@ -9756,7 +9748,7 @@ if (typeof productOrId === "object") {
 
       // [KEEPALIVE CLOUD SYNC]: Đảm bảo 100% gửi thẳng lên Worker và lưu vào Turso SQLite kể cả khi reload
       try {
-        const workerSecret = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : "MMO_ADMIN_SECURE_TOKEN_2026";
+        const workerSecret = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
         const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl) ? MMO_WORKER_API.getApiUrl() : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
         fetch(workerUrl + "/api/admin/products/save", {
           method: "POST",
@@ -10066,8 +10058,7 @@ if (typeof productOrId === "object") {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer MMO_ADMIN_SECURE_TOKEN_2026",
-            "x-admin-token": "MMO_ADMIN_SECURE_TOKEN_2026"
+            "Authorization": "Bearer " + ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "")), "x-admin-token": ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || ""))
           },
           body: JSON.stringify({
             email: email,
@@ -10082,8 +10073,7 @@ if (typeof productOrId === "object") {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer MMO_ADMIN_SECURE_TOKEN_2026",
-            "x-admin-token": "MMO_ADMIN_SECURE_TOKEN_2026"
+            "Authorization": "Bearer " + ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "")), "x-admin-token": ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || ""))
           },
           body: JSON.stringify({
             email: email,
@@ -11073,17 +11063,32 @@ if (typeof productOrId === "object") {
         // BẢO VỆ CHẶT CHẼ TÀI KHOẢN QUẢN TRỊ VIÊN (ADMIN)
         // =========================================================================
         if (isAdm) {
-          const cfgPin = (window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.ADMIN_PIN) ? String(window.MMO_SHOP_CONFIG.ADMIN_PIN).trim() : "";
-          const storedPin = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_admin_pin") || localStorage.getItem("mmo_admin_pass") || "") : "";
-          const validPin = (storedPin && storedPin.trim()) ? storedPin.trim() : (cfgPin || "888888");
+          // BẢO MẬT: XÁC THỰC MÃ PIN / SECRET SERVER-SIDE QUA WORKER (CHỐNG BYPASS PHÍA CLIENT)
+          const workerUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+            ? MMO_WORKER_API.getApiUrl()
+            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+          
+          let loginSuccess = false;
+          let adminSecretToken = "";
+          let adminSessionToken = "";
 
-          const computedPassHash = (typeof sha256Client === "function") ? (await sha256Client(pass)) : "";
-          const storedAdminHash = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_admin_pwd_hash") || "") : "";
+          try {
+            const vRes = await fetch(workerUrl + "/api/admin/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: email, pin: pass })
+            });
+            const vData = await vRes.json().catch(() => null);
+            if (vData && vData.success && vData.token) {
+              loginSuccess = true;
+              adminSecretToken = vData.token;
+              adminSessionToken = vData.session_token || "";
+            }
+          } catch(netErr) {
+            console.warn("Lỗi kết nối kiểm tra Admin Login:", netErr);
+          }
 
-          const isPinValid = (pass === validPin);
-          const isHashValid = (storedAdminHash && computedPassHash && storedAdminHash === computedPassHash);
-
-          if (!isPinValid && !isHashValid) {
+          if (!loginSuccess) {
             showToast("❌ Mật khẩu / Mã PIN Quản Trị Viên không chính xác! Đăng nhập bị từ chối.", "error");
             if (passInp) {
               passInp.value = "";
@@ -11092,8 +11097,17 @@ if (typeof productOrId === "object") {
             return;
           }
 
-          // ĐĂNG NHẬP ADMIN THÀNH CÔNG:
-          try { sessionStorage.setItem("mmo_admin_authenticated", "true"); } catch(eS) {}
+          // ĐĂNG NHẬP ADMIN THÀNH CÔNG (ĐÃ ĐƯỢC SERVER CẤP TOKEN QUẢN TRỊ):
+          try {
+            sessionStorage.setItem("mmo_admin_authenticated", "true");
+            if (adminSecretToken) {
+              localStorage.setItem("mmo_admin_secret", adminSecretToken);
+            }
+            if (adminSessionToken) {
+              localStorage.setItem("mmo_session_token", adminSessionToken);
+            }
+          } catch(eS) {}
+
           currentUser = {
             userId: "ADM_KTS_ROOT",
             name: "Quản Trị Viên (Admin)",
@@ -11105,7 +11119,6 @@ if (typeof productOrId === "object") {
           window.currentUser = currentUser;
           try {
             localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-            if (computedPassHash) localStorage.setItem("mmo_admin_pwd_hash", computedPassHash);
           } catch(eSto) {}
 
           updateUserUI();
@@ -13913,7 +13926,7 @@ if (typeof productOrId === "object") {
       },
 
       getAdminSecret: function() {
-        return ((localStorage.getItem("mmo_admin_secret") && localStorage.getItem("mmo_admin_secret").trim()) || "MMO_ADMIN_SECURE_TOKEN_2026").trim();
+        return (localStorage.getItem("mmo_admin_secret") || "").trim();
       },
 
       setAdminSecret: function(token) {
@@ -14212,7 +14225,7 @@ if (typeof productOrId === "object") {
       deleteProduct: async function(prodId) {
         try {
           if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-            const secret = MMO_WORKER_API.getAdminSecret() || "MMO_ADMIN_SECURE_TOKEN_2026";
+            const secret = MMO_WORKER_API.getAdminSecret() || (localStorage.getItem("mmo_admin_secret") || "");
             const headers = {
               "Content-Type": "application/json",
               "Authorization": "Bearer " + secret
@@ -15678,7 +15691,7 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "selltainguyenmmo.com",
         badgeColor: "#8b5cf6",
         baseUrl: "https://selltainguyenmmo.com",
-        apiKey: "e2c95231992c02fe582a536f59177052lLMCTW7NGJcxUFD1uiApZqnXg4d6mPt0",
+        apiKey: "",
         username: "LONGNGUYEN",
         initialBalance: 53400,
         rechargeUrl: "https://selltainguyenmmo.com/client/wallet"
@@ -15688,7 +15701,7 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "ultrammo.com",
         badgeColor: "#6366f1",
         baseUrl: "https://ultrammo.com",
-        apiKey: "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
+        apiKey: "",
         username: "LONGNGUYENMMO",
         initialBalance: 40000,
         rechargeUrl: "https://ultrammo.com/document-api"
@@ -15698,7 +15711,7 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "nguyenlieummo.com.vn",
         badgeColor: "#f59e0b",
         baseUrl: "https://nguyenlieummo.com.vn",
-        apiKey: "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
+        apiKey: "",
         username: "LONGNGUYENMMO",
         initialBalance: 0,
         rechargeUrl: "https://nguyenlieummo.com.vn/client/wallet"
@@ -16162,10 +16175,7 @@ function syncAllOpenViewsStock(changedProdId) {
       const baseUrl = pCfg.baseUrl || (payload && payload.baseUrl) || "https://selltainguyenmmo.com";
       let apiKey = (payload && payload.apiKey) || pCfg.apiKey || (typeof localStorage !== "undefined" ? localStorage.getItem("mmo_source_key_" + provider) : "") || "";
       if (provider === "ultrammo") {
-        if (!apiKey || apiKey.includes("YOUR") || apiKey.includes("0yZx8elVa") || apiKey.length < 50) {
-          apiKey = "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU";
-          if (pCfg) pCfg.apiKey = apiKey;
-        }
+        // Fallback removed for security
       }
 
       const isOfficialSource = ["selltainguyenmmo", "ultrammo", "nguyenlieummo"].includes(provider) ||
@@ -16674,7 +16684,7 @@ function syncAllOpenViewsStock(changedProdId) {
       try {
         const [resSelltainguyenmmo, resUltrammo, resNguyenLieu] = await Promise.allSettled([
           executeSourceApiCall("getProducts", { provider: "selltainguyenmmo", baseUrl: (API_SOURCES.selltainguyenmmo ? API_SOURCES.selltainguyenmmo.baseUrl : "https://selltainguyenmmo.com"), apiKey: (API_SOURCES.selltainguyenmmo ? API_SOURCES.selltainguyenmmo.apiKey : "") }),
-          executeSourceApiCall("getProducts", { provider: "ultrammo", baseUrl: (API_SOURCES.ultrammo ? API_SOURCES.ultrammo.baseUrl : "https://ultrammo.com"), apiKey: (API_SOURCES.ultrammo ? API_SOURCES.ultrammo.apiKey : "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU") }),
+          executeSourceApiCall("getProducts", { provider: "ultrammo", baseUrl: (API_SOURCES.ultrammo ? API_SOURCES.ultrammo.baseUrl : "https://ultrammo.com"), apiKey: (API_SOURCES.ultrammo ? API_SOURCES.ultrammo.apiKey : "") }),
           executeSourceApiCall("getProducts", { provider: "nguyenlieummo", baseUrl: (API_SOURCES.nguyenlieummo ? API_SOURCES.nguyenlieummo.baseUrl : "https://nguyenlieummo.com.vn"), apiKey: (API_SOURCES.nguyenlieummo ? API_SOURCES.nguyenlieummo.apiKey : "") })
         ]);
 
@@ -17515,7 +17525,7 @@ function syncAllOpenViewsStock(changedProdId) {
           TURSO_CLIENT.saveProduct(prod).catch(function(e) { console.warn("Lưu Turso error:", e); });
         }
         try {
-          const workerSecret = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : "MMO_ADMIN_SECURE_TOKEN_2026";
+          const workerSecret = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
           const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl) ? MMO_WORKER_API.getApiUrl() : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
           fetch(workerUrl + "/api/admin/products/save", {
             method: "POST",
@@ -18025,7 +18035,7 @@ function syncAllOpenViewsStock(changedProdId) {
           let savedKey = localStorage.getItem("mmo_source_key_" + p);
           if (p === "ultrammo") {
             if (!savedKey || savedKey.includes("0yZx8elVa") || savedKey.includes("YOUR") || savedKey.length < 50) {
-              savedKey = "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU";
+              savedKey = "";
               try { localStorage.setItem("mmo_source_key_ultrammo", savedKey); } catch(e) {}
             }
           }
@@ -22733,8 +22743,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
         const tRes = await fetch(workerUrl + "/api/admin/users", {
           headers: {
-            "Authorization": "Bearer MMO_ADMIN_SECURE_TOKEN_2026",
-            "x-admin-token": "MMO_ADMIN_SECURE_TOKEN_2026"
+            "Authorization": "Bearer " + ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "")), "x-admin-token": ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || ""))
           }
         }).then(r => r.json()).catch(() => null);
 
@@ -23256,7 +23265,7 @@ function syncAllOpenViewsStock(changedProdId) {
                     // Local có số dư dương (ví dụ vừa nạp SePay) nhưng Turso = 0 -> Sync số dư lên Turso
                     fetch(apiUrl + "/api/user/sync", {
                       method: "POST",
-                      headers: { "Content-Type": "application/json", "x-admin-token": "MMO_ADMIN_SECURE_TOKEN_2026" },
+                      headers: { "Content-Type": "application/json", "x-admin-token": ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "")) },
                       body: JSON.stringify({ email: cleanUserMail, balance: curLocalBal })
                     }).catch(() => {});
                   } else if (tursoBal !== curLocalBal && tursoBal > 0) {
@@ -25914,6 +25923,12 @@ function syncAllOpenViewsStock(changedProdId) {
         const workerCheckoutUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
           ? (MMO_WORKER_API.getApiUrl() + "/api/orders/checkout")
           : "https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/orders/checkout";
+        const reqHeaders = { "Content-Type": "application/json" };
+        const sessionTok = (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_session_token") || localStorage.getItem("mmo_admin_secret"))) || "";
+        if (sessionTok) {
+          reqHeaders["Authorization"] = "Bearer " + sessionTok;
+          reqHeaders["x-session-token"] = sessionTok;
+        }
 
         const checkoutPayload = {
           product_id: p.id,
@@ -25922,7 +25937,6 @@ function syncAllOpenViewsStock(changedProdId) {
           order_id: orderId,
           customer_email: cleanEmail,
           customer_name: (currentUser && (currentUser.name || currentUser.username)) || cleanEmail,
-          user_balance: curBal,
           amount: totalCost,
           payment_method: "BALANCE",
           api_mapping: isApiOnDemand ? apiMap : null
@@ -25930,7 +25944,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
         const wRes = await fetch(workerCheckoutUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: reqHeaders,
           body: JSON.stringify(checkoutPayload)
         });
 
@@ -34493,7 +34507,7 @@ function getProductSchemaReviews(p, idx) {
           if (workerUrl.includes('untrusted_external_source')) { workerUrl = "https://mmo-shop-api.khotaikhoanso-net.workers.dev"; }
           var secret = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function")
             ? MMO_WORKER_API.getAdminSecret()
-            : ((localStorage.getItem("mmo_admin_secret") && localStorage.getItem("mmo_admin_secret").trim()) || "MMO_ADMIN_SECURE_TOKEN_2026");
+            : (localStorage.getItem("mmo_admin_secret") || "");
 
           var headers = {
             "Content-Type": "application/json",
