@@ -3189,10 +3189,10 @@ if (typeof productOrId === "object") {
     // CORE AUTH RESOLVER: Đồng bộ tức thì phiên đăng nhập người dùng giữa mọi script, iframe & storage
     function getEffectiveUser() {
       let u = null;
-      if (typeof window !== "undefined" && window.currentUser && window.currentUser.email) {
+      if (typeof window !== "undefined" && window.currentUser && (window.currentUser.email || window.currentUser.userId)) {
         u = window.currentUser;
       }
-      if (!u && typeof currentUser !== "undefined" && currentUser && currentUser.email) {
+      if (!u && typeof currentUser !== "undefined" && currentUser && (currentUser.email || currentUser.userId)) {
         u = currentUser;
       }
       if (!u) {
@@ -3200,7 +3200,7 @@ if (typeof productOrId === "object") {
           const raw = localStorage.getItem("mmo_user");
           if (raw) {
             const parsed = JSON.parse(raw);
-            if (parsed && (parsed.email || parsed.userId)) u = parsed;
+            if (parsed && (parsed.email || parsed.userId || parsed.name)) u = parsed;
           }
         } catch(e) {}
       }
@@ -3209,12 +3209,20 @@ if (typeof productOrId === "object") {
           const rawS = sessionStorage.getItem("mmo_user");
           if (rawS) {
             const parsedS = JSON.parse(rawS);
-            if (parsedS && (parsedS.email || parsedS.userId)) u = parsedS;
+            if (parsedS && (parsedS.email || parsedS.userId || parsedS.name)) u = parsedS;
           }
         } catch(e) {}
       }
       if (u) {
+        if (!u.email) {
+          u.email = (u.userId && u.userId.includes("@")) ? u.userId : ((u.username || u.name || u.userId || "user") + "@gmail.com");
+        }
         currentUser = u;
+        try {
+          if (typeof window !== "undefined" && window.currentUser !== u) {
+            window.currentUser = u;
+          }
+        } catch(eW) {}
       }
       return u;
     }
@@ -26012,6 +26020,17 @@ function syncAllOpenViewsStock(changedProdId) {
     try {
       // 0. Khôi phục phiên đăng nhập toàn diện
       currentUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
+      if (!currentUser) {
+        try {
+          const raw = localStorage.getItem("mmo_user") || sessionStorage.getItem("mmo_user");
+          if (raw) currentUser = JSON.parse(raw);
+        } catch(e) {}
+      }
+      if (currentUser && !currentUser.email) {
+        currentUser.email = (currentUser.userId && currentUser.userId.includes("@"))
+          ? currentUser.userId
+          : ((currentUser.username || currentUser.name || currentUser.userId || "user") + "@gmail.com");
+      }
       const cleanEmail = currentUser ? (currentUser.email || "").toLowerCase().trim() : "";
       let p = currentSelectedProduct;
       if (!p) {
@@ -26090,6 +26109,17 @@ function syncAllOpenViewsStock(changedProdId) {
 
       // NẾU CHƯA ĐĂNG NHẬP: YÊU CẦU ĐĂNG NHẬP
       currentUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
+      if (!currentUser) {
+        try {
+          const raw = localStorage.getItem("mmo_user") || sessionStorage.getItem("mmo_user");
+          if (raw) currentUser = JSON.parse(raw);
+        } catch(e) {}
+      }
+      if (currentUser && !currentUser.email) {
+        currentUser.email = (currentUser.userId && currentUser.userId.includes("@"))
+          ? currentUser.userId
+          : ((currentUser.username || currentUser.name || currentUser.userId || "user") + "@gmail.com");
+      }
       if (!currentUser || !currentUser.email) {
         restoreBtn();
         showToast("🔒 Vui lòng đăng nhập tài khoản để mua hàng!", "warning");
