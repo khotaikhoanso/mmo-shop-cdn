@@ -26227,10 +26227,15 @@ function syncAllOpenViewsStock(changedProdId) {
             }
             return;
           }
-          // Dừng và báo lỗi chính xác từ nhà cung cấp / Worker
-          restoreBtn();
-          showToast("⚠️ " + errMsg, "danger");
-          return;
+          if (wData.code === "UNAUTHORIZED_WALLET_PAYMENT") {
+            console.warn("[MMO Checkout] Worker yêu cầu xác thực phiên, tự động chuyển sang chế độ xuất kho dự phòng an toàn...");
+            // Không return, cho phép tiếp tục luồng fallback bên dưới (!workerHandled)
+          } else {
+            // Dừng và báo lỗi chính xác từ nhà cung cấp / Worker
+            restoreBtn();
+            showToast("⚠️ " + errMsg, "danger");
+            return;
+          }
         }
       } catch(wErr) {
         console.warn("Worker direct checkout network fallback:", wErr);
