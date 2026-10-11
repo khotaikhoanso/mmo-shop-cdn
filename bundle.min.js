@@ -3652,15 +3652,28 @@ if (typeof productOrId === "object") {
         const stored = localStorage.getItem("mmo_user");
         if (stored) {
           currentUser = JSON.parse(stored);
-          if (currentUser) {
-            // Kiểm tra tài khoản có bị khóa từ Cloudflare Worker Turso Database (SSOT)
-            if (currentUser.email) {
-              checkUserLockedFromCloud(currentUser.email).then(isLocked => {
-                if (isLocked) {
-                  forceLogoutLockedUser(currentUser.email);
+          if (currentUser && currentUser.email) {
+            const uEm = (currentUser.email || "").toLowerCase().trim();
+            const rootEm = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
+            if (uEm !== rootEm) {
+              const aList = (typeof getAdminEmails === "function") ? getAdminEmails() : [rootEm];
+              if (!aList.map(e => (e || "").toLowerCase().trim()).includes(uEm)) {
+                if (currentUser.role === "Quản Trị Viên" || currentUser.role === "ADMIN" || currentUser.role === "Admin") {
+                  currentUser.role = "Thành Viên";
+                  try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
                 }
-              }).catch(() => {});
+                try {
+                  localStorage.removeItem("mmo_admin_pin");
+                  localStorage.removeItem("mmo_admin_pass");
+                } catch(ePin) {}
+              }
             }
+            // Kiểm tra tài khoản có bị khóa từ Cloudflare Worker Turso Database (SSOT)
+            checkUserLockedFromCloud(currentUser.email).then(isLocked => {
+              if (isLocked) {
+                forceLogoutLockedUser(currentUser.email);
+              }
+            }).catch(() => {});
           }
           if (currentUser && currentUser.email) {
             const users = getRegisteredUsers();
@@ -3680,6 +3693,10 @@ if (typeof productOrId === "object") {
               currentUser.role = found.role || currentUser.role;
               currentUser.name = found.name || currentUser.name;
               currentUser.avatar = found.avatar || currentUser.avatar;
+              if (typeof isAdminUser === "function" && !isAdminUser(currentUser)) {
+                currentUser.role = "Thành Viên";
+                found.role = "Thành Viên";
+              }
               saveRegisteredUsers(users);
               localStorage.setItem("mmo_user", JSON.stringify(currentUser));
             } else {
@@ -3714,14 +3731,19 @@ if (typeof productOrId === "object") {
     ];
 
     function getAdminEmails() {
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
       try {
         const stored = localStorage.getItem("mmo_admin_emails");
         if (stored !== null) {
           let list = JSON.parse(stored);
-          if (Array.isArray(list) && list.length > 0) return list;
+          if (Array.isArray(list) && list.length > 0) {
+            const clean = list.map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com");
+            if (!clean.includes(rootEmail)) clean.unshift(rootEmail);
+            return clean;
+          }
         }
       } catch (e) {}
-      const initial = [ROOT_ADMIN_EMAIL, "khotaikhoanso.net@gmail.com", "hoangtuananh0968@gmail.com"];
+      const initial = [rootEmail];
       try { localStorage.setItem("mmo_admin_emails", JSON.stringify(initial)); } catch(e) {}
       return initial;
     }
@@ -3848,14 +3870,14 @@ if (typeof productOrId === "object") {
       if (!user || !user.email) return false;
       
       const userEmail = (user.email || "").toLowerCase().trim();
-      if (userEmail === "hoangtuananh0968@gmail.com" || userEmail === "khotaikhoanso.net@gmail.com") return true;
-      try {
-        if (typeof localStorage !== "undefined") {
-          const pin = localStorage.getItem("mmo_admin_pin") || localStorage.getItem("mmo_admin_pass");
-          if (pin === "888888") return true;
-        }
-      } catch(ePin) {}
-      const adminList = (typeof getAdminEmails === "function") ? getAdminEmails().map(e => (e || "").toLowerCase().trim()) : [];
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
+      
+      // CHỈ HIỂN THỊ QUẢN TRỊ TRÊN TÀI KHOẢN CÓ ĐÚNG MAIL ADMIN
+      if (userEmail === rootEmail) return true;
+      
+      const adminList = (typeof getAdminEmails === "function") 
+        ? getAdminEmails().map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com") 
+        : [rootEmail];
       if (adminList.includes(userEmail)) return true;
 
       // Nếu người dùng không nằm trong danh sách Admin Email, tự động hạ quyền thành Thành Viên
@@ -3864,7 +3886,6 @@ if (typeof productOrId === "object") {
         if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === userEmail) {
           currentUser.role = "Thành Viên";
           try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
-          if (typeof updateUserUI === "function") updateUserUI();
         }
       }
 
@@ -6182,24 +6203,6 @@ if (typeof productOrId === "object") {
       let isAdm = false;
       try {
         if (typeof isAdminUser === "function") isAdm = isAdminUser();
-        if (!isAdm && typeof currentUser !== "undefined" && currentUser) {
-          const r = String(currentUser.role || "").toLowerCase();
-          const em = String(currentUser.email || "").toLowerCase().trim();
-          if (r.includes("admin") || r.includes("quản trị") || r.includes("quan tri") || em === "hoangtuananh0968@gmail.com" || em === "khotaikhoanso.net@gmail.com") isAdm = true;
-        }
-        if (!isAdm && typeof localStorage !== "undefined") {
-          const stored = localStorage.getItem("mmo_user");
-          if (stored) {
-            const u = JSON.parse(stored);
-            const ur = String(u.role || "").toLowerCase();
-            const uem = String(u.email || "").toLowerCase().trim();
-            if (ur.includes("admin") || ur.includes("quản trị") || ur.includes("quan tri") || uem === "hoangtuananh0968@gmail.com" || uem === "khotaikhoanso.net@gmail.com") isAdm = true;
-          }
-        }
-        if (!isAdm && typeof localStorage !== "undefined") {
-          const pin = localStorage.getItem("mmo_admin_pin") || localStorage.getItem("mmo_admin_pass");
-          if (pin === "888888") isAdm = true;
-        }
       } catch(e) {}
       wrap.style.display = isAdm ? "block" : "none";
       wrap.style.setProperty("display", isAdm ? "block" : "none", "important");
@@ -33802,6 +33805,11 @@ function changeAdmUsersPage(p) {
         } else if (savedView && validViews.includes(savedView) && savedView !== "viewProductDetail") {
           targetView = savedView;
         } else {
+          targetView = "viewStore";
+        }
+        
+        // CHỈ CHO PHÉP TRUY CẬP QUẢN TRỊ NẾU ĐÚNG EMAIL QUẢN TRỊ
+        if (targetView === "viewAdmin" && (typeof isAdminUser === "function" ? !isAdminUser() : true)) {
           targetView = "viewStore";
         }
         if (catParam && typeof filterCategory === "function") {
