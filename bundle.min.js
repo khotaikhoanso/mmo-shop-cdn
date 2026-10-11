@@ -11663,8 +11663,41 @@ if (typeof productOrId === "object") {
       return "mmo_notifications_" + String(email).toLowerCase().trim().replace(/[^a-z0-9_]/gi, "_");
     }
 
+    function isAntiLossNotification(n) {
+      if (!n) return false;
+      if (n.type === "PRICE_ADJUST" || n.forAdmin === true) return true;
+      const t = String(n.title || "").toLowerCase();
+      const m = String(n.message || "").toLowerCase();
+      if (t.includes("chống bán lỗ") || t.includes("nâng giá") || t.includes("bán lỗ") || t.includes("tăng giá") || t.includes("lợi nhuận")) return true;
+      if (m.includes("bảo vệ lợi nhuận") || m.includes("bán lỗ") || m.includes("chống bán lỗ") || m.includes("lợi nhuận shop")) return true;
+      return false;
+    }
+    window.isAntiLossNotification = isAntiLossNotification;
+
+    function cleanUpAntiLossNotifications() {
+      try {
+        if (typeof localStorage === "undefined") return;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("mmo_notifications_")) {
+            const raw = localStorage.getItem(key);
+            if (raw && (raw.includes("Chống Bán Lỗ") || raw.includes("PRICE_ADJUST") || raw.includes("bán lỗ") || raw.includes("bảo vệ lợi nhuận") || raw.includes("Nâng Giá") || raw.includes("lợi nhuận shop"))) {
+              const arr = JSON.parse(raw);
+              if (Array.isArray(arr)) {
+                const clean = arr.filter(n => !isAntiLossNotification(n));
+                localStorage.setItem(key, JSON.stringify(clean));
+              }
+            }
+          }
+        }
+      } catch(e) {}
+    }
+    window.cleanUpAntiLossNotifications = cleanUpAntiLossNotifications;
+    try { cleanUpAntiLossNotifications(); } catch(eClean) {}
+
     function getStoredNotifications(userEmail) {
       try {
+        cleanUpAntiLossNotifications();
         let email = userEmail;
         if (!email) {
           if (typeof isAdminUser === "function" && isAdminUser()) {
@@ -11677,7 +11710,8 @@ if (typeof productOrId === "object") {
         const raw = localStorage.getItem(key);
         if (!raw) return [];
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        const notifs = Array.isArray(parsed) ? parsed : [];
+        return notifs.filter(n => !isAntiLossNotification(n));
       } catch(e) {
         return [];
       }
@@ -11694,26 +11728,15 @@ if (typeof productOrId === "object") {
             email = (currentUser && currentUser.email) ? currentUser.email : "guest";
           }
         }
+        const cleanNotifs = (Array.isArray(notifs) ? notifs : []).filter(n => !isAntiLossNotification(n));
         const key = getUserNotificationsStorageKey(email);
-        localStorage.setItem(key, JSON.stringify(notifs.slice(0, 50)));
+        localStorage.setItem(key, JSON.stringify(cleanNotifs.slice(0, 50)));
       } catch(e) {}
     }
 
     function addUserNotification(opts) {
-      if (opts && (opts.forAdmin || opts.type === "PRICE_ADJUST" || (opts.title && (opts.title.includes("Chống Bán Lỗ") || opts.title.includes("Bán Lỗ") || opts.title.includes("Nâng Giá"))))) {
-        try {
-          const admNotifs = getStoredNotifications("admin");
-          admNotifs.unshift({
-            id: "NOTIF_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-            title: opts.title || "Thông báo hệ thống",
-            message: opts.message || "",
-            type: opts.type || "INFO",
-            time: new Date().toLocaleTimeString("vi-VN") + " " + new Date().toLocaleDateString("vi-VN"),
-            timestamp: Date.now(),
-            read: false
-          });
-          saveStoredNotifications(admNotifs.slice(0, 50), "admin");
-        } catch(e) {}
+      if (opts && isAntiLossNotification(opts)) {
+        // CẤM hiển thị thông báo chống bán lỗ trên trang người dùng hoặc chuông thông báo
         return;
       }
       try {
@@ -11782,7 +11805,9 @@ if (typeof productOrId === "object") {
 
     function renderHeaderNotifications() {
       try {
-        const notifs = getStoredNotifications();
+        cleanUpAntiLossNotifications();
+        const rawNotifs = getStoredNotifications();
+        const notifs = rawNotifs.filter(function(n) { return !isAntiLossNotification(n); });
         const unreadCount = notifs.filter(function(n) { return !n.read; }).length;
 
         const badge = document.getElementById("headerNotifBadge");
@@ -20935,20 +20960,7 @@ function syncAllOpenViewsStock(changedProdId) {
         isAuto: isSilent
       });
 
-      // Thông báo chuông & popup
-      const msg = "Đã tăng giá [" + (prod.name || prod.id) + "] từ " + formatVND(oldPrice) + " lên " + formatVND(newSafePrice) + " (+" + targetPct + "% so với vốn " + formatVND(liveCost) + ") chống bán lỗ!";
-      if (typeof addUserNotification === "function") {
-        addUserNotification({
-          title: "🛡️ Tăng Giá Chống Bán Lỗ",
-          message: msg,
-          type: "PRICE_ADJUST",
-          forAdmin: true,
-          playSound: true
-        });
-      }
-      if (!isSilent && typeof showToast === "function") {
-        showToast("🎉 " + msg, "success");
-      }
+      // CẤM hiển thị thông báo/toast chống bán lỗ trên trang người dùng (đã ghi log nội bộ qua addAutoPriceAdjustLog)
 
       // Làm mới giao diện
       if (typeof updateApiSourceAlertsBadge === "function") updateApiSourceAlertsBadge();
@@ -21094,18 +21106,7 @@ function syncAllOpenViewsStock(changedProdId) {
         if (typeof renderProductGrid === "function") renderProductGrid();
         if (typeof renderAllProductsPage === "function") renderAllProductsPage();
 
-        if (typeof showToast === "function") {
-          showToast("🛡️ [Tự Động Chống Lỗ] Đã tự động nâng giá cho " + adjustedProds.length + " sản phẩm bị tăng giá vốn (+" + configuredPct + "% lợi nhuận)!", "success");
-        }
-        if (typeof addUserNotification === "function") {
-          addUserNotification({
-            title: "🛡️ Tự Động Nâng Giá Chống Bán Lỗ",
-            message: "Hệ thống đã tự động nâng giá cho " + adjustedProds.length + " sản phẩm bị bán lỗ (+" + configuredPct + "% so với vốn).",
-            type: "PRICE_ADJUST",
-            forAdmin: true,
-            playSound: true
-          });
-        }
+        // CẤM hiển thị thông báo/toast chống bán lỗ trên trang người dùng (đã ghi log vào Auto Price Logs trong Admin)
       }
 
       return adjustedProds.length;
