@@ -23797,7 +23797,7 @@ function syncAllOpenViewsStock(changedProdId) {
             const cleanId = rawId.startsWith("#") ? rawId.replace("#", "").trim() : rawId;
 
             // Bỏ qua bản ghi TX_PO_ rác và đơn hàng cũ của web cũ MM
-            if ((rawId.startsWith("TX_PO_") && (!o.credentials && !o.deliveredAccounts) && (!o.total || o.total <= 0)) || rawId.startsWith("MM") || (o.date && o.date.includes("24/09/2026"))) {
+            if ((rawId.startsWith("TX_PO_") && (!o.credentials && !o.deliveredAccounts) && (!o.total || o.total <= 0)) || rawId.startsWith("MM")) {
               return;
             }
 
@@ -24570,6 +24570,7 @@ function syncAllOpenViewsStock(changedProdId) {
             <tbody>
               ${pageOrders.map(function(order) {
                 const oId = order.orderId || order.id || order.orderCode || '';
+                const cleanOId = String(oId).replace(/^#/, '').trim();
                 const rawStatus = String(order.status || '').toUpperCase().trim();
                 const rawCreds = String(order.credentials || order.accounts || '').trim();
                 const pName = escapeHtml(order.productName || 'Sản phẩm');
@@ -24602,31 +24603,31 @@ function syncAllOpenViewsStock(changedProdId) {
                   const effectiveDelivered = (freshPO && freshPO.deliveredAccounts && freshPO.deliveredAccounts.length > 0) ? freshPO.deliveredAccounts : (order.deliveredAccounts || (rawCreds ? [rawCreds] : []));
 
                   orderCodeHtml = `
-                    <a href="javascript:void(0)" onclick="openPreOrderDetailView('${oId}')" style="color:#f59e0b; font-weight:800; font-family:monospace; text-decoration:underline; font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer; white-space:nowrap;" title="👉 Bấm để mở xem chi tiết đơn hàng đặt trước #${oId}">#${oId} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem;"></i></a>
+                    <a href="javascript:void(0)" onclick="openPreOrderDetailView('${cleanOId}')" style="color:#f59e0b; font-weight:800; font-family:monospace; text-decoration:none; font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer; white-space:nowrap;" title="👉 Bấm để mở xem chi tiết đơn hàng đặt trước #${cleanOId}">${cleanOId} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem;"></i></a>
                     <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:3px; display:inline-block; white-space:nowrap;">ĐẶT TRƯỚC</span>
                   `;
 
                   prodTitleHtml = `
-                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; text-decoration:underline; text-decoration-color:rgba(245,158,11,0.4); white-space:nowrap;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem; opacity:0.8; color:#f59e0b;"></i></div>
+                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; text-decoration:none; white-space:nowrap;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem; opacity:0.8; color:#f59e0b;"></i></div>
                     <div style="color:#38bdf8; font-size:0.76rem; margin-top:2px; white-space:nowrap;">Loại: ${vName}</div>
                   `;
 
                   if (effectiveStatus === "COMPLETED" || (effectiveDelivered && effectiveDelivered.length > 0)) {
                     statusBadgeHtml = `
-                      <span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                      <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid #10b981; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
                         <i class="fa-solid fa-circle-check"></i> Đã Giao Hàng
                       </span>
                     `;
                     actionBtnsHtml = `
                       <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
-                        <button onclick="openPreOrderDetailView('${oId}')" title="Bấm để mở xem và sao chép tài khoản đã nhận" style="background:#10b981; color:#0b111e; border:none; border-radius:6px; padding:6px 11px; cursor:pointer; font-size:0.76rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3); white-space:nowrap;">
-                          <i class="fa-solid fa-key"></i> Nhận Acc
+                        <button onclick="openPreOrderDetailView('${cleanOId}')" title="Bấm để mở xem và sao chép tài khoản đã nhận" style="background:#0b111e; color:#10b981; border:1px solid rgba(16,185,129,0.4); border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.76rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                          <i class="fa-solid fa-key" style="color:#10b981;"></i> Nhận Acc
                         </button>
-                        <button onclick="openOrderReviewModal('${oId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#1e293b; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 11px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
-                          <i class="fa-solid fa-star"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
+                        <button onclick="openOrderReviewModal('${cleanOId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#0b111e; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
+                          <i class="fa-solid fa-star" style="color:#fbbf24;"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
                         </button>
-                        <button onclick="handleComplainOrder('${oId}')" style="background:#1e293b; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 11px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
-                          <i class="fa-solid fa-shield-halved"></i> Khiếu Nại
+                        <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
+                          <i class="fa-solid fa-shield-halved" style="color:#f87171;"></i> Khiếu Nại
                         </button>
                       </div>
                     `;
@@ -24638,7 +24639,7 @@ function syncAllOpenViewsStock(changedProdId) {
                       <span style="color:#38bdf8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Shop đang chuẩn bị acc</span>
                     `;
                     actionBtnsHtml = `
-                      <button onclick="openPreOrderDetailView('${oId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                      <button onclick="openPreOrderDetailView('${cleanOId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                         <i class="fa-solid fa-hourglass-half"></i> Theo Dõi
                       </button>
                     `;
@@ -24649,7 +24650,7 @@ function syncAllOpenViewsStock(changedProdId) {
                       </span>
                     `;
                     actionBtnsHtml = `
-                      <button onclick="openPreOrderDetailView('${oId}')" title="Xem chi tiết đơn hoàn tiền" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                      <button onclick="openPreOrderDetailView('${cleanOId}')" title="Xem chi tiết đơn hoàn tiền" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                         <i class="fa-solid fa-eye"></i> Chi Tiết
                       </button>
                     `;
@@ -24661,7 +24662,7 @@ function syncAllOpenViewsStock(changedProdId) {
                       <span style="color:#94a3b8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Hạn gom hàng: ${order.maxDays || 7} ngày</span>
                     `;
                     actionBtnsHtml = `
-                      <button onclick="openPreOrderDetailView('${oId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                      <button onclick="openPreOrderDetailView('${cleanOId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                         <i class="fa-solid fa-hourglass-half"></i> Theo Dõi
                       </button>
                     `;
@@ -24669,11 +24670,11 @@ function syncAllOpenViewsStock(changedProdId) {
                 } else {
                   // Đơn hàng mua thông thường
                   orderCodeHtml = `
-                    <a href="javascript:void(0)" onclick="openOrderCredentialsModal('${oId}')" style="color:#38bdf8; font-weight:800; font-family:monospace; text-decoration:underline; font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer; white-space:nowrap;" title="👉 Bấm để mở xem thông tin tài khoản #${oId}">#${oId} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem;"></i></a>
+                    <a href="javascript:void(0)" onclick="openOrderCredentialsModal('${cleanOId}')" style="color:#38bdf8; font-weight:800; font-family:monospace; text-decoration:none; font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer; white-space:nowrap;" title="👉 Bấm để mở xem thông tin tài khoản #${cleanOId}">${cleanOId} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem;"></i></a>
                   `;
 
                   prodTitleHtml = `
-                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; text-decoration:underline; text-decoration-color:rgba(56,189,248,0.4); white-space:nowrap;" onmouseover="this.style.color='#38bdf8'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem; opacity:0.8; color:#38bdf8;"></i></div>
+                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; text-decoration:none; white-space:nowrap;" onmouseover="this.style.color='#38bdf8'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem; opacity:0.8; color:#38bdf8;"></i></div>
                     <div style="color:#38bdf8; font-size:0.76rem; margin-top:2px; white-space:nowrap;">Loại: ${vName}</div>
                   `;
 
@@ -24697,7 +24698,7 @@ function syncAllOpenViewsStock(changedProdId) {
                     `;
                   } else {
                     statusBadgeHtml = `
-                      <span style="background:rgba(16,185,129,0.2); color:#34d399; border:1px solid #10b981; font-size:0.75rem; font-weight:800; padding:3px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                      <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid #10b981; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
                         <i class="fa-solid fa-circle-check"></i> Hoàn Thành
                       </span>
                     `;
@@ -24705,25 +24706,29 @@ function syncAllOpenViewsStock(changedProdId) {
 
                   actionBtnsHtml = `
                     <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
-                      <button onclick="openOrderCredentialsModal('${oId}')" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-weight:700; padding:6px 11px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Xem thông tin tài khoản đã nhận">
-                        <i class="fa-solid fa-key"></i> Xem Acc
+                      <button onclick="openOrderCredentialsModal('${cleanOId}')" style="background:#0b111e; color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Xem thông tin tài khoản đã nhận">
+                        <i class="fa-solid fa-key" style="color:#38bdf8;"></i> Xem Acc
                       </button>
-                      <button onclick="openOrderReviewModal('${oId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#1e293b; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 11px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
-                        <i class="fa-solid fa-star"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
+                      <button onclick="openOrderReviewModal('${cleanOId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#0b111e; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
+                        <i class="fa-solid fa-star" style="color:#fbbf24;"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
                       </button>
-                      <button onclick="handleComplainOrder('${oId}')" style="background:#1e293b; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 11px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
-                        <i class="fa-solid fa-shield-halved"></i> Khiếu Nại
+                      <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
+                        <i class="fa-solid fa-shield-halved" style="color:#f87171;"></i> Khiếu Nại
                       </button>
                     </div>
                   `;
                 }
+
+                const curU = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
+                const bUser = escapeHtml(order.buyerUsername || order.username || (curU ? (curU.username || curU.fullname || curU.name) : '') || 'Khách Hàng');
+                const bEmail = escapeHtml(order.buyerEmail || order.email || order.userEmail || (curU ? curU.email : '') || 'Tài khoản mua');
 
                 return `
                   <tr style="border-bottom:1px solid #1e293b; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
                     <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
                       <div style="display:flex; flex-direction:column; gap:2px; white-space:nowrap;">
                         <div>${orderCodeHtml}</div>
-                        <span style="color:#64748b; font-size:0.75rem; white-space:nowrap;"><i class="fa-regular fa-clock" style="font-size:0.7rem; margin-right:3px;"></i>${d}</span>
+                        <span style="color:#64748b; font-size:0.75rem; white-space:nowrap;">${d}</span>
                       </div>
                     </td>
                     <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
@@ -24733,14 +24738,14 @@ function syncAllOpenViewsStock(changedProdId) {
                     </td>
                     <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
                       <div style="white-space:nowrap;">
-                        <div style="color:#34d399; font-weight:800; font-size:0.92rem; white-space:nowrap;">${tot}</div>
+                        <div style="color:#10b981; font-weight:800; font-size:0.92rem; white-space:nowrap;">${tot}</div>
                         <div style="color:#94a3b8; font-size:0.75rem; white-space:nowrap;">SL: ${q}</div>
                       </div>
                     </td>
                     <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
                       <div style="white-space:nowrap;">
-                        <div style="color:#cbd5e1; font-size:0.78rem; white-space:nowrap;"><i class="fa-solid fa-user" style="color:#64748b; width:14px;"></i> ${escapeHtml(order.buyerUsername || 'Khách Hàng')}</div>
-                        <div style="color:#64748b; font-size:0.72rem; margin-top:2px; white-space:nowrap;"><i class="fa-solid fa-envelope" style="color:#64748b; width:14px;"></i> ${escapeHtml(order.buyerEmail || 'Tài khoản mua')}</div>
+                        <div style="color:#cbd5e1; font-size:0.78rem; white-space:nowrap;"><i class="fa-solid fa-user" style="color:#64748b; width:14px; margin-right:4px;"></i> ${bUser}</div>
+                        <div style="color:#64748b; font-size:0.72rem; margin-top:2px; white-space:nowrap;"><i class="fa-solid fa-envelope" style="color:#64748b; width:14px; margin-right:4px;"></i> ${bEmail}</div>
                       </div>
                     </td>
                     <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
