@@ -7,6 +7,19 @@ try {
   }
 } catch(eRedir) {}
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+if (typeof window !== "undefined") {
+  window.escapeHtml = escapeHtml;
+}
+
 if (typeof window !== "undefined") {
   window.cookieChoices = {
     showCookieConsentBar: function() {},
@@ -3216,11 +3229,11 @@ if (typeof productOrId === "object") {
         }
         const toast = document.createElement("div");
         toast.className = "toast-msg";
-        toast.style.cssText = "background:#0d131f; color:#fff; padding:12px 18px; border-radius:8px; border:1px solid #1e293b; box-shadow:0 8px 24px rgba(0,0,0,0.5); font-size:0.88rem; font-weight:600; display:flex; align-items:center; gap:10px; pointer-events:auto; border-left:4px solid #10b981; animation:fadeIn 0.3s ease;";
+        toast.style.cssText = "background:#0d131f; color:#fff; padding:12px 18px; border-radius:8px; border:1px solid #1e293b; box-shadow:0 8px 24px rgba(0,0,0,0.5); font-size:0.88rem; font-weight:600; display:flex; align-items:center; gap:10px; pointer-events:auto; border-left:4px solid #10b981; animation:fadeIn 0.3s ease; white-space:pre-line;";
         if (type === "danger") toast.style.borderLeftColor = "#ef4444";
         if (type === "warning") toast.style.borderLeftColor = "#f59e0b";
         if (type === "info") toast.style.borderLeftColor = "#3b82f6";
-        toast.innerHTML = msg;
+        toast.textContent = String(msg || "");
         container.appendChild(toast);
         setTimeout(() => {
           try { toast.remove(); } catch(e) {}
@@ -9200,7 +9213,7 @@ if (typeof productOrId === "object") {
       if (typeof currentUser !== "undefined" && currentUser && prodId) {
         refCode = (currentUser.email ? currentUser.email.split('@')[0] : (currentUser.userId || "aff")).toLowerCase();
       }
-      let shareUrl = "https://cuahangcuaban.com/";
+      let shareUrl = "https://www.khotaikhoanso.net/";
       if (prodId) {
         shareUrl = "https://mmo-shop-api.khotaikhoanso-net.workers.dev/og?prod=" + encodeURIComponent(prodId);
         if (refCode) shareUrl += "&ref=" + encodeURIComponent(refCode);
@@ -24846,6 +24859,15 @@ function syncAllOpenViewsStock(changedProdId) {
         }
         ogImg.setAttribute("content", cleanImg);
 
+        // Cập nhật og:image:secure_url
+        let ogImgSec = document.querySelector('meta[property="og:image:secure_url"]');
+        if (!ogImgSec) {
+          ogImgSec = document.createElement("meta");
+          ogImgSec.setAttribute("property", "og:image:secure_url");
+          document.head.appendChild(ogImgSec);
+        }
+        ogImgSec.setAttribute("content", cleanImg);
+
         // Cập nhật twitter:image
         let twImg = document.querySelector('meta[name="twitter:image"]');
         if (!twImg) {
@@ -24863,6 +24885,18 @@ function syncAllOpenViewsStock(changedProdId) {
           document.head.appendChild(linkImg);
         }
         linkImg.setAttribute("href", cleanImg);
+
+        // Cập nhật og:title & twitter:title
+        let ogTit = document.querySelector('meta[property="og:title"]');
+        if (ogTit) ogTit.setAttribute("content", pName + " | KHO TÀI KHOẢN SỐ (khotaikhoanso.net)");
+        let twTit = document.querySelector('meta[name="twitter:title"]');
+        if (twTit) twTit.setAttribute("content", pName + " | KHO TÀI KHOẢN SỐ (khotaikhoanso.net)");
+
+        // Cập nhật og:description & twitter:description
+        let ogDesc = document.querySelector('meta[property="og:description"]');
+        if (ogDesc) ogDesc.setAttribute("content", pDesc);
+        let twDesc = document.querySelector('meta[name="twitter:description"]');
+        if (twDesc) twDesc.setAttribute("content", pDesc);
 
         // Cập nhật Schema.org Product JSON-LD
         let schemaEl = document.getElementById("ktsProductJsonLdSchema");
@@ -24991,7 +25025,7 @@ function syncAllOpenViewsStock(changedProdId) {
         window._isOpeningProductDetail = true;
         window._openingProductId = cleanId;
         try {
-          const newUrl = (window.location.origin || "https://cuahangcuaban.com/") + "/?prod=" + encodeURIComponent(cleanId) + "&view=viewProductDetail";
+          const newUrl = (window.location.origin || "https://www.khotaikhoanso.net") + "/?prod=" + encodeURIComponent(cleanId) + "&view=viewProductDetail";
           window.history.replaceState({ prod: cleanId, view: "viewProductDetail" }, "", newUrl);
         } catch(e) {}
 
@@ -25263,7 +25297,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       try {
-        const newUrl = (window.location.origin || "https://cuahangcuaban.com/") + "/?prod=" + encodeURIComponent(p.id) + "&view=viewProductDetail";
+        const newUrl = (window.location.origin || "https://www.khotaikhoanso.net") + "/?prod=" + encodeURIComponent(p.id) + "&view=viewProductDetail";
         window.history.replaceState({ prod: p.id, view: "viewProductDetail" }, "", newUrl);
       } catch(e) {}
 
@@ -27212,42 +27246,61 @@ function syncAllOpenViewsStock(changedProdId) {
       if (!b) return;
 
       // Lưu lại ID bài viết đang xem để khi F5 / Reload trang không bao giờ bị mất hoặc trắng trang
+      // Lưu lại ID bài viết đang xem để khi F5 / Reload trang không bao giờ bị mất hoặc trắng trang
       let cleanShortPath = "";
       try {
         localStorage.setItem("mmo_current_blog_id", b.id);
         window.currentViewingBlog = b;
-        const curPath = (window.location.pathname || "").toLowerCase();
-        const cleanSlug = (typeof sanitizeBlogSlug === "function") ? sanitizeBlogSlug(b.slug || b.url || b.pathname || b.id) : (b.slug || "");
 
-        // 1. Nếu người dùng đang truy cập trực tiếp qua /blog/... thì giữ nguyên chuẩn SEO /blog/[cleanSlug]/
-        if (curPath.startsWith("/blog/")) {
-          cleanShortPath = "/blog/" + cleanSlug + "/";
-        } else if (curPath.split("/").filter(Boolean).length === 1 && !curPath.includes(".")) {
-          // 2. Nếu đang ở URL rút gọn đơn 1 cấp (như /tai-khoan-ai hoặc /gmail-thue) -> giữ nguyên 100% không đổi!
-          cleanShortPath = curPath.endsWith("/") ? curPath.slice(0, -1) : curPath;
-        } else {
-          // 3. Nếu người dùng vào qua link Blogger gốc /YYYY/MM/xxx.html hoặc click xem bài viết:
-          const rawPath = String(b.pathname || b.url || "").toLowerCase();
-          const rawFilenameMatch = rawPath.match(/\/([^\/\?#]+)\.html/);
-          const rawFilename = rawFilenameMatch ? rawFilenameMatch[1] : "";
-          const isOriginallyBlogPrefixed = /^blog[-_a-z0-9]/i.test(rawFilename) || (b.slug && /^blog/i.test(b.slug));
-
-          if (isOriginallyBlogPrefixed) {
-            cleanShortPath = "/blog/" + cleanSlug + "/";
-          } else if (cleanSlug) {
-            cleanShortPath = "/" + cleanSlug;
-          } else {
-            cleanShortPath = b.pathname || "";
-            if (!cleanShortPath && b.url) {
-              try { cleanShortPath = new URL(b.url).pathname; } catch(e) {}
-            }
-            cleanShortPath = cleanShortPath.replace(/^\/\d{4}\/\d{2}\//, '/');
-            if (!cleanShortPath.startsWith("/")) cleanShortPath = "/" + cleanShortPath;
-            if (!cleanShortPath.endsWith(".html") && !cleanShortPath.endsWith("/")) cleanShortPath += ".html";
-          }
+        // [CHUẨN SEO ĐƯỜNG DẪN ĐẸP]: Giữ nguyên định dạng /blog/[slug]/ thân thiện, sạch đẹp, chuyên nghiệp
+        let postSlug = (b.slug || "").toLowerCase().trim();
+        if (!postSlug && b.pathname) {
+          const m = b.pathname.match(/\/([^\/\?#]+)\.html/);
+          if (m) postSlug = m[1].replace(/^blog/i, "");
         }
+        if (!postSlug && b.url) {
+          try {
+            const u = new URL(b.url);
+            const m = u.pathname.match(/\/([^\/\?#]+)\.html/);
+            if (m) postSlug = m[1].replace(/^blog/i, "");
+          } catch(e) {}
+        }
+        if (!postSlug && b.id) postSlug = b.id;
+        postSlug = (typeof sanitizeBlogSlug === "function" ? sanitizeBlogSlug(postSlug) : postSlug)
+          .replace(/^\/+/, "").replace(/\/+$/, "").replace(/^blog\//i, "").replace(/^blog/i, "");
 
-        window.history.replaceState(null, "", window.location.origin + cleanShortPath);
+        const prettyPostPath = "/blog/" + postSlug + "/";
+        cleanShortPath = prettyPostPath;
+        window.history.replaceState({ blog: b.id, view: "viewBlogDetail" }, "", window.location.origin + prettyPostPath);
+
+        // Cập nhật thẻ Meta Open Graph, Twitter Card và Tiêu đề trang cho bài viết
+        try {
+          const fullPostUrl = window.location.origin + prettyPostPath;
+          const postImg = b.image || "https://iili.io/nGs8RDv.jpg";
+          document.title = (b.title || "Bài viết") + " | KHO TÀI KHOẢN SỐ";
+
+          let ogTit = document.querySelector('meta[property="og:title"]');
+          if (ogTit) ogTit.setAttribute("content", (b.title || "") + " | KHO TÀI KHOẢN SỐ (khotaikhoanso.net)");
+          let twTit = document.querySelector('meta[name="twitter:title"]');
+          if (twTit) twTit.setAttribute("content", (b.title || "") + " | KHO TÀI KHOẢN SỐ (khotaikhoanso.net)");
+
+          let ogDesc = document.querySelector('meta[property="og:description"]');
+          if (ogDesc) ogDesc.setAttribute("content", b.snippet || b.title || "");
+          let twDesc = document.querySelector('meta[name="twitter:description"]');
+          if (twDesc) twDesc.setAttribute("content", b.snippet || b.title || "");
+
+          let ogUrl = document.querySelector('meta[property="og:url"]');
+          if (ogUrl) ogUrl.setAttribute("content", fullPostUrl);
+
+          let ogImg = document.querySelector('meta[property="og:image"]');
+          if (ogImg) ogImg.setAttribute("content", postImg);
+          let ogImgSec = document.querySelector('meta[property="og:image:secure_url"]');
+          if (ogImgSec) ogImgSec.setAttribute("content", postImg);
+          let twImg = document.querySelector('meta[name="twitter:image"]');
+          if (twImg) twImg.setAttribute("content", postImg);
+          let linkImg = document.querySelector('link[rel="image_src"]');
+          if (linkImg) linkImg.setAttribute("href", postImg);
+        } catch(eOg) {}
       } catch(e) {}
 
       const bCat = document.getElementById("articleBreadcrumbCat");
@@ -27823,28 +27876,54 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.renderArticleRelatedGrid = renderArticleRelatedGrid;
 
+    function getCanonicalBlogShareUrl() {
+      const b = window.currentViewingBlog;
+      const curOrigin = (window.location && window.location.origin) || "https://www.khotaikhoanso.net";
+      let slug = "";
+      if (b) {
+        slug = b.slug || "";
+        if (!slug && b.pathname) {
+          const m = b.pathname.match(/\/([^\/\?#]+)\.html/);
+          if (m) slug = m[1].replace(/^blog/i, "");
+        }
+        if (!slug && b.id) slug = b.id;
+      }
+      if (!slug) {
+        const curPath = (window.location.pathname || "").toLowerCase();
+        const m = curPath.match(/\/blog\/([^\/\?#]+)/) || curPath.match(/\/([^\/\?#]+)\.html/);
+        if (m) slug = m[1].replace(/^blog/i, "");
+      }
+      if (!slug) slug = "huong-dan-dang-ky-tiktok";
+
+      // [SMART SOCIAL SHARE LINK CHO BLOG]: Link rút gọn siêu ngắn, sạch đẹp, không bị dài, chống chặn link 100%
+      return "https://mmo-shop-api.khotaikhoanso-net.workers.dev/og?post=" + encodeURIComponent(slug);
+    }
+
     function copyArticleLink() {
-      const url = window.location.href;
+      const shareUrl = getCanonicalBlogShareUrl();
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(() => {
-          if (typeof showNotification === "function") showNotification("Đã sao chép liên kết bài viết thành công!");
-          else alert("Đã sao chép liên kết bài viết!");
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          if (typeof showToast === "function") showToast("🎉 Đã sao chép liên kết bài viết chuẩn:\n" + shareUrl, "success");
+          else if (typeof showNotification === "function") showNotification("Đã sao chép liên kết bài viết thành công!");
+          else alert("Đã sao chép liên kết bài viết: " + shareUrl);
         });
       } else {
-        alert("Đã copy link bài viết!");
+        if (typeof copyTextDirect === "function") copyTextDirect(shareUrl, false);
+        if (typeof showToast === "function") showToast("🎉 Đã sao chép liên kết bài viết chuẩn:\n" + shareUrl, "success");
+        else alert("Đã copy link bài viết: " + shareUrl);
       }
     }
     window.copyArticleLink = copyArticleLink;
 
     function shareArticleFb() {
-      const url = encodeURIComponent(window.location.href);
-      window.open('https://www.facebook.com/sharer/sharer.php?u=' + url, '_blank', 'width=600,height=400');
+      const shareUrl = getCanonicalBlogShareUrl();
+      window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl), '_blank', 'width=600,height=400');
     }
     window.shareArticleFb = shareArticleFb;
 
     function shareArticleTg() {
-      const url = encodeURIComponent(window.location.href);
-      window.open('https://t.me/share/url?url=' + url, '_blank', 'width=600,height=400');
+      const shareUrl = getCanonicalBlogShareUrl();
+      window.open('https://t.me/share/url?url=' + encodeURIComponent(shareUrl), '_blank', 'width=600,height=400');
     }
     window.shareArticleTg = shareArticleTg;
 
