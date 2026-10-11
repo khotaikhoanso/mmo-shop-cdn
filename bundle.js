@@ -26547,6 +26547,14 @@ function syncAllOpenViewsStock(changedProdId) {
       const tyProdImg = document.getElementById("tyProdImg");
       if (tyProdImg) {
         tyProdImg.src = p.image || p.image_url || KTS_CLEAN_FALLBACK_SVG;
+        tyProdImg.style.width = "64px";
+        tyProdImg.style.height = "64px";
+        tyProdImg.style.minWidth = "64px";
+        tyProdImg.style.maxWidth = "64px";
+        tyProdImg.style.objectFit = "cover";
+        tyProdImg.style.borderRadius = "8px";
+        tyProdImg.style.border = "1px solid #1e293b";
+        tyProdImg.style.flexShrink = "0";
       }
       const tyProdName = document.getElementById("tyProdName");
       if (tyProdName) tyProdName.innerText = p.name;
