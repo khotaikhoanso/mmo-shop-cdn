@@ -3181,6 +3181,32 @@ if (typeof productOrId === "object") {
       }
     } catch(e) {}
 
+    // HÀM TẠO CANONICAL SLUG CHUẨN XÁC ĐỒNG BỘ 100% VỚI CLOUDFLARE WORKER & DATABASE TURSO
+    function generateCleanKtsSlug(name, id) {
+      let s = String(name || '').toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      if (!s || s === 'san-pham') s = 'tai-khoan-mmo';
+      if (!s.startsWith('kts-')) s = 'kts-' + s;
+      return s;
+    }
+    window.generateCleanKtsSlug = generateCleanKtsSlug;
+
+    // TỰ ĐỘNG KHỞI TẠO CANONICAL SLUG CHO MỌI SẢN PHẨM TRONG BỘ NHỚ CỤC BỘ (0MS IN-MEMORY HIT)
+    try {
+      if (MOCK_DATA && Array.isArray(MOCK_DATA.products)) {
+        for (let i = 0; i < MOCK_DATA.products.length; i++) {
+          const p = MOCK_DATA.products[i];
+          if (p && !p.slug) {
+            p.slug = generateCleanKtsSlug(p.name, p.id);
+          }
+        }
+      }
+    } catch(e) {}
+
     // APP STATE
     window.MOCK_DATA = MOCK_DATA;
     let currentCategory = "Tất cả";
@@ -25156,6 +25182,69 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.handleProductNotFoundUI = handleProductNotFoundUI;
 
+    function handleProductLoadRetryUI(cleanId, errMsg) {
+      if (typeof switchView === "function") switchView("viewProductDetail");
+      try { window.scrollTo(0, 0); } catch(e) {}
+      const isRateLimit = (errMsg && (/429|quá nhanh|rate-limit|RATE_LIMIT/i.test(errMsg)));
+      const titleText = isRateLimit
+        ? 'Máy chủ đang xử lý yêu cầu, vui lòng thử lại sau giây lát!'
+        : 'Không thể kết nối đến máy chủ';
+      const detailText = isRateLimit
+        ? 'Hệ thống đang bảo vệ chống spam. Vui lòng bấm "Thử lại ngay" để tiếp tục xem sản phẩm.'
+        : 'Đã xảy ra sự cố mạng khi tải sản phẩm. Vui lòng kiểm tra kết nối mạng và thử lại.';
+
+      const dtlTitleEl = document.getElementById("dtlTitle");
+      if (dtlTitleEl) dtlTitleEl.innerHTML = '<i class="fa-solid fa-clock-rotate-left" style="color:#f59e0b;"></i> ' + titleText;
+      const dtlDesc = document.getElementById("dtlDesc");
+      if (dtlDesc) {
+        dtlDesc.innerHTML = '<div style="text-align:center; padding:45px 20px; background:#070a12; border:1px solid #1e293b; border-radius:12px; margin-top:20px;">' +
+          '<div style="font-size:3rem; color:#f59e0b; margin-bottom:12px;"><i class="fa-solid fa-rotate"></i></div>' +
+          '<h3 style="color:#f8fafc; font-size:1.25rem; font-weight:700; margin-bottom:8px;">' + titleText + '</h3>' +
+          '<p style="color:#94a3b8; font-size:0.95rem; margin-bottom:24px; max-width:520px; margin-left:auto; margin-right:auto;">' + detailText + '</p>' +
+          '<div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">' +
+            '<button onclick="openProductDetailById(\'' + (typeof escapeHtml === "function" ? escapeHtml(cleanId) : cleanId) + '\')" class="btn-primary" style="padding:12px 28px; font-size:1rem; background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border:none; border-radius:10px; color:#fff; cursor:pointer; font-weight:700; box-shadow:0 4px 14px rgba(59,130,246,0.35);"><i class="fa-solid fa-arrow-rotate-right" style="margin-right:8px;"></i> Thử lại ngay</button>' +
+            '<button onclick="switchView(\'viewStore\')" class="btn-secondary" style="padding:12px 24px; font-size:1rem; background:#1e293b; border:1px solid #334155; border-radius:10px; color:#94a3b8; cursor:pointer; font-weight:600;"><i class="fa-solid fa-house" style="margin-right:8px;"></i> Về Cửa Hàng</button>' +
+          '</div>' +
+        '</div>';
+      }
+      const dtlPrice = document.getElementById("dtlPrice");
+      if (dtlPrice) dtlPrice.innerHTML = "";
+      const dtlStock = document.getElementById("dtlStock");
+      if (dtlStock) dtlStock.innerHTML = "";
+      const dtlVarContainer = document.getElementById("dtlVariantsList");
+      if (dtlVarContainer) dtlVarContainer.innerHTML = "";
+      const dtlBuyBtn = document.getElementById("dtlBuyBtn");
+      if (dtlBuyBtn) dtlBuyBtn.style.display = "none";
+    }
+    window.handleProductLoadRetryUI = handleProductLoadRetryUI;
+
+    function isProductMatch(item, queryId) {
+      if (!item || !queryId) return false;
+      if (typeof isProductDeleted === "function" && isProductDeleted(item)) return false;
+      const q = String(queryId).trim().toLowerCase();
+      const qWithoutKts = q.replace(/^kts-/, '');
+      const pId = String(item.id || '').trim().toLowerCase();
+      if (pId === q) return true;
+
+      const pSlug = String(item.slug || '').trim().toLowerCase();
+      const pSlugWithoutKts = pSlug.replace(/^kts-/, '');
+      if (pSlug && (pSlug === q || pSlugWithoutKts === q || pSlugWithoutKts === qWithoutKts || pSlug === ('kts-' + qWithoutKts))) {
+        return true;
+      }
+
+      if (item.name) {
+        const normSlug = (typeof generateCleanKtsSlug === "function") ? generateCleanKtsSlug(item.name, item.id) : "";
+        const normWithoutKts = normSlug.replace(/^kts-/, '');
+        if (normSlug === q || normWithoutKts === q || normWithoutKts === qWithoutKts) {
+          return true;
+        }
+        const pName = String(item.name).trim().toLowerCase();
+        if (pName === q) return true;
+      }
+      return false;
+    }
+    window.isProductMatch = isProductMatch;
+
     function openProductDetailById(id) {
       if (!id) return;
       const cleanId = String(id).trim();
@@ -25169,12 +25258,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
       // BƯỚC 2: TÌM SẢN PHẨM TRONG BỘ NHỚ CỤC BỘ (CHỈ LẤY SẢN PHẨM HỢP LỆ, CHƯA BỊ XÓA)
       const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
-      const isId = /^(PROD_|SP_)/i.test(cleanId);
-      let p = allProds.find(item => item && !(typeof isProductDeleted === "function" && isProductDeleted(item)) && (
-        String(item.id) === cleanId ||
-        String(item.id).toLowerCase() === cleanId.toLowerCase() ||
-        (item.slug && String(item.slug).toLowerCase() === cleanId.toLowerCase())
-      ));
+      let p = allProds.find(item => isProductMatch(item, cleanId));
 
       if (!p && typeof findShopProduct === "function") {
         const fp = findShopProduct(cleanId);
@@ -25184,12 +25268,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       if (!p && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
-        p = MOCK_DATA.products.find(item => item && !(typeof isProductDeleted === "function" && isProductDeleted(item)) && (
-          String(item.id) === cleanId ||
-          String(item.id).toLowerCase() === cleanId.toLowerCase() ||
-          (item.slug && item.slug.toLowerCase() === cleanId.toLowerCase()) ||
-          (!isId && item.name && item.name.toLowerCase() === cleanId.toLowerCase())
-        ));
+        p = MOCK_DATA.products.find(item => isProductMatch(item, cleanId));
       }
 
       if (!p) {
@@ -25198,12 +25277,7 @@ function syncAllOpenViewsStock(changedProdId) {
           if (raw) {
             const list = JSON.parse(raw);
             if (Array.isArray(list)) {
-              p = list.find(item => item && !(typeof isProductDeleted === "function" && isProductDeleted(item)) && (
-                String(item.id) === cleanId ||
-                String(item.id).toLowerCase() === cleanId.toLowerCase() ||
-                (item.slug && String(item.slug).toLowerCase() === cleanId.toLowerCase()) ||
-                (!isId && item.name && item.name.toLowerCase() === cleanId.toLowerCase())
-              ));
+              p = list.find(item => isProductMatch(item, cleanId));
               if (p && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
                 if (!MOCK_DATA.products.some(x => String(x.id) === String(p.id))) {
                   MOCK_DATA.products.unshift(p);
@@ -25260,11 +25334,13 @@ function syncAllOpenViewsStock(changedProdId) {
                 }
               }
               openProductDetailById(wp.id);
-            } else {
+            } else if (res && (res.notFound || res.code === "NOT_FOUND")) {
               handleProductNotFoundUI(cleanId);
+            } else {
+              handleProductLoadRetryUI(cleanId, res && (res.error || res.message));
             }
-          }).catch(() => {
-            handleProductNotFoundUI(cleanId);
+          }).catch(err => {
+            handleProductLoadRetryUI(cleanId, err && err.message);
           });
         } else {
           handleProductNotFoundUI(cleanId);
@@ -26229,6 +26305,11 @@ function syncAllOpenViewsStock(changedProdId) {
             if (typeof openPreOrderModal === "function") {
               setTimeout(() => openPreOrderModal(p, vIdx), 600);
             }
+            return;
+          }
+          if (wData.code === "RATE_LIMIT_EXCEEDED" || (wRes && wRes.status === 429) || (errMsg && /quá nhanh|rate limit/i.test(errMsg))) {
+            restoreBtn();
+            showToast("⚠️ " + (errMsg || "Hệ thống đang xử lý, vui lòng thử lại sau giây lát!"), "warning");
             return;
           }
           if (wData.code === "UNAUTHORIZED_WALLET_PAYMENT") {
