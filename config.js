@@ -16,26 +16,27 @@ window.MMO_SHOP_CONFIG = {
   TICKER_TEXT: "Chào mừng quý khách đến với KHO TÀI KHOẢN SỐ! Nạp tiền tự động qua VietQR duyệt tức thì trong 3 giây.",
 
   // 2. LIÊN HỆ & CHĂM SÓC KHÁCH HÀNG
-  HOTLINE: "0988.888.888",
-  ZALO_URL: "https://zalo.me/0988888888",
-  TELEGRAM_URL: "https://t.me/admin_yourshop",
+  HOTLINE: "0346508659",
+  ZALO_URL: "https://zalo.me/0346508659",
+  TELEGRAM_URL: "https://t.me/longnguyen1az",
   FACEBOOK_URL: "https://facebook.com/yourshop",
 
   // 3. TÀI KHOẢN ADMIN CAO NHẤT
   ROOT_ADMIN_EMAIL: "khotaikhoanso.net@gmail.com",
-  ADMIN_PIN: "888888",
+  ADMIN_PIN: "", // Bảo vệ trên Cloudflare Worker Secrets (Server-side PIN verification)
 
   // 4. THÔNG TIN NGÂN HÀNG NHẬN TIỀN (VIETQR)
-  BANK_CODE: "MB", // MB, VCB, TCB, ACB, TPB, VPB, BIDV, MOMO...
-  BANK_NAME_DISPLAY: "Ngân Hàng Quân Đội (MBBank)",
-  BANK_ACCOUNT_NUMBER: "0123456789",
-  BANK_ACCOUNT_NAME: "NGUYEN VAN A",
+  BANK_CODE: "ACB",
+  BANK_NAME_DISPLAY: "Ngân hàng TMCP Á Châu (ACB)",
+  BANK_ACCOUNT_NUMBER: "33011557",
+  BANK_ACCOUNT_NAME: "NGUYEN THI KIM LONG",
   ORDER_PREFIX: "DH",
 
   // 5. CỔNG SEPAY TỰ ĐỘNG
-  SEPAY_API_KEY: "spsk_live_YOUR_SEPAY_API_KEY",
+  SEPAY_API_KEY: "", // Bảo vệ trên Cloudflare Worker Secrets (WEBHOOK_SECRET)
 
   // 6. BACKEND API CLOUDFLARE WORKER & GOOGLE APPS SCRIPT
   WORKER_API_URL: "https://mmo-shop-api.khotaikhoanso-net.workers.dev",
-  GAS_BACKEND_URL: "https://script.google.com/macros/s/AKfycbzASJMRx8Z_E5soTvWS0MglpY_yyDjaQtUvXla1JtHKJmtnUARnqo4G6CM2q07Mn_dw/exec"
+  SOURCE_PROXY_URL: "https://mmo-proxy.khotaikhoanso-net.workers.dev",
+  GAS_BACKEND_URL: ""
 };
