@@ -79,15 +79,11 @@ function isForbiddenLegacyOrder(o) {
   if (!o) return true;
   var rawId = String(o.id || o.orderId || o.orderCode || "").trim();
   var cleanId = rawId.toUpperCase().replace(/^#/, "").trim();
-  if (cleanId.startsWith("MM") || cleanId.startsWith("PO_") || cleanId.startsWith("PRE") || cleanId.startsWith("TX_PO_") || cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD") || cleanId.includes("LEGACY")) return true;
+  if (cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD")) return true;
   var em = String(o.userEmail || o.email || o.buyerEmail || o.customerEmail || "").toLowerCase().trim();
-  
-  var uName = String(o.username || o.buyerUsername || o.customerName || o.userName || "").toLowerCase().trim();
-  
+  if (em === "khachhang@gmail.com" || em.includes("demo@") || em.includes("sample@")) return true;
   var pName = String(o.productName || o.prodName || "").toLowerCase();
-  if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu") || pName.includes("gmail cổ 2019") || pName.includes("tiktok việt reg") || pName.includes("tiktok việt đã ngâm")) return true;
-  var notes = String(o.customNotes || o.note || "").toLowerCase();
-  
+  if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu")) return true;
   return false;
 }
 if (typeof window !== "undefined") {
@@ -97,35 +93,16 @@ if (typeof window !== "undefined") {
 (function autoPurgeOldSiteCache() {
   try {
     var oldGas = "";
-    for (var i = localStorage.length - 1; i >= 0; i--) {
-      var k = localStorage.key(i);
-      if (!k) continue;
-      var v = localStorage.getItem(k) || "";
-      if (v.indexOf(oldGas) !== -1 || v.indexOf("your-shop-api") !== -1) {
-        localStorage.removeItem(k);
+    if (oldGas) {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (!k) continue;
+        var v = localStorage.getItem(k) || "";
+        if (v.indexOf(oldGas) !== -1 || v.indexOf("your-shop-api") !== -1) {
+          localStorage.removeItem(k);
+        }
       }
     }
-    var legacyBadKeys = ['mmo_all_orders', 'mmo_user_orders', 'mmo_orders', 'mmo_pre_orders', 'mmo_balance_logs'];
-    legacyBadKeys.forEach(function(k) {
-      var raw = localStorage.getItem(k);
-      if (!raw) return;
-      try {
-        var arr = JSON.parse(raw);
-        if (Array.isArray(arr)) {
-          var filtered = arr.filter(function(o) { return !isForbiddenLegacyOrder(o); });
-          localStorage.setItem(k, JSON.stringify(filtered));
-        }
-      } catch(e) {}
-    });
-    try {
-      var sessRaw = sessionStorage.getItem("mmo_session_orders");
-      if (sessRaw) {
-        var sessArr = JSON.parse(sessRaw);
-        if (Array.isArray(sessArr)) {
-          sessionStorage.setItem("mmo_session_orders", JSON.stringify(sessArr.filter(function(o) { return !isForbiddenLegacyOrder(o); })));
-        }
-      }
-    } catch(eSess) {}
   } catch(e) {}
 })();
 // =========================================================================
@@ -3208,7 +3185,67 @@ if (typeof productOrId === "object") {
     window.MOCK_DATA = MOCK_DATA;
     let currentCategory = "Tất cả";
     let currentBlogCategory = "Tất cả";
-    let currentUser = null;
+
+    // CORE AUTH RESOLVER: Đồng bộ tức thì phiên đăng nhập người dùng giữa mọi script, iframe & storage
+    function getEffectiveUser() {
+      let u = null;
+      if (typeof window !== "undefined" && window.currentUser && window.currentUser.email) {
+        u = window.currentUser;
+      }
+      if (!u && typeof currentUser !== "undefined" && currentUser && currentUser.email) {
+        u = currentUser;
+      }
+      if (!u) {
+        try {
+          const raw = localStorage.getItem("mmo_user");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && (parsed.email || parsed.userId)) u = parsed;
+          }
+        } catch(e) {}
+      }
+      if (!u) {
+        try {
+          const rawS = sessionStorage.getItem("mmo_user");
+          if (rawS) {
+            const parsedS = JSON.parse(rawS);
+            if (parsedS && (parsedS.email || parsedS.userId)) u = parsedS;
+          }
+        } catch(e) {}
+      }
+      if (u) {
+        currentUser = u;
+      }
+      return u;
+    }
+    window.getEffectiveUser = getEffectiveUser;
+
+    let currentUser = (typeof window !== "undefined" && window.currentUser && window.currentUser.email) ? window.currentUser : null;
+    if (!currentUser) {
+      try {
+        const stored = localStorage.getItem("mmo_user");
+        if (stored) currentUser = JSON.parse(stored);
+      } catch(e) {}
+    }
+
+    try {
+      Object.defineProperty(window, "currentUser", {
+        get: function() {
+          return currentUser || (function() {
+            try {
+              const raw = localStorage.getItem("mmo_user");
+              return raw ? JSON.parse(raw) : null;
+            } catch(e) { return null; }
+          })();
+        },
+        set: function(val) {
+          currentUser = val;
+        },
+        configurable: true,
+        enumerable: true
+      });
+    } catch(eProp) {}
+
     let currentSelectedProduct = null;
     let currentSelectedVariantIndex = 0;
     let currentSelectedPrice = 0;
@@ -3224,13 +3261,14 @@ if (typeof productOrId === "object") {
         if (!container) {
           container = document.createElement("div");
           container.id = "toastContainer";
-          container.style.cssText = "position:fixed; top:20px; right:20px; z-index:999999; display:flex; flex-direction:column; gap:10px; pointer-events:none;";
+          container.style.cssText = "position:fixed; top:20px; right:20px; z-index:2147483647 !important; display:flex; flex-direction:column; gap:10px; pointer-events:none;";
           document.body.appendChild(container);
         }
+        container.style.zIndex = "2147483647";
         const toast = document.createElement("div");
         toast.className = "toast-msg";
-        toast.style.cssText = "background:#0d131f; color:#fff; padding:12px 18px; border-radius:8px; border:1px solid #1e293b; box-shadow:0 8px 24px rgba(0,0,0,0.5); font-size:0.88rem; font-weight:600; display:flex; align-items:center; gap:10px; pointer-events:auto; border-left:4px solid #10b981; animation:fadeIn 0.3s ease; white-space:pre-line;";
-        if (type === "danger") toast.style.borderLeftColor = "#ef4444";
+        toast.style.cssText = "background:#0d131f; color:#fff; padding:12px 18px; border-radius:8px; border:1px solid #1e293b; box-shadow:0 8px 24px rgba(0,0,0,0.8); font-size:0.88rem; font-weight:600; display:flex; align-items:center; gap:10px; pointer-events:auto; border-left:4px solid #10b981; animation:fadeIn 0.3s ease; white-space:pre-line; z-index:2147483647;";
+        if (type === "danger" || type === "error") toast.style.borderLeftColor = "#ef4444";
         if (type === "warning") toast.style.borderLeftColor = "#f59e0b";
         if (type === "info") toast.style.borderLeftColor = "#3b82f6";
         toast.textContent = String(msg || "");
@@ -3249,7 +3287,15 @@ if (typeof productOrId === "object") {
     // =========================================================================
     const ROOT_ADMIN_EMAIL = (window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.ROOT_ADMIN_EMAIL) || "khotaikhoanso.net@gmail.com";
     const DEFAULT_REGISTERED_USERS = [
-      { name: "Admin Shop", email: ROOT_ADMIN_EMAIL, role: "Quản Trị Viên", balance: 0, created: "01/01/2026", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=admin" }
+      { userId: "USR_329303", email: "khotaikhoanso.net@gmail.com", name: "khotaikhoanso.net", role: "Quản Trị Viên", balance: 0, createdAt: "5/10/2026", avatar: "https://lh3.googleusercontent.com/a/ACg8ocKwXhuHBweSzZBANObl4tMn6tRc6aTYQ8rAZpkSptds9vaximo=s96-c" },
+      { userId: "USR_720463", email: "digimarketmmo@gmail.com", name: "Nguyễn Mạnh Đông", role: "Thành Viên", balance: 0, createdAt: "5/10/2026", avatar: "https://lh3.googleusercontent.com/a/ACg8ocLOWfBpR5-uEzucX2mK0hTwpcfp8dvbTDXMvrUftGmbgmSIU7o=s96-c" },
+      { userId: "USR_417540", email: "nguyenvinh09678@gmail.com", name: "Vinh Nguyen", role: "Thành Viên", balance: 6000, createdAt: "5/10/2026", avatar: "https://lh3.googleusercontent.com/a/ACg8ocKL6Y-gZYl_vKwh1gQ5flfg4j0PkVvfzNA6MQGdxmStOkZNeQ=s96-c" },
+      { userId: "USR_144343", email: "vinhnguyen0974@gmail.com", name: "vinhnguyen0974", role: "Thành Viên", balance: 0, createdAt: "5/10/2026", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=vinhnguyen0974%40gmail.com" },
+      { userId: "USR_705958", email: "nguyenthikimlong400@gmail.com", name: "kim long nguyen thi", role: "Thành Viên", balance: 10000, createdAt: "5/10/2026", avatar: "https://lh3.googleusercontent.com/a/ACg8ocJKPrNR2E_5CqePUiIhWkv2lCQH4j16fgV-J2Onk2sd-P2FyeA=s96-c" },
+      { userId: "USR_371243", email: "chidiep003@gmail.com", name: "chidiep003", role: "Thành Viên", balance: 0, createdAt: "5/10/2026", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=chidiep003%40gmail.com" },
+      { userId: "USR_475508", email: "hoangtuananh0968@gmail.com", name: "Tuan anh", role: "Thành Viên", balance: 11400, createdAt: "7/10/2026", totalSpent: 9400, totalOrders: 4, avatar: "https://lh3.googleusercontent.com/a/ACg8ocKn7NALyDWCAc_ePuncinqrhDoxOoywGoLTA3gE7hcraKZTkA=s96-c" },
+      { userId: "USR_804108", email: "hoangtuananh09668@gmail.com", name: "hoangtuananh09668", role: "Thành Viên", balance: 0, createdAt: "7/10/2026", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=hoangtuananh09668%40gmail.com" },
+      { userId: "USR_749190", email: "manhdong2022@gmail.com", name: "manhdong2022", role: "Thành Viên", balance: 0, createdAt: "9/10/2026", avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=manhdong2022%40gmail.com" }
     ];
 
     // HÀM TỰ ĐỘNG XÓA SẠCH 100% DỮ LIỆU DEMO / ĐƠN ẢO / TỒN KHO ẢO KHI KHỞI ĐỘNG
@@ -3264,7 +3310,7 @@ if (typeof productOrId === "object") {
       try {
         const stored = localStorage.getItem("mmo_registered_users");
         let users = stored ? JSON.parse(stored) : null;
-        if (!Array.isArray(users) || users.length === 0) {
+        if (!Array.isArray(users) || users.length <= 1) {
           users = JSON.parse(JSON.stringify(DEFAULT_REGISTERED_USERS));
           localStorage.setItem("mmo_registered_users", JSON.stringify(users));
         }
@@ -3402,9 +3448,11 @@ if (typeof productOrId === "object") {
             } catch(e) {}
 
             // Cập nhật lại mmo_registered_users theo đúng Cloud
+            let users = [];
+            let idx = -1;
             try {
-              let users = getRegisteredUsers();
-              const idx = users.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
+              users = getRegisteredUsers();
+              idx = users.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
               if (idx !== -1) {
                 users[idx].isLocked = isLocked;
                 users[idx].status = isLocked ? "LOCKED" : "ACTIVE";
@@ -3415,7 +3463,7 @@ if (typeof productOrId === "object") {
             // Đồng bộ số dư chuẩn từ Turso Database (SSOT 24/7)
             if (data.user.balance !== undefined && !isNaN(Number(data.user.balance))) {
               const cloudBal = Number(data.user.balance);
-              if (idx !== -1) {
+              if (idx !== -1 && users[idx]) {
                 users[idx].balance = cloudBal;
                 saveRegisteredUsers(users);
               }
@@ -3787,14 +3835,7 @@ if (typeof productOrId === "object") {
 
     function isAdminUser(user) {
       if (!user) {
-        if (typeof currentUser !== "undefined" && currentUser) {
-          user = currentUser;
-        } else {
-          try {
-            const stored = localStorage.getItem("mmo_user");
-            if (stored) user = JSON.parse(stored);
-          } catch(e) {}
-        }
+        user = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
       }
       if (!user || !user.email) return false;
       
@@ -4741,28 +4782,31 @@ if (typeof productOrId === "object") {
           if (isDemo) return;
 
           if (st !== "CANCELLED" && st !== "REFUNDED" && st !== "ĐÃ HOÀN TIỀN" && st !== "HUỶ" && st !== "ĐÃ HỦY") {
-            const amt = Number(o.total || o.totalPrice || o.totalAmount || o.amount || 0);
-            if (amt > 0) {
-              totalGMV += amt;
-              successfulOrdersCount++;
+            const pId = String(o.productId || o.prodId || "").toUpperCase();
+            const isDeposit = pId === "NAP_VI" || pId.startsWith("NAP") || oId.startsWith("DH_NAP") || oId.startsWith("NAP_");
+            if (!isDeposit) {
+              const amt = Number(o.total || o.totalPrice || o.totalAmount || o.price || o.amount || 0);
+              if (amt > 0) {
+                totalGMV += amt;
+                successfulOrdersCount++;
 
-              // Tính giá vốn nguồn thực tế nếu là sản phẩm dropship qua API nguồn (selltainguyenmmo, ultrammo, nguyenlieummo...)
-              const qty = Number(o.quantity || o.qty || 1);
-              let unitCost = 0;
-              if (typeof o.cost === "number" && o.cost > 0) {
-                unitCost = o.cost / qty;
-              } else if (typeof o.sourceCost === "number" && o.sourceCost > 0) {
-                unitCost = o.sourceCost / qty;
-              } else {
-                const pId = o.productId || o.prodId;
-                const apiMap = (typeof getApiProductMapping === "function" && pId) ? getApiProductMapping(pId) : null;
-                if (apiMap && apiMap.enabled && apiMap.sourcePrice) {
-                  unitCost = Number(apiMap.sourcePrice) || 0;
+                // Tính giá vốn nguồn thực tế nếu là sản phẩm dropship qua API nguồn (selltainguyenmmo, ultrammo, nguyenlieummo...)
+                const qty = Number(o.quantity || o.qty || 1);
+                let unitCost = 0;
+                if (typeof o.cost === "number" && o.cost > 0) {
+                  unitCost = o.cost / qty;
+                } else if (typeof o.sourceCost === "number" && o.sourceCost > 0) {
+                  unitCost = o.sourceCost / qty;
+                } else {
+                  const apiMap = (typeof getApiProductMapping === "function" && pId) ? getApiProductMapping(pId) : null;
+                  if (apiMap && apiMap.enabled && apiMap.sourcePrice) {
+                    unitCost = Number(apiMap.sourcePrice) || 0;
+                  }
                 }
+                const orderCost = unitCost * qty;
+                totalSourceCost += orderCost;
+                totalGrossProfit += Math.max(0, amt - orderCost);
               }
-              const orderCost = unitCost * qty;
-              totalSourceCost += orderCost;
-              totalGrossProfit += Math.max(0, amt - orderCost);
             }
           }
         });
@@ -4805,6 +4849,14 @@ if (typeof productOrId === "object") {
           const t = ((tx.type || "") + " " + (tx.note || "")).toLowerCase();
           if (t.includes("nạp tiền") || t.includes("sepay") || t.includes("deposit") || t.includes("ngân hàng") || t.includes("cộng tiền") || t.includes("nạp quỹ")) {
             totalDepositsFromTx += Math.abs(Number(tx.amount) || 0);
+          }
+        });
+        allOrders.forEach(function(o) {
+          const pId = String(o.productId || o.prodId || "").toUpperCase();
+          const st = String(o.status || "").toUpperCase();
+          if (pId === "NAP_VI" && (st === "COMPLETED" || st === "PAID" || st === "THÀNH CÔNG")) {
+            const depAmt = Number(o.total || o.totalPrice || o.totalAmount || o.price || o.amount || 0);
+            if (depAmt > 0) totalDepositsFromTx += depAmt;
           }
         });
         // Đảm bảo đồng bộ số dư mới nhất của currentUser (nếu đang đăng nhập) vào danh sách users
@@ -4880,8 +4932,10 @@ if (typeof productOrId === "object") {
           const isDemo = oId === "MMO888999" || oId.includes("SAMPLE") || oId.includes("DEMO") || oId.includes("TEST") || 
                          !em || !em.includes("@") || em.includes("sample") || em.includes("demo") || em === "khachhang@gmail.com" || em.includes("test@") || em.includes("khach@");
           const isCancelled = st.includes("huỷ") || st.includes("hủy") || st === "cancelled";
+          const pId = String(o.productId || o.prodId || "").toUpperCase();
+          const isDeposit = pId === "NAP_VI" || pId.startsWith("NAP") || oId.startsWith("DH_NAP") || oId.startsWith("NAP_");
 
-          if (!isDemo && !isCancelled) {
+          if (!isDemo && !isCancelled && !isDeposit) {
             const qty = Number(o.quantity || o.qty || 1);
             finalSoldOrders++;
             finalSoldAccounts += qty;
@@ -6652,25 +6706,34 @@ if (typeof productOrId === "object") {
           const completedDeposits = res.orders.filter(o => {
             if (!o) return false;
             const oId = String(o.orderId || "").trim();
-            const hasAccounts = Boolean(o.accounts || o.credentials || String(o.note || "").includes("|"));
-            const isDep = !hasAccounts && !oId.startsWith("DH") && (o.prodId === "NAP_VI" || oId.startsWith("NAP") || String(o.prodName || "").toLowerCase().includes("nạp tiền ví") || String(o.prodName || "").toLowerCase().includes("nạp tiền vào ví"));
+            const pId = String(o.prodId || "").toUpperCase();
+            const pName = String(o.prodName || "").toLowerCase();
+            const isDep = pId === "NAP_VI" || pId.startsWith("NAP") || oId.startsWith("NAP") || pName.includes("nạp tiền");
             const isPaid = o.status === "COMPLETED" || o.status === "PAID";
             return isDep && isPaid;
-          }).map(o => ({
-            id: String(o.orderId || "").trim(),
-            orderId: String(o.orderId || "").trim(),
-            prodId: "NAP_VI",
-            prodName: o.prodName || "Nạp tiền vào ví điện tử",
-            amount: Number(o.totalAmount || o.price || 0) || 20000,
-            email: (o.email || o.userEmail || "").toLowerCase().trim(),
-            userEmail: (o.email || o.userEmail || "").toLowerCase().trim(),
-            userName: o.userName || (o.email ? o.email.split("@")[0] : "Khách Hàng"),
-            status: "COMPLETED",
-            note: o.accounts || ("Đã cộng " + formatVND(Number(o.totalAmount || 0)) + " vào ví (VietQR / SePay)"),
-            time: o.createdAt || (new Date().toLocaleString("vi-VN")),
-            date: o.createdAt || (new Date().toLocaleString("vi-VN")),
-            type: "Nạp tiền VietQR / SePay"
-          }));
+          }).map(o => {
+            let realAmt = Number(o.totalAmount || o.price || 0);
+            if (o.accounts && String(o.accounts).includes("Đã cộng ")) {
+              const m = String(o.accounts).match(/Đã cộng ([\d\.]+) VN[ĐD]/i);
+              if (m && m[1]) realAmt = parseInt(m[1].replace(/\./g, ''), 10);
+            }
+            if (realAmt <= 0) realAmt = Number(o.totalAmount || o.price || 0) || 20000;
+            return {
+              id: String(o.orderId || "").trim(),
+              orderId: String(o.orderId || "").trim(),
+              prodId: "NAP_VI",
+              prodName: o.prodName || "Nạp tiền vào ví điện tử",
+              amount: realAmt,
+              email: (o.email || o.userEmail || "").toLowerCase().trim(),
+              userEmail: (o.email || o.userEmail || "").toLowerCase().trim(),
+              userName: o.userName || (o.email ? o.email.split("@")[0] : "Khách Hàng"),
+              status: "COMPLETED",
+              note: o.accounts || ("Đã cộng " + ((typeof formatVND === "function") ? formatVND(realAmt) : (realAmt + " đ")) + " vào ví (VietQR / SePay)"),
+              time: o.createdAt || (new Date().toLocaleString("vi-VN")),
+              date: o.createdAt || (new Date().toLocaleString("vi-VN")),
+              type: "Nạp tiền VietQR / SePay"
+            };
+          });
 
           if (completedDeposits.length > 0) {
             savePlatformDeposits(completedDeposits);
@@ -10493,7 +10556,50 @@ if (typeof productOrId === "object") {
       }
     }
 
+    function showAuthAlert(formType, msg, type) {
+      const alertId = formType === "register" ? "authRegisterAlert" : "authLoginAlert";
+      const alertEl = document.getElementById(alertId);
+      if (!alertEl) return;
+      alertEl.style.display = "block";
+      if (type === "error" || type === "danger") {
+        alertEl.style.background = "rgba(239, 68, 68, 0.15)";
+        alertEl.style.border = "1px solid #ef4444";
+        alertEl.style.color = "#fca5a5";
+      } else if (type === "warning") {
+        alertEl.style.background = "rgba(245, 158, 11, 0.15)";
+        alertEl.style.border = "1px solid #f59e0b";
+        alertEl.style.color = "#fcd34d";
+      } else {
+        alertEl.style.background = "rgba(16, 185, 129, 0.15)";
+        alertEl.style.border = "1px solid #10b981";
+        alertEl.style.color = "#6ee7b7";
+      }
+      alertEl.innerHTML = msg;
+    }
+    window.showAuthAlert = showAuthAlert;
+
+    function clearAuthAlerts() {
+      ["authLoginAlert", "authRegisterAlert"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.display = "none";
+          el.innerHTML = "";
+        }
+      });
+    }
+    window.clearAuthAlerts = clearAuthAlerts;
+
+    function quickSwitchToRegister(email) {
+      if (typeof switchAuthTab === "function") switchAuthTab("register");
+      const regEmail = document.getElementById("regEmailInput");
+      if (regEmail && email) regEmail.value = email;
+      const regName = document.getElementById("regNameInput");
+      if (regName) regName.focus();
+    }
+    window.quickSwitchToRegister = quickSwitchToRegister;
+
     function switchAuthTab(tab) {
+      clearAuthAlerts();
       const btnLogin = document.getElementById("tabBtnLogin");
       const btnRegister = document.getElementById("tabBtnRegister");
       const formLogin = document.getElementById("formLoginBlock");
@@ -10997,24 +11103,43 @@ if (typeof productOrId === "object") {
     window.sha256Client = sha256Client;
 
     async function handleAccountLogin() {
+      if (typeof clearAuthAlerts === "function") clearAuthAlerts();
       const emailInp = document.getElementById("loginEmailInput");
       const passInp = document.getElementById("loginPassInput");
       const email = (emailInp ? emailInp.value : "").trim().toLowerCase();
       const pass = passInp ? passInp.value : "";
 
+      if (emailInp) emailInp.style.borderColor = "#1e293b";
+      if (passInp) passInp.style.borderColor = "#1e293b";
+
       if (!email || !email.includes("@")) {
-        showToast("Vui lòng nhập địa chỉ email hợp lệ!", "warning");
-        if (emailInp) emailInp.focus();
+        const errMsg = "⚠️ Vui lòng nhập địa chỉ email hợp lệ!";
+        if (typeof showAuthAlert === "function") showAuthAlert("login", errMsg, "warning");
+        showToast(errMsg, "warning");
+        if (emailInp) {
+          emailInp.style.borderColor = "#f59e0b";
+          emailInp.focus();
+        }
         return;
       }
       if (!pass) {
-        showToast("Vui lòng nhập mật khẩu!", "warning");
-        if (passInp) passInp.focus();
+        const errMsg = "⚠️ Vui lòng nhập mật khẩu đăng nhập!";
+        if (typeof showAuthAlert === "function") showAuthAlert("login", errMsg, "warning");
+        showToast(errMsg, "warning");
+        if (passInp) {
+          passInp.style.borderColor = "#f59e0b";
+          passInp.focus();
+        }
         return;
       }
       if (pass.length < 6) {
-        showToast("Mật khẩu phải có ít nhất 6 ký tự!", "warning");
-        if (passInp) passInp.focus();
+        const errMsg = "⚠️ Mật khẩu phải có ít nhất 6 ký tự!";
+        if (typeof showAuthAlert === "function") showAuthAlert("login", errMsg, "warning");
+        showToast(errMsg, "warning");
+        if (passInp) {
+          passInp.style.borderColor = "#f59e0b";
+          passInp.focus();
+        }
         return;
       }
 
@@ -11031,8 +11156,13 @@ if (typeof productOrId === "object") {
         const isLockedCloud = await checkUserLockedFromCloud(email);
         if (isLockedCloud) {
           if (btnLogin) { btnLogin.disabled = false; btnLogin.style.opacity = "1"; btnLogin.innerHTML = origBtnText; }
-          closeModal("authModal");
-          forceLogoutLockedUser(email);
+          const lockMsg = "⛔ Tài khoản của bạn đã bị tạm khóa do vi phạm chính sách! Vui lòng liên hệ hỗ trợ.";
+          if (typeof showAuthAlert === "function") showAuthAlert("login", lockMsg, "error");
+          showToast(lockMsg, "error");
+          setTimeout(() => {
+            closeModal("authModal");
+            forceLogoutLockedUser(email);
+          }, 2000);
           return;
         }
 
@@ -11044,7 +11174,6 @@ if (typeof productOrId === "object") {
         // BẢO VỆ CHẶT CHẼ TÀI KHOẢN QUẢN TRỊ VIÊN (ADMIN)
         // =========================================================================
         if (isAdm) {
-          // BẢO MẬT: XÁC THỰC MÃ PIN / SECRET SERVER-SIDE QUA WORKER (CHỐNG BYPASS PHÍA CLIENT)
           const workerUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
             ? MMO_WORKER_API.getApiUrl()
             : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
@@ -11070,15 +11199,18 @@ if (typeof productOrId === "object") {
           }
 
           if (!loginSuccess) {
-            showToast("❌ Mật khẩu / Mã PIN Quản Trị Viên không chính xác! Đăng nhập bị từ chối.", "error");
+            const admErrMsg = "❌ Mật khẩu / Mã PIN Quản Trị Viên không chính xác! Đăng nhập bị từ chối.";
+            if (typeof showAuthAlert === "function") showAuthAlert("login", admErrMsg, "error");
+            showToast(admErrMsg, "error");
             if (passInp) {
+              passInp.style.borderColor = "#ef4444";
               passInp.value = "";
               passInp.focus();
             }
             return;
           }
 
-          // ĐĂNG NHẬP ADMIN THÀNH CÔNG (ĐÃ ĐƯỢC SERVER CẤP TOKEN QUẢN TRỊ):
+          // ĐĂNG NHẬP ADMIN THÀNH CÔNG:
           try {
             sessionStorage.setItem("mmo_admin_authenticated", "true");
             if (adminSecretToken) {
@@ -11112,18 +11244,54 @@ if (typeof productOrId === "object") {
         // =========================================================================
         // XÁC THỰC THÀNH VIÊN THƯỜNG (MEMBER)
         // =========================================================================
-        const users = getRegisteredUsers();
-        const found = users.find(u => (u.email || "").toLowerCase().trim() === email);
+        let users = getRegisteredUsers();
+        let found = users.find(u => (u.email || "").toLowerCase().trim() === email);
 
+        // Nếu máy khách chưa có thông tin tài khoản, truy vấn ngay từ Cloud Worker Turso DB
         if (!found) {
-          showToast("❌ Tài khoản [" + email + "] chưa được đăng ký! Vui lòng bấm 'Đăng ký tài khoản mới'.", "warning");
+          try {
+            const cloudRes = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/user/wallet?email=" + encodeURIComponent(email));
+            const cloudData = await cloudRes.json().catch(() => null);
+            if (cloudData && cloudData.success && cloudData.user && cloudData.user.email) {
+              const cu = cloudData.user;
+              found = {
+                userId: cu.id || ("USR_" + Date.now()),
+                name: cu.name || email.split("@")[0],
+                email: email,
+                role: cu.role || "Thành Viên",
+                balance: Number(cu.balance || cloudData.balance || 0),
+                avatar: cu.avatar || ("https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(email)),
+                isLocked: Boolean(cu.is_locked),
+                created: cu.created_at || new Date().toLocaleDateString("vi-VN")
+              };
+              users.push(found);
+              saveRegisteredUsers(users);
+            }
+          } catch(eCloud) {
+            console.warn("Lỗi kiểm tra user Cloud:", eCloud);
+          }
+        }
+
+        // NẾU TÀI KHOẢN CHƯA ĐƯỢC ĐĂNG KÝ
+        if (!found) {
+          const notExistMsg = `⚠️ Tài khoản <strong style="color:#fff;">${email}</strong> chưa được đăng ký trên hệ thống!<br/><span style="font-size:0.8rem; color:#94a3b8;">Vui lòng kiểm tra lại địa chỉ email hoặc</span><br/><a href="javascript:void(0)" onclick="quickSwitchToRegister('${email}')" style="display:inline-block; margin-top:6px; color:#38bdf8; font-weight:700; text-decoration:underline;"><i class="fa-solid fa-user-plus"></i> Bấm vào đây để Đăng Ký Tài Khoản Mới</a>`;
+          if (typeof showAuthAlert === "function") showAuthAlert("login", notExistMsg, "warning");
+          showToast("⚠️ Tài khoản [" + email + "] chưa được đăng ký! Vui lòng bấm 'Đăng ký tài khoản mới'.", "warning");
+          if (emailInp) {
+            emailInp.style.borderColor = "#f59e0b";
+            emailInp.focus();
+          }
           return;
         }
 
+        // KIỂM TRA MẬT KHẨU
         const computedHash = await sha256Client(pass);
         if (found.pwdHash && found.pwdHash !== computedHash) {
+          const wrongPassMsg = `❌ <strong>Mật khẩu không chính xác!</strong> Vui lòng kiểm tra lại.<br/><span style="font-size:0.8rem; color:#94a3b8;">Nếu bạn quên mật khẩu, hãy bấm </span><a href="javascript:void(0)" onclick="switchAuthTab('forgot')" style="color:#38bdf8; font-weight:700; text-decoration:underline;">Quên mật khẩu?</a>`;
+          if (typeof showAuthAlert === "function") showAuthAlert("login", wrongPassMsg, "error");
           showToast("❌ Mật khẩu không chính xác! Vui lòng kiểm tra lại.", "error");
           if (passInp) {
+            passInp.style.borderColor = "#ef4444";
             passInp.value = "";
             passInp.focus();
           }
@@ -11165,32 +11333,42 @@ if (typeof productOrId === "object") {
     window.handleAccountLogin = handleAccountLogin;
 
     async function registerNewAccount() {
+      if (typeof clearAuthAlerts === "function") clearAuthAlerts();
       const name = document.getElementById("regNameInput")?.value.trim();
       const email = document.getElementById("regEmailInput")?.value.trim().toLowerCase();
       const pass = document.getElementById("regPassInput")?.value;
       const passConfirm = (document.getElementById("regConfirmPassInput") || document.getElementById("regPassConfirmInput"))?.value;
 
       if (!name) {
+        if (typeof showAuthAlert === "function") showAuthAlert("register", "⚠️ Vui lòng nhập Họ & Tên!", "warning");
         showToast("Vui lòng nhập Họ & Tên!", "warning");
+        document.getElementById("regNameInput")?.focus();
         return;
       }
       if (!email || !email.includes("@")) {
+        if (typeof showAuthAlert === "function") showAuthAlert("register", "⚠️ Vui lòng nhập địa chỉ email hợp lệ!", "warning");
         showToast("Vui lòng nhập email hợp lệ!", "warning");
+        document.getElementById("regEmailInput")?.focus();
         return;
       }
       if (!pass || pass.length < 6) {
+        if (typeof showAuthAlert === "function") showAuthAlert("register", "⚠️ Mật khẩu phải có ít nhất 6 ký tự!", "warning");
         showToast("Mật khẩu phải có ít nhất 6 ký tự!", "warning");
+        document.getElementById("regPassInput")?.focus();
         return;
       }
       if (pass !== passConfirm) {
+        if (typeof showAuthAlert === "function") showAuthAlert("register", "⚠️ Mật khẩu xác nhận không khớp!", "warning");
         showToast("Mật khẩu xác nhận không khớp!", "warning");
+        document.getElementById("regConfirmPassInput")?.focus();
         return;
       }
 
       const existingUsers = getRegisteredUsers();
       if (existingUsers.some(u => (u.email || "").toLowerCase().trim() === email)) {
-        showToast("⚠️ Email này đã được đăng ký! Vui lòng Đăng Nhập hoặc dùng Quên Mật Khẩu.", "warning");
-        if (typeof switchAuthTab === "function") switchAuthTab("login");
+        const dupMsg = `⚠️ Email này đã được đăng ký tài khoản! <a href="javascript:void(0)" onclick="switchAuthTab('login')" style="color:#38bdf8; font-weight:700; text-decoration:underline;">Bấm vào đây để Đăng Nhập</a> hoặc <a href="javascript:void(0)" onclick="switchAuthTab('forgot')" style="color:#38bdf8; font-weight:700; text-decoration:underline;">Quên Mật Khẩu?</a>`;
+        if (typeof showAuthAlert === "function") showAuthAlert("register", dupMsg, "warning");
+        showToast("⚠️ Email này đã được đăng ký! Vui lòng Đăng Nhập.", "warning");
         return;
       }
 
@@ -11310,8 +11488,7 @@ if (typeof productOrId === "object") {
 
     function updateUserUI() {
       try {
-        const stored = localStorage.getItem("mmo_user");
-        if (stored) currentUser = JSON.parse(stored);
+        currentUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
         if (currentUser && currentUser.email) {
           const uList = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
           const found = uList.find(u => (u.email || "").toLowerCase().trim() === currentUser.email.toLowerCase().trim());
@@ -11439,6 +11616,7 @@ if (typeof productOrId === "object") {
         }
       }
     }
+    window.updateUserUI = updateUserUI;
 
     // Subtab switcher for Profile Wallet
     
@@ -11968,18 +12146,9 @@ if (typeof productOrId === "object") {
         }, 100);
       }
       if (viewId === "viewProfile" || viewId === "viewDeposit" || viewId === "viewAdmin") {
-        let checkUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
-        if (!checkUser) {
-          try {
-            const stored = localStorage.getItem("mmo_user");
-            if (stored) {
-              checkUser = JSON.parse(stored);
-              currentUser = checkUser;
-            }
-          } catch(e) {}
-        }
+        let checkUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
 
-        if (!checkUser) {
+        if (!checkUser || !checkUser.email) {
           showToast("🔒 Vui lòng đăng nhập để truy cập trang này!", "info");
           switchView("viewStore");
           openAuthModal("login");
@@ -13094,6 +13263,7 @@ if (typeof productOrId === "object") {
       }
       if (tabId === "tabAdmDashboard") {
         if (typeof renderSystemOverview === "function") renderSystemOverview();
+        if (typeof syncSystemOverviewWithCloud === "function") syncSystemOverviewWithCloud();
       }
       if (tabId === "tabAdmProducts") {
         if (typeof renderAdminDashboard === "function") renderAdminDashboard();
@@ -22640,12 +22810,12 @@ function syncAllOpenViewsStock(changedProdId) {
       if (typeof window !== "undefined" && window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.GAS_BACKEND_URL) {
         return window.MMO_SHOP_CONFIG.GAS_BACKEND_URL;
       }
-      const CURRENT_GAS_URL = "";
+      const CURRENT_GAS_URL = "https://script.google.com/macros/s/AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T/exec";
       try {
         const sys = typeof getGeneralSettings === "function" ? getGeneralSettings() : {};
         if (sys && sys.gasUrl && sys.gasUrl.trim()) {
           const u = sys.gasUrl.trim();
-          if (u.startsWith("https://script.google.com/") && !u.includes("your-shop-api") && !u.includes("AKfycbx9OePuEjn6jn5HeDL4Dm1UeCmN67R4UsXBIW_NssTSzuO1x2IdFx9MgL5s5mbXmp6T")) {
+          if (u.startsWith("https://script.google.com/") && !u.includes("your-shop-api")) {
             return u;
           }
         }
@@ -22659,7 +22829,7 @@ function syncAllOpenViewsStock(changedProdId) {
       if ([
         "adminSaveProduct", "adminDeleteProduct", "deleteProduct",
         "adminImportStock", "adminAddStock", "adminClearStock", "adminDeleteStockItem",
-        "getProducts", "adminGetAllOrders", "getUserOrders", "adminGetUsers", "getOrders", "checkOrder", "lookupOrder", "adminGetSettings"
+        "getProducts"
       ].includes(action)) {
         console.warn("[KHOTAIKHOANSO FIREWALL] Chặn hành động '" + action + "' tới Google Apps Script - Độc lập 100%.");
         return { success: true, message: "Blocked GAS sync - Turso SQLite SSOT exclusive" };
@@ -22675,8 +22845,8 @@ function syncAllOpenViewsStock(changedProdId) {
         "adminUpdateBalance", "adminUpdateOrderStatus"
       ].includes(action);
 
-      // Timeout an toàn: Cho phép tới 20s cho getUserWallet/getUserOrders/adminUpdateBalance để chịu tải cold start GAS
-      const isSlowAction = ["getUserWallet", "getUserOrders", "adminUpdateBalance", "adminGetUsers", "authEmail", "login", "register"].includes(action);
+      // Timeout an toàn: Cho phép tới 20s cho getUserWallet/getUserOrders/adminUpdateBalance/adminGetAllOrders để chịu tải cold start GAS
+      const isSlowAction = ["getUserWallet", "getUserOrders", "adminUpdateBalance", "adminGetUsers", "adminGetAllOrders", "authEmail", "login", "register"].includes(action);
       const timeoutMs = isSlowAction ? 20000 : (isMutation ? 8000 : 5000);
       function createTimeoutSignal(ms) {
         if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
@@ -22803,7 +22973,8 @@ function syncAllOpenViewsStock(changedProdId) {
       const apiUrl = (typeof getBackendApiUrl === "function") ? getBackendApiUrl() : "";
       if (apiUrl && typeof callGasApi === "function") {
         const adminEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
-        callGasApi("adminGetUsers", { adminEmail: adminEmail }).then(data => {
+        try {
+          const data = await callGasApi("adminGetUsers", { adminEmail: adminEmail });
           if (data && data.success && Array.isArray(data.users)) {
             let localUsers = getRegisteredUsers();
             data.users.forEach(cloudU => {
@@ -22820,15 +22991,27 @@ function syncAllOpenViewsStock(changedProdId) {
                     if (typeof updateUserUI === "function") updateUserUI();
                   }
                 }
+              } else {
+                localUsers.push({
+                  userId: cloudU.userId || ("USR_" + Math.random().toString(36).substr(2, 6)),
+                  email: cEmail,
+                  name: cloudU.name || cEmail.split("@")[0],
+                  role: (cloudU.role === "ADMIN" || cEmail === "khotaikhoanso.net@gmail.com") ? "Quản Trị Viên" : (cloudU.role || "Thành Viên"),
+                  balance: Number(cloudU.balance) || 0,
+                  created: cloudU.createdAt || "05/10/2026",
+                  lastLogin: cloudU.lastLogin || "",
+                  avatar: cloudU.avatar || ("https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(cEmail))
+                });
               }
             });
             saveRegisteredUsers(localUsers);
             if (typeof renderAdminUsersTable === "function") renderAdminUsersTable();
             if (typeof renderAdminDashboard === "function") renderAdminDashboard();
+            if (typeof renderSystemOverview === "function") renderSystemOverview();
           }
-        }).catch(err => {
+        } catch(err) {
           console.warn("Background GAS sync error:", err);
-        });
+        }
       }
     }
     window.fetchCloudUsers = fetchCloudUsers;
@@ -23197,15 +23380,11 @@ function syncAllOpenViewsStock(changedProdId) {
       if (!o) return true;
       const rawId = String(o.id || o.orderId || o.orderCode || "").trim();
       const cleanId = rawId.toUpperCase().replace(/^#/, "").trim();
-      if (cleanId.startsWith("MM") || cleanId.startsWith("PO_") || cleanId.startsWith("PRE") || cleanId.startsWith("TX_PO_") || cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD") || cleanId.includes("LEGACY")) return true;
+      if (cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD")) return true;
       const em = String(o.userEmail || o.email || o.buyerEmail || o.customerEmail || "").toLowerCase().trim();
-      
-      const uName = String(o.username || o.buyerUsername || o.customerName || o.userName || "").toLowerCase().trim();
-      
+      if (em === "khachhang@gmail.com" || em.includes("demo@") || em.includes("sample@")) return true;
       const pName = String(o.productName || o.prodName || "").toLowerCase();
-      if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu") || pName.includes("gmail cổ 2019") || pName.includes("tiktok việt reg") || pName.includes("tiktok việt đã ngâm")) return true;
-      const notes = String(o.customNotes || o.note || "").toLowerCase();
-      
+      if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu")) return true;
       return false;
     }
     window.isForbiddenLegacyOrder = isForbiddenLegacyOrder;
@@ -25831,13 +26010,8 @@ function syncAllOpenViewsStock(changedProdId) {
     };
 
     try {
-      // 0. Khôi phục phiên đăng nhập nếu có
-      if (!currentUser) {
-        try {
-          const storedUser = localStorage.getItem("mmo_user");
-          if (storedUser) currentUser = JSON.parse(storedUser);
-        } catch(e) {}
-      }
+      // 0. Khôi phục phiên đăng nhập toàn diện
+      currentUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
       const cleanEmail = currentUser ? (currentUser.email || "").toLowerCase().trim() : "";
       let p = currentSelectedProduct;
       if (!p) {
@@ -25913,15 +26087,16 @@ function syncAllOpenViewsStock(changedProdId) {
       const totalCost = unitPrice * qty;
 
       const orderId = "DH" + Math.floor(100000 + Math.random() * 900000);
-      const curBal = (currentUser && Number(currentUser.balance)) || 0;
 
       // NẾU CHƯA ĐĂNG NHẬP: YÊU CẦU ĐĂNG NHẬP
-      if (!currentUser) {
+      currentUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
+      if (!currentUser || !currentUser.email) {
         restoreBtn();
         showToast("🔒 Vui lòng đăng nhập tài khoản để mua hàng!", "warning");
         if (typeof openAuthModal === "function") openAuthModal("login");
         return;
       }
+      const curBal = Number(currentUser.balance) || 0;
 
       // NẾU SỐ DƯ VÍ KHÔNG ĐỦ: CHUYỂN HƯỚNG SANG NẠP TIỀN VÀO VÍ TIỀN
       if (curBal < totalCost) {
@@ -33644,9 +33819,13 @@ function changeAdmUsersPage(p) {
     }
     window.initMMOApplication = initMMOApplication;
     if (typeof document !== "undefined") {
-      document.addEventListener("DOMContentLoaded", function() {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function() {
+          setTimeout(initMMOApplication, 0);
+        });
+      } else {
         setTimeout(initMMOApplication, 0);
-      });
+      }
     }
 
     if (typeof window !== "undefined") {
@@ -36272,6 +36451,47 @@ function getProductSchemaReviews(p, idx) {
         return true;
       });
 
+      if (all.length === 0) {
+        const seedOrders = [
+          {"orderId":"DH9831603774","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH9343890402","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH2099863085","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH2671169257","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (kim long nguyen thi)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenthikimlong400@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH9990154374","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":10000,"totalAmount":10000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH_PRE614962","prodId":"PROD_MTVI44UK","prodName":"Đặt trước: Tiktok việt reg trên 4 tháng (Tik Tok việt trên 1 năm)","quantity":1,"price":8000,"totalAmount":8000,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH8723024085","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH5814033791","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH9309956105","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH355756","prodId":"PROD_MTQZT2Y1","prodName":"HOTMAIL - OUTLOOK ĐỘ TRUST CAO LIVE TRÂU","quantity":1,"price":600,"totalAmount":600,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH733910","prodId":"PROD_MTQQXO2E","prodName":"Gmail cho Thuê 24h","quantity":1,"price":400,"totalAmount":400,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH854746","prodId":"PROD_MTRB6000","prodName":"OUTLOOK TRUSTED - LIVE 6-12 Tháng","quantity":1,"price":400,"totalAmount":400,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH5419121420","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH3898951317","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (kim long nguyen thi)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenthikimlong400@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH6039586843","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH3760449145","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH1287347948","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH1050162980","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH3147162070","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH1915396459","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH9442915098","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH8229961848","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH5159151378","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH3592018175","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH6874645436","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Nguyễn Mạnh Đông)","quantity":1,"price":20000,"totalAmount":20000,"email":"digimarketmmo@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH4243925331","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH2691875954","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
+          {"orderId":"DH1282315997","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"}
+        ];
+        all = seedOrders.map(function(o) {
+          return Object.assign({}, o, {
+            id: o.orderId,
+            totalPrice: o.totalAmount || o.price || 0,
+            total: o.totalAmount || o.price || 0,
+            date: o.createdAt || ""
+          });
+        });
+      }
+
       // Sắp xếp đơn mới nhất lên đầu (NEWEST FIRST)
       const getExactAdminTs = function(item) {
         if (!item) return 0;
@@ -38466,13 +38686,14 @@ function getProductSchemaReviews(p, idx) {
     // Tự động tải danh sách đơn hàng từ Google Sheets
     async function fetchAdminOrdersFromCloud() {
       if (typeof callGasApi !== "function") return;
-      const callerEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "admin@cuahangcuaban.com";
+      const callerEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
       try {
         showToast("⏳ Đang đồng bộ đơn hàng từ Google Sheets...", "info");
         const res = await callGasApi("adminGetAllOrders", { adminEmail: callerEmail });
-        if (res && res.success && Array.isArray(res.orders)) {
+        if (res && (res.orders || (res.success && Array.isArray(res.orders)))) {
+          const cloudOrdersList = res.orders || [];
           let localOrders = getAllOrders();
-          res.orders.forEach(function(cloudOrd) {
+          cloudOrdersList.forEach(function(cloudOrd) {
             if (!cloudOrd || (typeof isForbiddenLegacyOrder === "function" && isForbiddenLegacyOrder(cloudOrd))) return;
             const idx = localOrders.findIndex(o => (o.orderId === cloudOrd.orderId || o.id === cloudOrd.orderId));
             if (idx !== -1) {
@@ -38504,7 +38725,8 @@ function getProductSchemaReviews(p, idx) {
           renderAdminOrdersTable();
           if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
           if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
-          showToast("🎉 Đã đồng bộ " + res.orders.length + " đơn hàng từ Google Sheets!", "success");
+          if (typeof renderSystemOverview === "function") renderSystemOverview();
+          showToast("🎉 Đã đồng bộ " + cloudOrdersList.length + " đơn hàng từ Google Sheets!", "success");
         }
       } catch(e) {
         console.warn("fetchAdminOrdersFromCloud error:", e);
