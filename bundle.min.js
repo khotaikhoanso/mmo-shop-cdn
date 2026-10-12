@@ -12716,7 +12716,22 @@ if (typeof productOrId === "object") {
         return BANNED.some(b => low.includes(b));
       }
 
-      // 1. [ƯU TIÊN TUYỆT ĐỐI #1]: Ảnh trực tiếp trong đối tượng sản phẩm (từ Turso Cloud SQLite)
+      // 1. [ƯU TIÊN TUYỆT ĐỐI #1]: Ảnh do Admin của shop lưu trong localStorage
+      if (pId) {
+        try {
+          const customSaved = localStorage.getItem("mmo_custom_img_" + pId) ||
+                              localStorage.getItem("mmo_custom_img_" + pId.toUpperCase()) ||
+                              localStorage.getItem("mmo_custom_img_" + pId.toLowerCase());
+          if (customSaved && customSaved.trim() !== "") {
+            const trimmed = customSaved.trim();
+            if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("/")) && !isBannedOrDemo(trimmed)) {
+              return trimmed;
+            }
+          }
+        } catch(e) {}
+      }
+
+      // 2. [ƯU TIÊN #2]: Ảnh trực tiếp trong đối tượng sản phẩm (từ Turso Cloud SQLite)
       let directImg = prodObj ? (prodObj.image || prodObj.image_url || prodObj.imageUrl || "") : ((typeof p === "string" && (p.startsWith("http") || p.startsWith("data:") || p.startsWith("/"))) ? p : "");
       if (!directImg && pId && typeof findShopProduct === "function") {
         const fp = findShopProduct(pId);
@@ -12731,21 +12746,6 @@ if (typeof productOrId === "object") {
         if ((trimmed.startsWith("data:") || trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) && !isBannedOrDemo(trimmed)) {
           return trimmed;
         }
-      }
-
-      // 2. [ƯU TIÊN #2]: Ảnh do Admin của shop lưu trong localStorage
-      if (pId) {
-        try {
-          const customSaved = localStorage.getItem("mmo_custom_img_" + pId) ||
-                              localStorage.getItem("mmo_custom_img_" + pId.toUpperCase()) ||
-                              localStorage.getItem("mmo_custom_img_" + pId.toLowerCase());
-          if (customSaved && customSaved.trim() !== "") {
-            const trimmed = customSaved.trim();
-            if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("/")) && !isBannedOrDemo(trimmed)) {
-              return trimmed;
-            }
-          }
-        } catch(e) {}
       }
 
       // 3. [ƯU TIÊN #3]: Tra cứu trực tiếp theo Product ID trong bảng CDN chuẩn của Shop
