@@ -3035,10 +3035,9 @@ if (typeof productOrId === "object") {
                     MOCK_DATA.products.unshift(savedProd);
                   }
                 });
-                // Chỉ giữ lại các sản phẩm thực sự tồn tại trong danh sách đã lưu (loại bỏ tuyệt đối sản phẩm đã bị xóa)
-                const parsedIdSet = new Set(parsed.map(function(sp) { return String(sp.id); }));
+                // Bảo toàn tuyệt đối toàn bộ sản phẩm hợp lệ, chỉ loại trừ sản phẩm trong danh sách đã xóa
                 MOCK_DATA.products = MOCK_DATA.products.filter(function(p) {
-                  return p && p.id && parsedIdSet.has(String(p.id)) && !deletedIds.includes(String(p.id)) && (typeof isProductDeleted !== "function" || !isProductDeleted(p));
+                  return p && p.id && !deletedIds.includes(String(p.id)) && (typeof isProductDeleted !== "function" || !isProductDeleted(p));
                 });
               } else {
                 MOCK_DATA.products = parsed.filter(function(p) {
@@ -12820,11 +12819,12 @@ if (typeof productOrId === "object") {
 
       if (viewId === "viewAllProducts") {
         document.getElementById("navProducts")?.classList.add("active");
-        if (!_viewRendered["viewAllProducts"] || _viewDirty["viewAllProducts"]) {
-          _viewRendered["viewAllProducts"] = true;
-          _viewDirty["viewAllProducts"] = false;
-          if (typeof renderAllProductsPage === "function") renderAllProductsPage();
-        }
+        allProdCurrentCat = "Tất cả";
+        const spInp = document.getElementById("allProdSearchInp");
+        if (spInp) spInp.value = "";
+        _viewRendered["viewAllProducts"] = true;
+        _viewDirty["viewAllProducts"] = false;
+        if (typeof renderAllProductsPage === "function") renderAllProductsPage();
       }
 
       if (viewId === "viewBlogDetail") {
@@ -12964,7 +12964,10 @@ if (typeof productOrId === "object") {
         if (!v) {
           const id = link.id;
           if (id === "navStore") v = "viewStore";
-          else if (id === "navProducts") v = "viewAllProducts";
+          else if (id === "navProducts") {
+          v = "viewAllProducts";
+          if (typeof setAllProdCategory === "function") setAllProdCategory("Tất cả");
+        }
           else if (id === "navBlog") v = "viewBlog";
           else if (id === "navTools") v = "viewTools";
           else if (id === "navProfile") v = "viewProfile";
@@ -15273,15 +15276,10 @@ if (typeof productOrId === "object") {
         if (!MOCK_DATA.products) MOCK_DATA.products = [];
 
         // ĐỒNG BỘ TRIỆT ĐỂ VỚI TURSO CLOUD SQLITE (SSOT):
-        const tursoValidIds = new Set(res.products.filter(tp => tp && tp.id && !deletedIds.includes(tp.id) && !(typeof isProductDeleted === "function" && isProductDeleted(tp))).map(tp => String(tp.id).toLowerCase()));
-        const prevCount = MOCK_DATA.products.length;
-        MOCK_DATA.products = MOCK_DATA.products.filter(p => {
+        // BẢO TOÀN TUYỆT ĐỐI TOÀN BỘ SẢN PHẨM TRONG HỆ THỐNG:
+        MOCK_DATA.products = (MOCK_DATA.products || []).filter(p => {
           if (!p || !p.id) return false;
-          const pid = String(p.id).toLowerCase();
           if (deletedIds.includes(p.id) || (typeof isProductDeleted === "function" && isProductDeleted(p))) return false;
-          const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + p.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(p.id).toUpperCase())) || (p._lastEditedAt) || 0;
-          const isLocallyFresh = !!(p._isLocalNew || (lastEditTs > 0 && (Date.now() - lastEditTs < 15000)));
-          if (!tursoValidIds.has(pid) && !isLocallyFresh) return false;
           return true;
         });
 
