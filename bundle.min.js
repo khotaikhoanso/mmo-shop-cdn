@@ -34085,7 +34085,9 @@ function changeAdmUsersPage(p) {
       }
     } catch(_eClean) {}
 
-      if (window._mmoAppFullyInitialized) {
+      var pGridInitCheck = document.getElementById("productGrid");
+      var isAlreadyRendered = pGridInitCheck && pGridInitCheck.children && pGridInitCheck.children.length > 0 && !pGridInitCheck.innerHTML.includes("fa-spinner");
+      if (window._mmoAppFullyInitialized && isAlreadyRendered) {
         if (typeof ensureUniversalComponentsExist === "function") ensureUniversalComponentsExist();
         if (typeof renderHeaderNotifications === "function") renderHeaderNotifications();
         return;
@@ -44052,13 +44054,34 @@ window.switchToFreeProvider = switchToFreeProvider;
 
 // =========================================================================
 // SAFE AUTOMATIC BOOT AT VERY END OF BUNDLE (ALL DEFINITIONS READY)
-// =========================================================================
 if (typeof window !== "undefined") {
-  if (typeof initMMOApplication === "function" && !window._mmoAppFullyInitialized) {
-    try {
-      initMMOApplication();
-    } catch(errBoot) {
-      console.error("Auto boot initMMOApplication error:", errBoot);
+  if (typeof initMMOApplication === "function") {
+    var pGridEnd = document.getElementById("productGrid");
+    var isGridPopulated = pGridEnd && pGridEnd.children && pGridEnd.children.length > 0 && !pGridEnd.innerHTML.includes("fa-spinner");
+    if (!window._mmoAppFullyInitialized || !isGridPopulated) {
+      try {
+        initMMOApplication();
+      } catch(errBoot) {
+        console.error("Auto boot initMMOApplication error:", errBoot);
+      }
+    }
+  }
+  if (typeof renderProductGrid === "function") {
+    var pGridEnd2 = document.getElementById("productGrid");
+    if (pGridEnd2 && (!pGridEnd2.children || pGridEnd2.children.length === 0 || pGridEnd2.innerHTML.includes("fa-spinner"))) {
+      try { renderProductGrid(); } catch(eG2) {}
+    }
+  }
+  if (typeof renderBestSellers === "function") {
+    var bListEnd = document.getElementById("bestSellerList");
+    if (bListEnd && (!bListEnd.children || bListEnd.children.length === 0)) {
+      try { renderBestSellers(); } catch(eB2) {}
+    }
+  }
+  if (typeof renderRecommended === "function") {
+    var rGridEnd = document.getElementById("recommendedGrid");
+    if (rGridEnd && (!rGridEnd.children || rGridEnd.children.length === 0)) {
+      try { renderRecommended(); } catch(eR2) {}
     }
   }
 }
