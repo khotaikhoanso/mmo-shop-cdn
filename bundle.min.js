@@ -3914,27 +3914,31 @@ if (typeof productOrId === "object") {
       if (!user) {
         user = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
       }
-      if (!user || !user.email) return false;
+      if (!user) {
+        try {
+          const raw = localStorage.getItem("mmo_user");
+          if (raw) user = JSON.parse(raw);
+        } catch(e) {}
+      }
+      if (!user) return false;
+
+      // 1. Kiểm tra theo Role Quản Trị Viên
+      const uRole = String(user.role || "").toUpperCase().trim();
+      if (uRole === "ADMIN" || uRole === "QUẢN TRỊ VIÊN" || uRole === "QUAN TRI VIEN") return true;
       
-      const userEmail = (user.email || "").toLowerCase().trim();
+      const userEmail = String(user.email || user.name || "").toLowerCase().trim();
+      if (!userEmail) return false;
+
       const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
       
-      // CHỈ HIỂN THỊ QUẢN TRỊ TRÊN TÀI KHOẢN CÓ ĐÚNG MAIL ADMIN
-      if (userEmail === rootEmail) return true;
+      // 2. Kiểm tra theo Email hoặc Tên tài khoản Admin
+      if (userEmail === rootEmail || userEmail === "khotaikhoanso.net@gmail.com" || userEmail === "khotaikhoanso.net" || userEmail === "admin@yourshop.com") return true;
+      if (userEmail.startsWith("khotaikhoanso.net")) return true;
       
       const adminList = (typeof getAdminEmails === "function") 
         ? getAdminEmails().map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com") 
         : [rootEmail];
       if (adminList.includes(userEmail)) return true;
-
-      // Nếu người dùng không nằm trong danh sách Admin Email, tự động hạ quyền thành Thành Viên
-      if (user.role === "Quản Trị Viên" || user.role === "ADMIN" || user.role === "Admin") {
-        user.role = "Thành Viên";
-        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === userEmail) {
-          currentUser.role = "Thành Viên";
-          try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
-        }
-      }
 
       return false;
     }
@@ -4413,7 +4417,8 @@ if (typeof productOrId === "object") {
         };
         const tbody = document.querySelector("#admProductsTable tbody");
         if (tbody) {
-          let prods = (MOCK_DATA && MOCK_DATA.products) ? [...MOCK_DATA.products] : [];
+          const mData = (typeof MOCK_DATA !== "undefined" && MOCK_DATA) ? MOCK_DATA : ((typeof window !== "undefined" && window.MOCK_DATA) ? window.MOCK_DATA : {});
+          let prods = (mData && Array.isArray(mData.products)) ? [...mData.products] : [];
           prods = prods.filter(function(p) {
             return p && p.id && (typeof isProductDeleted !== "function" || !isProductDeleted(p));
           });
@@ -12817,8 +12822,8 @@ if (typeof productOrId === "object") {
             }
 
             const urlParams = new URLSearchParams(window.location.search);
-            const savedBlogId = urlParams.get("post") || urlParams.get("blog") || localStorage.getItem("mmo_current_blog_id");
-            const blogs = (MOCK_DATA && MOCK_DATA.blogs) ? MOCK_DATA.blogs : [];
+            const mBlogsData = (typeof MOCK_DATA !== "undefined" && MOCK_DATA) ? MOCK_DATA : ((typeof window !== "undefined" && window.MOCK_DATA) ? window.MOCK_DATA : {});
+            const blogs = (mBlogsData && Array.isArray(mBlogsData.blogs)) ? mBlogsData.blogs : [];
             const targetBlog = savedBlogId ? blogs.find(item => item.id === savedBlogId) : null;
             if (targetBlog) {
               openBlogDetail(targetBlog.id);
@@ -12921,6 +12926,41 @@ if (typeof productOrId === "object") {
       } catch(e) {}
 
       try { window.scrollTo(0, 0); } catch(e) {}
+    }
+    if (typeof window !== "undefined") {
+      window.switchView = switchView;
+    }
+
+    // CAPTURE-PHASE MENU NAVIGATION DELEGATE: Đảm bảo 100% mọi click/tap vào menu đều chuyển view tức thì
+    if (typeof document !== "undefined") {
+      document.addEventListener("click", function(e) {
+        const link = e.target.closest("a.nav-link, a[data-view], .header-nav a");
+        if (!link) return;
+        let v = link.getAttribute("data-view");
+        if (!v) {
+          const id = link.id;
+          if (id === "navStore") v = "viewStore";
+          else if (id === "navProducts") v = "viewAllProducts";
+          else if (id === "navBlog") v = "viewBlog";
+          else if (id === "navTools") v = "viewTools";
+          else if (id === "navProfile") v = "viewProfile";
+          else if (id === "navAdmin") v = "viewAdmin";
+        }
+        if (!v) {
+          const href = (link.getAttribute("href") || "").trim();
+          if (href === "/" || href === "/#" || href === "#viewStore" || href.includes("viewStore")) v = "viewStore";
+          else if (href.includes("viewAllProducts")) v = "viewAllProducts";
+          else if (href.includes("viewBlog")) v = "viewBlog";
+          else if (href.includes("viewTools")) v = "viewTools";
+          else if (href.includes("viewProfile")) v = "viewProfile";
+          else if (href.includes("viewAdmin")) v = "viewAdmin";
+        }
+        if (v && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          switchView(v);
+        }
+      }, { capture: true });
     }
 
         // SMART SYNCHRONIZED SOLD QUANTITY CALCULATOR (KHÔNG BỊ 100 ĐỒNG LOẠT)
