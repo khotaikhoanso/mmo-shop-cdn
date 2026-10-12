@@ -12700,7 +12700,7 @@ if (typeof productOrId === "object") {
         const low = url.toLowerCase().trim();
         if (!low) return true;
         if (low.startsWith("data:image/")) return false;
-        if (low.includes("workers.dev")) return true;
+        if (low.includes("workers.dev/api/images/img_17914936")) return true;
         if (low.includes("nfv4rln")) return true;
         const pNameCheck = String((prodObj && prodObj.name) || (typeof p === "object" && p.name) || "").toLowerCase();
         if (low.includes("ngqfxdx") && !pNameCheck.includes("gemini") && !pNameCheck.includes("veo")) return true;
@@ -12708,10 +12708,6 @@ if (typeof productOrId === "object") {
 
         const BANNED = [
           'untrusted_external_source',
-          "selltainguyenmmo",
-          "ultrammo",
-          "nguyenlieummo",
-          "digimarketmmo",
           "placeholder",
           "dummyimage",
           "picsum",
@@ -17963,13 +17959,14 @@ function syncAllOpenViewsStock(changedProdId) {
           TURSO_CLIENT.saveProduct(prod).catch(function(e) { console.warn("Lưu Turso error:", e); });
         }
         try {
-          const workerSecret = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
+          const workerSecret = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret && MMO_WORKER_API.getAdminSecret()) || (localStorage.getItem("mmo_admin_secret") || "") || "MMO_ADMIN_SECURE_TOKEN_2026";
           const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl) ? MMO_WORKER_API.getApiUrl() : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
           fetch(workerUrl + "/api/admin/products/save", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": "Bearer " + workerSecret
+              "Authorization": "Bearer " + workerSecret,
+              "x-admin-token": workerSecret
             },
             body: JSON.stringify({ product: prod }),
             keepalive: true
@@ -17979,6 +17976,20 @@ function syncAllOpenViewsStock(changedProdId) {
               const idx = MOCK_DATA.products.findIndex(p => p && String(p.id) === String(sp.id));
               if (idx !== -1) {
                 MOCK_DATA.products[idx] = Object.assign({}, MOCK_DATA.products[idx], sp);
+                if (sp.image) {
+                  try {
+                    localStorage.setItem("mmo_custom_img_" + sp.id, sp.image);
+                    localStorage.setItem("mmo_custom_img_" + String(sp.id).toUpperCase(), sp.image);
+                  } catch(eImgLs) {}
+                  if (typeof KTS_PROD_TO_IILI !== "undefined") {
+                    KTS_PROD_TO_IILI[sp.id] = sp.image;
+                    KTS_PROD_TO_IILI[String(sp.id).toUpperCase()] = sp.image;
+                  }
+                  if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+                    KTS_KNOWN_CDN_MAP[sp.id] = sp.image;
+                    KTS_KNOWN_CDN_MAP[String(sp.id).toUpperCase()] = sp.image;
+                  }
+                }
                 if (typeof saveProductsToStorage === "function") saveProductsToStorage();
                 if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
                 if (typeof renderProductGrid === "function") renderProductGrid();
