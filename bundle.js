@@ -5459,13 +5459,13 @@ if (typeof productOrId === "object") {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.scanRealtimeProducts === "function") {
           scanRes = await MMO_WORKER_API.scanRealtimeProducts(options);
         } else {
-          var resp = await fetch(workerUrl + "/api/webhook/products", {
+          var scanUrl = workerUrl + "/api/webhook/products" + (adminSecret ? ("?secret=" + encodeURIComponent(adminSecret)) : "");
+          var resp = await fetch(scanUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "Authorization": "Bearer " + adminSecret,
-              "x-admin-token": adminSecret,
-              "x-webhook-secret": adminSecret
+              "x-admin-token": adminSecret
             },
             body: JSON.stringify({
               action: "scan",
@@ -14427,9 +14427,9 @@ if (typeof productOrId === "object") {
         if (secret) {
           headers["Authorization"] = "Bearer " + secret;
           headers["x-admin-token"] = secret;
-          headers["x-webhook-secret"] = secret;
         }
-        return await this._fetchJson(this.getApiUrl() + "/api/webhook/products", {
+        const url = this.getApiUrl() + "/api/webhook/products" + (secret ? ("?secret=" + encodeURIComponent(secret)) : "");
+        return await this._fetchJson(url, {
           method: "POST",
           headers: headers,
           body: JSON.stringify(Object.assign({ action: action }, payload || {}))
@@ -14451,9 +14451,9 @@ if (typeof productOrId === "object") {
         if (secret) {
           headers["Authorization"] = "Bearer " + secret;
           headers["x-admin-token"] = secret;
-          headers["x-webhook-secret"] = secret;
         }
-        const res = await this._fetchJson(this.getApiUrl() + "/api/webhook/products", {
+        const url = this.getApiUrl() + "/api/webhook/products" + (secret ? ("?secret=" + encodeURIComponent(secret)) : "");
+        const res = await this._fetchJson(url, {
           method: "POST",
           headers: headers,
           body: JSON.stringify({ action: "product.update", product: prodData })
@@ -35174,9 +35174,10 @@ function getProductSchemaReviews(p, idx) {
           };
 
           // Gửi webhook product.delete
-          fetch(workerUrl + "/api/webhook/products", {
+          var delHookUrl = workerUrl + "/api/webhook/products" + (secret ? ("?secret=" + encodeURIComponent(secret)) : "");
+          fetch(delHookUrl, {
             method: "POST",
-            headers: Object.assign({}, headers, { "x-webhook-secret": secret, "x-admin-token": secret }),
+            headers: Object.assign({}, headers, { "x-admin-token": secret }),
             body: JSON.stringify({ action: "product.delete", product_id: targetId, deleted_ids: [targetId, pid] })
           }).catch(function() {});
 
