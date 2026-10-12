@@ -9808,8 +9808,9 @@ if (typeof productOrId === "object") {
             // 8. Tồn kho
             if (typeof syncDetailStockUI === "function") syncDetailStockUI(p.stock);
 
-            // 9. Sidebars & Thẻ SEO & Admin Quick Button
+            // 9. Sidebars & Thẻ SEO & Admin Quick Button & Đề xuất cho bạn
             if (typeof renderProductDetailSidebars === "function") renderProductDetailSidebars(p);
+            if (typeof renderDetailRelatedProducts === "function") renderDetailRelatedProducts(p);
             if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, exactImg);
             if (typeof checkAndShowAdminQuickWrap === "function") checkAndShowAdminQuickWrap();
 
@@ -12934,7 +12935,7 @@ if (typeof productOrId === "object") {
     // CAPTURE-PHASE MENU NAVIGATION DELEGATE: Đảm bảo 100% mọi click/tap vào menu đều chuyển view tức thì
     if (typeof document !== "undefined") {
       document.addEventListener("click", function(e) {
-        const link = e.target.closest("a.nav-link, a[data-view], .header-nav a");
+        const link = e.target.closest("a.nav-link, a[data-view], .header-nav a, .mobile-drawer-link, .mobile-drawer-nav a");
         if (!link) return;
         let v = link.getAttribute("data-view");
         if (!v) {
@@ -12958,6 +12959,7 @@ if (typeof productOrId === "object") {
         if (v && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
           e.preventDefault();
           e.stopPropagation();
+          if (typeof toggleMobileDrawer === "function") toggleMobileDrawer(false);
           switchView(v);
         }
       }, { capture: true });
