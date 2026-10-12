@@ -7107,8 +7107,11 @@ if (typeof productOrId === "object") {
     window.fetchAndSyncMemberCloudDeposits = fetchAndSyncMemberCloudDeposits;
 
     function getUserComprehensiveTransactions(targetEmail) {
+      if (window._isCalculatingComprehensiveTxs) return { transactions: [], currentBalance: 0, totalDeposited: 0, totalSpent: 0 };
+      window._isCalculatingComprehensiveTxs = true;
+      try {
       const cleanEmail = (targetEmail || "").toLowerCase().trim();
-      if (!cleanEmail) return { transactions: [], currentBalance: 0 };
+      if (!cleanEmail) return { transactions: [], currentBalance: 0, totalDeposited: 0, totalSpent: 0 };
 
       const rawLogs = [];
 
@@ -7516,12 +7519,15 @@ if (typeof productOrId === "object") {
           if (totalDeposited > 0 && currentUser.balance !== curBal) {
             currentUser.balance = curBal;
             localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-            if (typeof updateUserUI === "function") updateUserUI();
+            // TUYỆT ĐỐI KHÔNG GỌI updateUserUI() Ở ĐÂY ĐỂ TRÁNH ĐỆ QUY MAXIMUM CALL STACK!
           }
         }
       } catch(eBal) {}
 
       return { transactions: allLogs, currentBalance: curBal, totalDeposited, totalSpent };
+      } finally {
+        window._isCalculatingComprehensiveTxs = false;
+      }
     }
     window.getUserComprehensiveTransactions = getUserComprehensiveTransactions;
 
@@ -10230,6 +10236,8 @@ if (typeof productOrId === "object") {
         localStorage.setItem("mmo_custom_category_" + actualTargetId, category);
         localStorage.setItem("mmo_custom_warranty_" + actualTargetId, warranty);
         localStorage.setItem("mmo_custom_variants_" + actualTargetId, JSON.stringify(variants));
+        localStorage.setItem("mmo_last_edited_" + actualTargetId, String(Date.now()));
+        localStorage.setItem("mmo_last_edited_" + String(actualTargetId).toUpperCase(), String(Date.now()));
       } catch(eAllCust) {}
 
       // [KEEPALIVE CLOUD SYNC]: Đảm bảo 100% gửi thẳng lên Worker và lưu vào Turso SQLite kể cả khi reload
@@ -11916,8 +11924,11 @@ if (typeof productOrId === "object") {
     }
 
     function updateUserUI() {
+      if (window._isUpdatingUserUIRecursion) return;
+      window._isUpdatingUserUIRecursion = true;
       try {
-        currentUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
+        try {
+          currentUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
         if (currentUser && currentUser.email) {
           const uList = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
           const found = uList.find(u => (u.email || "").toLowerCase().trim() === currentUser.email.toLowerCase().trim());
@@ -11927,7 +11938,7 @@ if (typeof productOrId === "object") {
             found.balance = bestBal;
             if (found.role) currentUser.role = found.role;
             localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-            if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(uList);
+            localStorage.setItem("mmo_registered_users", JSON.stringify(uList));
           }
         }
       } catch(e) {}
@@ -12043,6 +12054,9 @@ if (typeof productOrId === "object") {
             </button>
           `;
         }
+      }
+      } finally {
+        window._isUpdatingUserUIRecursion = false;
       }
     }
     window.updateUserUI = updateUserUI;
@@ -15098,7 +15112,8 @@ if (typeof productOrId === "object") {
           if (!p || !p.id) return false;
           const pid = String(p.id);
           if (deletedIds.includes(pid) || (typeof isProductDeleted === "function" && isProductDeleted(p))) return false;
-          const isLocallyFresh = !!(p._isLocalNew || (p._lastEditedAt && (Date.now() - p._lastEditedAt < 900000)));
+          const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + pid)) || Number(localStorage.getItem("mmo_last_edited_" + pid.toUpperCase())) || (p._lastEditedAt) || 0;
+          const isLocallyFresh = !!(p._isLocalNew || (lastEditTs > 0 && (Date.now() - lastEditTs < 86400000)));
           if (!tursoValidIds.has(pid) && !isLocallyFresh) return false;
           return true;
         });
@@ -15108,7 +15123,14 @@ if (typeof productOrId === "object") {
           if (rawAdmin) {
             let adminList = JSON.parse(rawAdmin);
             if (Array.isArray(adminList)) {
-              adminList = adminList.filter(p => p && p.id && !deletedIds.includes(String(p.id)) && !(typeof isProductDeleted === "function" && isProductDeleted(p)) && (tursoValidIds.has(String(p.id)) || p._isLocalNew || (p._lastEditedAt && (Date.now() - p._lastEditedAt < 900000))));
+              adminList = adminList.filter(p => {
+                if (!p || !p.id) return false;
+                const pidA = String(p.id);
+                if (deletedIds.includes(pidA) || (typeof isProductDeleted === "function" && isProductDeleted(p))) return false;
+                const aLastEdit = Number(localStorage.getItem("mmo_last_edited_" + pidA)) || Number(localStorage.getItem("mmo_last_edited_" + pidA.toUpperCase())) || (p._lastEditedAt) || 0;
+                const aFresh = !!(p._isLocalNew || (aLastEdit > 0 && (Date.now() - aLastEdit < 86400000)));
+                return tursoValidIds.has(pidA) || aFresh;
+              });
               localStorage.setItem("mmo_admin_products", JSON.stringify(adminList));
             }
           }
