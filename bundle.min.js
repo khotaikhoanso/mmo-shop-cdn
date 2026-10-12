@@ -17213,6 +17213,9 @@ function syncAllOpenViewsStock(changedProdId) {
       
       "PROD_MTQX7SIK": {"enabled":true,"provider":"ultrammo","sourceProdId":"34752","sourcePrice":225,"sourceProdName":"12h Tiếng Anh","baseUrl":"https://ultrammo.com"}
     };
+    const defaultMappings = DEFAULT_API_PRODUCT_MAPPINGS;
+    window.defaultMappings = defaultMappings;
+    window.DEFAULT_API_PRODUCT_MAPPINGS = DEFAULT_API_PRODUCT_MAPPINGS;
 
     var _cachedApiProductMappings = null;
     function invalidateApiProductMappingsCache() {
@@ -17323,9 +17326,22 @@ function syncAllOpenViewsStock(changedProdId) {
 
     function getApiProductMapping(productOrId) {
       if (!productOrId) return null;
+      const defaultMappings = (typeof DEFAULT_API_PRODUCT_MAPPINGS !== "undefined" && DEFAULT_API_PRODUCT_MAPPINGS) ? DEFAULT_API_PRODUCT_MAPPINGS : (window.DEFAULT_API_PRODUCT_MAPPINGS || {});
       const prodId = typeof productOrId === "string" ? productOrId.trim() : (productOrId.id || "").trim();
       const isIdKey = /^(PROD_|SP_)/i.test(prodId);
-      const prodObj = typeof productOrId === "object" ? productOrId : ((typeof findShopProduct === "function") ? findShopProduct(prodId) : null);
+      let prodObj = typeof productOrId === "object" ? productOrId : ((typeof findShopProduct === "function") ? findShopProduct(prodId) : null);
+      if (!prodObj && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+        prodObj = MOCK_DATA.products.find(item => item && (String(item.id) === prodId || String(item.slug) === prodId));
+      }
+      if (!prodObj && isIdKey && prodId.includes("_")) {
+        const baseId = prodId.replace(/_\d+$/, "");
+        if (baseId !== prodId) {
+          prodObj = (typeof findShopProduct === "function") ? findShopProduct(baseId) : null;
+          if (!prodObj && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+            prodObj = MOCK_DATA.products.find(item => item && (String(item.id) === baseId || String(item.slug) === baseId));
+          }
+        }
+      }
       const prodName = prodObj ? (prodObj.name || "") : (typeof productOrId === "string" ? productOrId.trim() : "");
 
       const maps = getApiProductMappings();
@@ -17364,7 +17380,11 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       // [BẢO VỆ KHO NỘI BỘ]: Nếu sản phẩm là kho nội bộ và không có mapping API nào, không tự động gán
-      const isExplicitLocal = prodObj && (prodObj.deliveryType === "local" || prodObj.delivery_type === "local" || prodObj.deliveryType === "manual" || prodObj.delivery_type === "manual") && !maps[prodId] && !DEFAULT_API_PRODUCT_MAPPINGS[prodId] && !(prodObj.apiMapping && prodObj.apiMapping.enabled);
+      const isExplicitLocal = prodObj && (
+        prodObj.deliveryType === "local" || prodObj.delivery_type === "local" ||
+        prodObj.deliveryType === "manual" || prodObj.delivery_type === "manual" ||
+        (!prodObj.deliveryType && !prodObj.delivery_type && (Array.isArray(prodObj.accounts) || Number(prodObj.stock) > 0))
+      ) && !maps[prodId] && !defaultMappings[prodId] && !(prodObj.apiMapping && prodObj.apiMapping.enabled);
       if (isExplicitLocal) {
         if (prodObj.apiMapping && prodObj.apiMapping.enabled && prodObj.apiMapping.sourceProdId) {
           return enrichMapping(prodObj.apiMapping);
@@ -17424,10 +17444,10 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       // ƯU TIÊN SỐ 4: Fallback defaultMappings
-      if (prodId && defaultMappings[prodId]) {
+      if (prodId && defaultMappings && defaultMappings[prodId]) {
         return enrichMapping(defaultMappings[prodId]);
       }
-      if (prodObj && prodObj.id && defaultMappings[prodObj.id]) {
+      if (prodObj && prodObj.id && defaultMappings && defaultMappings[prodObj.id]) {
         return enrichMapping(defaultMappings[prodObj.id]);
       }
 
@@ -17460,10 +17480,10 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       // 6. Tra cứu trong defaultMappings built-in nếu chưa được cấu hình thủ công
-      if (prodId && defaultMappings[prodId]) {
+      if (prodId && defaultMappings && defaultMappings[prodId]) {
         return enrichMapping(defaultMappings[prodId]);
       }
-      if (prodObj && prodObj.id && defaultMappings[prodObj.id]) {
+      if (prodObj && prodObj.id && defaultMappings && defaultMappings[prodObj.id]) {
         return enrichMapping(defaultMappings[prodObj.id]);
       }
 
@@ -26157,7 +26177,7 @@ function syncAllOpenViewsStock(changedProdId) {
           ? currentUser.userId
           : ((currentUser.username || currentUser.name || currentUser.userId || "user") + "@gmail.com");
       }
-      const cleanEmail = currentUser ? (currentUser.email || "").toLowerCase().trim() : "";
+      let cleanEmail = currentUser ? (currentUser.email || "").toLowerCase().trim() : "";
       let p = currentSelectedProduct;
       if (!p) {
         let prodParam = null;
@@ -26252,6 +26272,7 @@ function syncAllOpenViewsStock(changedProdId) {
         if (typeof openAuthModal === "function") openAuthModal("login");
         return;
       }
+      cleanEmail = String(currentUser.email).toLowerCase().trim();
       const curBal = Number(currentUser.balance) || 0;
 
       // NẾU SỐ DƯ VÍ KHÔNG ĐỦ: CHUYỂN HƯỚNG SANG NẠP TIỀN VÀO VÍ TIỀN
@@ -26293,6 +26314,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }
       let credsLines = [];
       let workerHandled = false;
+      let wData = null;
 
       // [ƯU TIÊN TỐI CAO] GỌI TRỰC TIẾP CLOUDFLARE WORKER / TURSO ĐÁM MÂY XỬ LÝ 100%
       try {
@@ -26324,7 +26346,7 @@ function syncAllOpenViewsStock(changedProdId) {
           body: JSON.stringify(checkoutPayload)
         });
 
-        const wData = await wRes.json().catch(() => null);
+        wData = await wRes.json().catch(() => null);
         if (wData && wData.success && Array.isArray(wData.accounts) && wData.accounts.length >= qty) {
           credsLines = wData.accounts;
           workerHandled = true;
@@ -26459,7 +26481,9 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       // TRỪ TIỀN VÍ NGƯỜI DÙNG
-      const newBal = curBal - totalCost;
+      const newBal = (workerHandled && wData && wData.balance_after !== undefined && !isNaN(Number(wData.balance_after)))
+        ? Number(wData.balance_after)
+        : (curBal - totalCost);
       currentUser.balance = newBal;
       try {
         localStorage.setItem("mmo_user", JSON.stringify(currentUser));
@@ -26650,13 +26674,13 @@ function syncAllOpenViewsStock(changedProdId) {
           if (res && res.success && res.newBalance !== undefined) {
             currentUser.balance = Number(res.newBalance);
             localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-            let allUsers = getRegisteredUsers();
+            let allUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
             const uIdx = allUsers.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
             if (uIdx !== -1) {
               allUsers[uIdx].balance = Number(res.newBalance);
-              saveRegisteredUsers(allUsers);
+              if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
             }
-            updateUserUI();
+            if (typeof updateUserUI === "function") updateUserUI();
           }
         }).catch(function() {});
       }
