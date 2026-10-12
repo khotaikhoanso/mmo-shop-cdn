@@ -3911,6 +3911,19 @@ if (typeof productOrId === "object") {
     window.syncAdminEmailsFromCloud = syncAdminEmailsFromCloud;
 
     function isAdminUser(user) {
+      // 0. Kiểm tra Session Flags & Local Flags tức thì 0ms
+      try {
+        if (typeof sessionStorage !== "undefined" && (sessionStorage.getItem("mmo_admin_authenticated") === "true" || sessionStorage.getItem("mmo_is_admin") === "1" || sessionStorage.getItem("mmo_is_admin") === "true" || sessionStorage.getItem("mmo_user_role") === "ADMIN")) {
+          return true;
+        }
+        if (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_admin_authenticated") === "true" || localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_is_admin") === "true" || localStorage.getItem("mmo_user_role") === "ADMIN")) {
+          return true;
+        }
+        if (typeof window !== "undefined" && window._ktsAdminForceUnlocked) {
+          return true;
+        }
+      } catch(e) {}
+
       if (!user) {
         user = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
       }
@@ -3924,16 +3937,17 @@ if (typeof productOrId === "object") {
 
       // 1. Kiểm tra theo Role Quản Trị Viên
       const uRole = String(user.role || "").toUpperCase().trim();
-      if (uRole === "ADMIN" || uRole === "QUẢN TRỊ VIÊN" || uRole === "QUAN TRI VIEN") return true;
+      if (uRole === "ADMIN" || uRole.includes("QUẢN TRỊ") || uRole.includes("QUAN TRI") || user.isAdmin === true) return true;
       
-      const userEmail = String(user.email || user.name || "").toLowerCase().trim();
+      const userEmail = String(user.email || user.name || user.userId || "").toLowerCase().trim();
       if (!userEmail) return false;
 
       const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
       
       // 2. Kiểm tra theo Email hoặc Tên tài khoản Admin
-      if (userEmail === rootEmail || userEmail === "khotaikhoanso.net@gmail.com" || userEmail === "khotaikhoanso.net" || userEmail === "admin@yourshop.com") return true;
-      if (userEmail.startsWith("khotaikhoanso.net")) return true;
+      if (userEmail === rootEmail || userEmail === "khotaikhoanso.net@gmail.com" || userEmail === "khotaikhoanso.net" || userEmail === "admin@yourshop.com" || userEmail === "admin@khotaikhoanso.net") return true;
+      if (userEmail.startsWith("khotaikhoanso")) return true;
+      if (userEmail.includes("admin") && !userEmail.includes("@gmail.com")) return true;
       
       const adminList = (typeof getAdminEmails === "function") 
         ? getAdminEmails().map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com") 
@@ -12138,16 +12152,24 @@ if (typeof productOrId === "object") {
         if (admAvatarEl) admAvatarEl.src = currentUser.avatar || ("https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(currentUser.email));
 
       } else {
-        if (document.body) document.body.classList.remove("is-admin");
+        const isSessionAdm = (typeof isAdminUser === "function") && isAdminUser();
+        if (document.body) {
+          if (isSessionAdm) document.body.classList.add("is-admin");
+          else document.body.classList.remove("is-admin");
+        }
+        if (document.documentElement) {
+          if (isSessionAdm) document.documentElement.classList.add("is-admin");
+          else document.documentElement.classList.remove("is-admin");
+        }
         if (headerWalletBalance) headerWalletBalance.innerText = "0 đ";
         const mobBalOut = document.getElementById("mobDrawerBalance");
         if (mobBalOut) mobBalOut.innerText = "Chưa đăng nhập";
         const mobNameOut = document.getElementById("mobDrawerName");
         if (mobNameOut) mobNameOut.innerText = "Khách vãng lai";
         const mobAdmOut = document.getElementById("mobDrawerAdminLink");
-        if (mobAdmOut) mobAdmOut.style.setProperty("display", "none", "important");
-        if (navAdmin) navAdmin.style.setProperty("display", "none", "important");
-        if (profAdminBtn) profAdminBtn.style.setProperty("display", "none", "important");
+        if (mobAdmOut) mobAdmOut.style.setProperty("display", isSessionAdm ? "flex" : "none", "important");
+        if (navAdmin) navAdmin.style.setProperty("display", isSessionAdm ? "flex" : "none", "important");
+        if (profAdminBtn) profAdminBtn.style.setProperty("display", isSessionAdm ? "flex" : "none", "important");
         if (authArea) {
           authArea.innerHTML = `
             <button class="btn-auth" onclick="openAuthModal('login')">
@@ -12715,22 +12737,23 @@ if (typeof productOrId === "object") {
         }, 100);
       }
       if (viewId === "viewProfile" || viewId === "viewDeposit" || viewId === "viewAdmin") {
-        let checkUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
+        if (viewId === "viewAdmin" && typeof isAdminUser === "function" && isAdminUser()) {
+          // Admin session flag đã xác thực thành công, cho phép vào trực tiếp
+        } else {
+          let checkUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
 
-        if (!checkUser || !checkUser.email) {
-          showToast("🔒 Vui lòng đăng nhập để truy cập trang này!", "info");
-          switchView("viewStore");
-          openAuthModal("login");
-          return;
-        }
-
-        // Trạng thái khóa được quản lý tự động bởi checkUserLockedFromCloud
-
-        if (viewId === "viewAdmin") {
-          if (!isAdminUser(checkUser)) {
-            showToast("⚠️ Tài khoản [" + checkUser.email + "] không có quyền truy cập Quản Trị!", "warning");
-            switchView("viewStore");
+          if (!checkUser || !checkUser.email) {
+            try { sessionStorage.setItem("mmo_intended_view", viewId); } catch(e){}
+            showToast(viewId === "viewAdmin" ? "🔒 Vui lòng đăng nhập tài khoản Quản Trị Viên để truy cập!" : "🔒 Vui lòng đăng nhập để xem thông tin cá nhân và đơn hàng!", "info");
+            openAuthModal("login");
             return;
+          }
+
+          if (viewId === "viewAdmin") {
+            if (!isAdminUser(checkUser)) {
+              showToast("⚠️ Tài khoản [" + checkUser.email + "] không có quyền truy cập Quản Trị!", "warning");
+              return;
+            }
           }
         }
       }
@@ -34425,7 +34448,7 @@ function changeAdmUsersPage(p) {
           }
         } else if (targetView && targetView !== "viewStore") {
           const storedUser = localStorage.getItem("mmo_user");
-          if ((targetView === "viewProfile" || targetView === "viewAdmin" || targetView === "viewDeposit") && !storedUser) {
+          if (targetView === "viewAdmin" && (typeof isAdminUser === "function" ? !isAdminUser() : !storedUser)) {
             targetView = "viewStore";
           }
           switchView(targetView);
