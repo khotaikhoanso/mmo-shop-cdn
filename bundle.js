@@ -5435,6 +5435,121 @@ if (typeof productOrId === "object") {
     }
     window.purgeDeletedProductsFromDOM = purgeDeletedProductsFromDOM;
 
+    async function scanRealtimeAndPurgeDeletedProducts(options) {
+      options = options || {};
+      try {
+        if (typeof showToast === "function") {
+          showToast("🔄 Đang quét sản phẩm thời gian thực và dọn dẹp hàng đã xóa...", "info");
+        }
+        var adminSecret = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function")
+          ? MMO_WORKER_API.getAdminSecret()
+          : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+        var workerUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+          ? MMO_WORKER_API.getApiUrl()
+          : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        if (workerUrl.includes('untrusted_external_source')) workerUrl = "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+
+        var localDeleted = (typeof getDeletedProductIds === "function") ? getDeletedProductIds() : [];
+        var hardcodedDeleted = (typeof GLOBAL_PERMANENT_DELETED_IDS !== "undefined" && Array.isArray(GLOBAL_PERMANENT_DELETED_IDS))
+          ? GLOBAL_PERMANENT_DELETED_IDS
+          : ["PROD_TEST"];
+        var allDeleted = Array.from(new Set(hardcodedDeleted.concat(localDeleted)));
+
+        var scanRes = null;
+        if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.scanRealtimeProducts === "function") {
+          scanRes = await MMO_WORKER_API.scanRealtimeProducts(options);
+        } else {
+          var resp = await fetch(workerUrl + "/api/webhook/products", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + adminSecret,
+              "x-admin-token": adminSecret,
+              "x-webhook-secret": adminSecret
+            },
+            body: JSON.stringify({
+              action: "scan",
+              deleted_ids: allDeleted,
+              delete_dead_api: (options.deleteDeadApi !== false),
+              purge_inactive: !!options.purgeInactive
+            })
+          });
+          scanRes = await resp.json();
+        }
+
+        console.log("[Realtime Scanner] Kết quả quét thời gian thực:", scanRes);
+        var purgedCount = 0;
+        var updatedCount = 0;
+
+        if (scanRes && scanRes.success) {
+          purgedCount = scanRes.purged_count || 0;
+          updatedCount = scanRes.updated_api_count || 0;
+          var purgedIds = Array.isArray(scanRes.purged_ids) ? scanRes.purged_ids : [];
+
+          // 1. Cập nhật blacklist local
+          if (purgedIds.length > 0) {
+            var updatedDeleted = Array.from(new Set(allDeleted.concat(purgedIds)));
+            localStorage.setItem("mmo_deleted_product_ids", JSON.stringify(updatedDeleted));
+          }
+
+          // 2. Đồng bộ sản phẩm mới nhất nếu worker trả về danh sách products
+          if (Array.isArray(scanRes.products) && scanRes.products.length > 0) {
+            MOCK_DATA.products = scanRes.products;
+          } else {
+            // Lọc bỏ các sản phẩm đã bị purged
+            if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+              MOCK_DATA.products = MOCK_DATA.products.filter(function(p) {
+                if (!p) return false;
+                var pid = String(p.id || "").trim();
+                if (purgedIds.indexOf(pid) !== -1 || purgedIds.indexOf(pid.toLowerCase()) !== -1) return false;
+                if (p.isDeleted || p.isSourceDeleted) return false;
+                if (typeof isProductDeleted === "function" && isProductDeleted(p)) return false;
+                return true;
+              });
+            }
+          }
+
+          // 3. Lưu vào localStorage
+          try {
+            var pJson = JSON.stringify(MOCK_DATA.products || []);
+            localStorage.setItem("mmo_products", pJson);
+            localStorage.setItem("mmo_admin_products", pJson);
+          } catch(eLS) {}
+
+          // 4. Purge DOM
+          if (typeof purgeDeletedProductsFromDOM === "function") {
+            purgeDeletedProductsFromDOM();
+          }
+
+          // 5. Render lại toàn bộ giao diện
+          if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
+          if (typeof renderAdminDashboard === "function") renderAdminDashboard();
+          if (typeof renderProductGrid === "function") renderProductGrid();
+          if (typeof renderAllProductsPage === "function") renderAllProductsPage();
+          if (typeof renderBestSellers === "function") renderBestSellers();
+          if (typeof renderRecommended === "function") renderRecommended();
+          if (typeof renderCategories === "function") renderCategories();
+
+          var msg = "⚡ Quét Realtime hoàn tất! Đã dọn dẹp " + purgedCount + " SP không tồn tại, cập nhật " + updatedCount + " SP nguồn API.";
+          if (typeof showToast === "function") {
+            showToast(msg, "success");
+          }
+          return scanRes;
+        } else {
+          var errMsg = (scanRes && scanRes.error) ? scanRes.error : "Không thể quét sản phẩm từ server.";
+          if (typeof showToast === "function") showToast("⚠️ Lỗi quét realtime: " + errMsg, "error");
+          return scanRes;
+        }
+      } catch(err) {
+        console.error("[Realtime Scanner] Lỗi quét sản phẩm:", err);
+        if (typeof showToast === "function") {
+          showToast("⚠️ Lỗi kết nối khi quét sản phẩm: " + (err.message || err), "error");
+        }
+        return { success: false, error: err.message };
+      }
+    }
+    window.scanRealtimeAndPurgeDeletedProducts = scanRealtimeAndPurgeDeletedProducts;
+
     // =========================================================================
     // [KHOTAIKHOANSO LIVE CORE]: RENDER ĐẦY ĐỦ CÁC NGUỒN HÀNG (CẢ THÊM BẰNG TAY)
     // =========================================================================
@@ -9869,6 +9984,23 @@ if (typeof productOrId === "object") {
           keepalive: true
         }).then(r => r.json()).then(res => {
           console.log("Keepalive saveProduct success:", res);
+          if (res && res.product) {
+            var syncedProd = res.product;
+            if (syncedProd.isSourceDeleted) {
+              if (typeof showToast === "function") showToast("⚠️ Nguồn sỉ báo sản phẩm này đã bị xóa hoặc không còn tồn tại trên nguồn sỉ!", "warning");
+            } else if (syncedProd.sourceStock !== undefined) {
+              if (typeof showToast === "function") showToast("⚡ Đã đồng bộ tức thì với nguồn sỉ: Tồn kho " + syncedProd.sourceStock + " | Giá sỉ " + (Number(syncedProd.sourcePrice) || 0).toLocaleString("vi-VN") + "đ", "success");
+            }
+            if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+              var sIdx = MOCK_DATA.products.findIndex(p => p && String(p.id) === String(syncedProd.id));
+              if (sIdx !== -1) {
+                MOCK_DATA.products[sIdx] = Object.assign({}, MOCK_DATA.products[sIdx], syncedProd);
+                if (typeof saveProductsToStorage === "function") saveProductsToStorage();
+                if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
+                if (typeof renderProductGrid === "function") renderProductGrid();
+              }
+            }
+          }
         }).catch(err => {
           console.warn("Keepalive saveProduct non-fatal:", err);
         });
@@ -14289,18 +14421,51 @@ if (typeof productOrId === "object") {
         }, 2000);
       },
 
+      callProductWebhook: async function(action, payload) {
+        const secret = this.getAdminSecret() || (localStorage.getItem("mmo_admin_secret") || "");
+        const headers = { "Content-Type": "application/json" };
+        if (secret) {
+          headers["Authorization"] = "Bearer " + secret;
+          headers["x-admin-token"] = secret;
+          headers["x-webhook-secret"] = secret;
+        }
+        return await this._fetchJson(this.getApiUrl() + "/api/webhook/products", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+        }, 25000);
+      },
+
+      scanRealtimeProducts: async function(options) {
+        const deleted = (typeof getDeletedProductIds === "function") ? getDeletedProductIds() : [];
+        return await this.callProductWebhook("scan", {
+          deleted_ids: deleted,
+          delete_dead_api: (options && options.deleteDeadApi !== false),
+          purge_inactive: !!(options && options.purgeInactive)
+        });
+      },
+
       adminSaveProduct: async function(prodData) {
         const secret = this.getAdminSecret();
         const headers = { "Content-Type": "application/json" };
         if (secret) {
           headers["Authorization"] = "Bearer " + secret;
           headers["x-admin-token"] = secret;
+          headers["x-webhook-secret"] = secret;
         }
-        return await this._fetchJson(this.getApiUrl() + "/api/admin/products/save", {
+        const res = await this._fetchJson(this.getApiUrl() + "/api/webhook/products", {
           method: "POST",
           headers: headers,
-          body: JSON.stringify({ product: prodData })
-        }, 10000);
+          body: JSON.stringify({ action: "product.update", product: prodData })
+        }, 15000);
+        if (res && res.product && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+          const idx = MOCK_DATA.products.findIndex(item => item && String(item.id) === String(res.product.id));
+          if (idx !== -1) {
+            MOCK_DATA.products[idx] = Object.assign({}, MOCK_DATA.products[idx], res.product);
+            if (typeof saveProductsToStorage === "function") saveProductsToStorage();
+          }
+        }
+        return res;
       },
 
       adminSyncProducts: async function(products) {
@@ -17808,6 +17973,17 @@ function syncAllOpenViewsStock(changedProdId) {
             },
             body: JSON.stringify({ product: prod }),
             keepalive: true
+          }).then(r => r.json()).then(res => {
+            if (res && res.product && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+              const sp = res.product;
+              const idx = MOCK_DATA.products.findIndex(p => p && String(p.id) === String(sp.id));
+              if (idx !== -1) {
+                MOCK_DATA.products[idx] = Object.assign({}, MOCK_DATA.products[idx], sp);
+                if (typeof saveProductsToStorage === "function") saveProductsToStorage();
+                if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
+                if (typeof renderProductGrid === "function") renderProductGrid();
+              }
+            }
           }).catch(() => {});
         } catch(eK) {}
       }
@@ -34996,6 +35172,13 @@ function getProductSchemaReviews(p, idx) {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + secret
           };
+
+          // Gửi webhook product.delete
+          fetch(workerUrl + "/api/webhook/products", {
+            method: "POST",
+            headers: Object.assign({}, headers, { "x-webhook-secret": secret, "x-admin-token": secret }),
+            body: JSON.stringify({ action: "product.delete", product_id: targetId, deleted_ids: [targetId, pid] })
+          }).catch(function() {});
 
           // Gửi DELETE request với header chuẩn Authorization
           await fetch(workerUrl + "/api/admin/products/" + encodeURIComponent(targetId), {
