@@ -9605,6 +9605,312 @@ if (typeof productOrId === "object") {
     }
     window.updateCommissionEstimate = updateCommissionEstimate;
 
+
+    // =========================================================================
+    // [MMO SHOP 2026 - REALTIME SYNCHRONIZATION ENGINE FOR BUNDLE.JS]
+    // =========================================================================
+    var _ktsProductChannel = null;
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        _ktsProductChannel = new BroadcastChannel("mmo_realtime_products_channel");
+      }
+    } catch(eBc) {}
+
+    function refreshActiveProductDetailUI(p) {
+      if (!p) return;
+      try {
+        var cleanId = String(p.id || '').trim();
+        var cleanSlug = String(p.slug || '').trim();
+
+        var curP = window.currentSelectedProduct || window._currentActiveDetailProduct;
+        var sp = null;
+        try { sp = new URLSearchParams(window.location.search); } catch(eSp) {}
+        var urlParam = sp ? (sp.get('prod') || sp.get('id') || '') : '';
+
+        var isMatching = false;
+        if (curP) {
+          if (cleanId && String(curP.id).trim().toLowerCase() === cleanId.toLowerCase()) isMatching = true;
+          if (cleanSlug && String(curP.slug || '').trim().toLowerCase() === cleanSlug.toLowerCase()) isMatching = true;
+        }
+        if (urlParam) {
+          if (cleanId && urlParam.toLowerCase() === cleanId.toLowerCase()) isMatching = true;
+          if (cleanSlug && urlParam.toLowerCase() === cleanSlug.toLowerCase()) isMatching = true;
+        }
+
+        var detailView = document.getElementById("viewProductDetail");
+        var isDetailVisible = detailView && (detailView.style.display !== "none" && getComputedStyle(detailView).display !== "none");
+
+        if (isMatching || isDetailVisible) {
+          window.currentSelectedProduct = Object.assign({}, window.currentSelectedProduct || {}, p);
+          window._currentActiveDetailProduct = window.currentSelectedProduct;
+
+          // 1. Tiêu đề
+          var dtlTitle = document.getElementById("dtlTitle");
+          if (dtlTitle && p.name) dtlTitle.innerText = p.name;
+
+          // 2. Giá
+          var effectivePrice = Number(p.price) || 0;
+          if (Array.isArray(p.variants) && p.variants.length > 0 && p.variants[0] && p.variants[0].price !== undefined) {
+            effectivePrice = Number(p.variants[0].price) || effectivePrice;
+          }
+          var dtlPrice = document.getElementById("dtlPrice");
+          if (dtlPrice) {
+            dtlPrice.innerText = (typeof formatVND === "function") ? formatVND(effectivePrice) : (effectivePrice.toLocaleString("vi-VN") + " đ");
+          }
+
+          // 3. Ảnh sản phẩm (Bảo tồn ảnh mới nhất, gắn cả data-id và data-slug)
+          var exactImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : (p.image || p.image_url || p.imageUrl || "https://iili.io/nGs8RDv.jpg");
+          var dtlImg = document.getElementById("dtlImage");
+          if (dtlImg) {
+            dtlImg.setAttribute('data-id', cleanId);
+            if (cleanSlug) dtlImg.setAttribute('data-slug', cleanSlug);
+            dtlImg.setAttribute('data-name', p.name || '');
+            dtlImg.src = exactImg;
+            dtlImg.onerror = function() {
+              this.onerror = null;
+              if (typeof handleProductImgError === 'function') handleProductImgError(this);
+              else this.src = 'https://iili.io/nGs8RDv.jpg';
+            };
+          }
+
+          // 4. Danh mục
+          var dtlCat = document.getElementById("dtlCategory");
+          if (dtlCat && p.category) dtlCat.innerText = (p.category || "").replace(/&amp;/g, '&');
+
+          // 5. Mô tả
+          var dtlDesc = document.getElementById("dtlFullDesc") || document.getElementById("dtlDesc");
+          if (dtlDesc && p.description !== undefined) dtlDesc.innerText = p.description || "";
+          var dtlShortDesc = document.getElementById("dtlDesc");
+          if (dtlShortDesc && p.description !== undefined) dtlShortDesc.innerText = p.description || "";
+
+          // 6. Bảo hành
+          var dtlWarr = document.getElementById("dtlWarranty");
+          if (dtlWarr && p.warranty) {
+            var cleanW = String(p.warranty).trim().replace(/^(chính\s*sách\s*)?bảo\s*hành\s*:?\s*/i, "");
+            dtlWarr.innerText = "🛡 " + (cleanW || p.warranty);
+          }
+
+          // 7. Biến thể
+          var pillsContainer = document.getElementById("dtlVariantPills");
+          if (pillsContainer && Array.isArray(p.variants) && p.variants.length > 0) {
+            pillsContainer.innerHTML = p.variants.map(function(v, idx) {
+              var vStock = (typeof v.stock === "number") ? v.stock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (p.stock || 0));
+              var stockBadge = vStock > 0
+                ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
+                : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
+              return '<div class="variant-pill-option ' + (idx === 0 ? 'active' : '') + '" onclick="selectVariant(' + idx + ', ' + (v.price || 0) + ')">' +
+                '<span>' + (typeof escapeHtml === 'function' ? escapeHtml(v.name || ("Gói " + (idx + 1))) : (v.name || ("Gói " + (idx + 1)))) + stockBadge + '</span>' +
+                '<span style="font-weight:700;">' + (typeof formatVND === "function" ? formatVND(v.price || 0) : ((v.price || 0).toLocaleString("vi-VN") + " đ")) + '</span>' +
+              '</div>';
+            }).join("");
+          }
+
+          // 8. Tồn kho
+          if (typeof syncDetailStockUI === "function") syncDetailStockUI(p.stock);
+
+          // 9. Sidebars & Thẻ SEO & Admin Quick Button
+          if (typeof renderProductDetailSidebars === "function") renderProductDetailSidebars(p);
+          if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, exactImg);
+          if (typeof checkAndShowAdminQuickWrap === "function") checkAndShowAdminQuickWrap();
+
+          // 10. URL canonical
+          if (window.history && window.history.replaceState) {
+            var canonicalParam = p.slug || p.id;
+            window.history.replaceState(null, "", "?prod=" + encodeURIComponent(canonicalParam) + "&view=viewProductDetail");
+          }
+        }
+      } catch(eRef) {
+        console.warn("refreshActiveProductDetailUI bundle error:", eRef);
+      }
+    }
+    window.refreshActiveProductDetailUI = refreshActiveProductDetailUI;
+
+    function broadcastProductUpdateRealtime(prod) {
+      if (!prod || !prod.id) return;
+      try {
+        refreshActiveProductDetailUI(prod);
+        if (typeof renderProductGrid === "function") renderProductGrid();
+        if (typeof renderBestSellers === "function") renderBestSellers();
+        if (typeof renderRecommended === "function") renderRecommended();
+        if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
+        if (typeof renderAdminDashboard === "function") renderAdminDashboard();
+        if (typeof renderAllProductsPage === "function") renderAllProductsPage();
+
+        if (_ktsProductChannel) {
+          try {
+            _ktsProductChannel.postMessage({
+              type: "PRODUCT_REALTIME_UPDATE",
+              product: prod,
+              timestamp: Date.now()
+            });
+          } catch(ePost) {}
+        }
+
+        try {
+          localStorage.setItem("mmo_realtime_sync_event", JSON.stringify({
+            action: "product_update",
+            id: prod.id,
+            slug: prod.slug || "",
+            image: prod.image || "",
+            name: prod.name || "",
+            price: prod.price || 0,
+            timestamp: Date.now()
+          }));
+        } catch(eLs) {}
+      } catch(eBrd) {
+        console.warn("broadcastProductUpdateRealtime bundle error:", eBrd);
+      }
+    }
+    window.broadcastProductUpdateRealtime = broadcastProductUpdateRealtime;
+
+    function applyIncomingProductUpdate(prod) {
+      if (!prod || !prod.id) return;
+      try {
+        var cleanId = String(prod.id).trim();
+        var cleanSlug = String(prod.slug || '').trim();
+
+        if (typeof MOCK_DATA !== "undefined") {
+          if (!Array.isArray(MOCK_DATA.products)) MOCK_DATA.products = [];
+          var exIdx = MOCK_DATA.products.findIndex(function(x) {
+            return x && (String(x.id).trim().toLowerCase() === cleanId.toLowerCase() || (cleanSlug && String(x.slug || '').trim().toLowerCase() === cleanSlug.toLowerCase()));
+          });
+          if (exIdx !== -1) {
+            MOCK_DATA.products[exIdx] = Object.assign({}, MOCK_DATA.products[exIdx], prod);
+          } else {
+            MOCK_DATA.products.unshift(prod);
+          }
+          if (typeof window !== "undefined" && window.MOCK_DATA) window.MOCK_DATA.products = MOCK_DATA.products;
+        }
+
+        try {
+          var img = prod.image || prod.image_url || prod.imageUrl || "";
+          if (img && img.indexOf("img_17914936") === -1 && img.indexOf("nfv4rln") === -1) {
+            localStorage.setItem("mmo_custom_img_" + cleanId, img);
+            localStorage.setItem("mmo_custom_img_" + cleanId.toUpperCase(), img);
+            localStorage.setItem("mmo_custom_img_" + cleanId.toLowerCase(), img);
+            if (cleanSlug) {
+              localStorage.setItem("mmo_custom_img_" + cleanSlug, img);
+              localStorage.setItem("mmo_custom_img_" + cleanSlug.toLowerCase(), img);
+            }
+            if (typeof KTS_PROD_TO_IILI !== "undefined") {
+              KTS_PROD_TO_IILI[cleanId] = img;
+              KTS_PROD_TO_IILI[cleanId.toUpperCase()] = img;
+              if (cleanSlug) KTS_PROD_TO_IILI[cleanSlug] = img;
+            }
+            if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+              KTS_KNOWN_CDN_MAP[cleanId] = img;
+              KTS_KNOWN_CDN_MAP[cleanId.toUpperCase()] = img;
+              if (cleanSlug) KTS_KNOWN_CDN_MAP[cleanSlug] = img;
+            }
+          }
+          if (prod.name) localStorage.setItem("mmo_custom_name_" + cleanId, prod.name);
+          if (prod.price !== undefined) localStorage.setItem("mmo_custom_price_" + cleanId, String(prod.price));
+          if (prod.category) localStorage.setItem("mmo_custom_category_" + cleanId, prod.category);
+          if (prod.warranty) localStorage.setItem("mmo_custom_warranty_" + cleanId, prod.warranty);
+          if (prod.description) localStorage.setItem("mmo_custom_desc_" + cleanId, prod.description);
+          if (prod.variants) localStorage.setItem("mmo_custom_variants_" + cleanId, JSON.stringify(prod.variants));
+        } catch(eLsCust) {}
+
+        refreshActiveProductDetailUI(prod);
+        if (typeof renderProductGrid === "function") renderProductGrid();
+        if (typeof renderBestSellers === "function") renderBestSellers();
+        if (typeof renderRecommended === "function") renderRecommended();
+        if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
+        if (typeof renderAdminDashboard === "function") renderAdminDashboard();
+        if (typeof renderAllProductsPage === "function") renderAllProductsPage();
+      } catch(eApp) {
+        console.warn("applyIncomingProductUpdate bundle error:", eApp);
+      }
+    }
+    window.applyIncomingProductUpdate = applyIncomingProductUpdate;
+
+    function initRealtimeProductListener() {
+      if (window._hasInitRealtimeProductListener) return;
+      window._hasInitRealtimeProductListener = true;
+
+      if (_ktsProductChannel) {
+        _ktsProductChannel.onmessage = function(ev) {
+          if (ev && ev.data && ev.data.type === "PRODUCT_REALTIME_UPDATE" && ev.data.product) {
+            applyIncomingProductUpdate(ev.data.product);
+          }
+        };
+      }
+
+      window.addEventListener("storage", function(e) {
+        if (e && e.key === "mmo_realtime_sync_event" && e.newValue) {
+          try {
+            var syncData = JSON.parse(e.newValue);
+            if (syncData && syncData.id) {
+              var targetP = null;
+              if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+                targetP = MOCK_DATA.products.find(function(x) {
+                  return x && (String(x.id) === String(syncData.id) || (syncData.slug && String(x.slug) === String(syncData.slug)));
+                });
+              }
+              if (targetP) {
+                if (syncData.image) targetP.image = syncData.image;
+                if (syncData.name) targetP.name = syncData.name;
+                if (syncData.price !== undefined) targetP.price = syncData.price;
+                applyIncomingProductUpdate(targetP);
+              } else if (typeof syncTursoProductsToLocalUI === "function") {
+                syncTursoProductsToLocalUI();
+              }
+            }
+          } catch(eEv) {}
+        }
+      });
+    }
+    window.initRealtimeProductListener = initRealtimeProductListener;
+
+    var _LAST_LOCAL_PRODUCTS_VERSION = Date.now();
+    var _isPollingCloudTimestamp = false;
+
+    async function checkCloudProductsTimestamp() {
+      if (_isPollingCloudTimestamp) return;
+      _isPollingCloudTimestamp = true;
+      try {
+        var workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
+          ? MMO_WORKER_API.getApiUrl()
+          : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        var res = await fetch(workerUrl + "/api/products/timestamp?_t=" + Date.now(), {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" }
+        });
+        if (res && res.ok) {
+          var data = await res.json();
+          if (data && data.success && data.timestamp) {
+            if (data.timestamp > _LAST_LOCAL_PRODUCTS_VERSION) {
+              console.log("⚡ [Realtime Cloud Watcher] Phát hiện cập nhật mới từ Turso SQLite (" + data.timestamp + "), tự động đồng bộ...");
+              _LAST_LOCAL_PRODUCTS_VERSION = data.timestamp;
+              if (typeof syncTursoProductsToLocalUI === "function") {
+                await syncTursoProductsToLocalUI();
+              }
+            }
+          }
+        }
+      } catch(ePoll) {
+      } finally {
+        _isPollingCloudTimestamp = false;
+      }
+    }
+
+    function startRealtimeCloudWatcher() {
+      if (window._hasStartedRealtimeCloudWatcher) return;
+      window._hasStartedRealtimeCloudWatcher = true;
+
+      setInterval(checkCloudProductsTimestamp, 5000);
+
+      window.addEventListener("focus", function() {
+        checkCloudProductsTimestamp();
+      });
+      document.addEventListener("visibilitychange", function() {
+        if (document.visibilityState === "visible") {
+          checkCloudProductsTimestamp();
+        }
+      });
+    }
+    window.startRealtimeCloudWatcher = startRealtimeCloudWatcher;
+
     function handleSaveProduct(event) {
       if (event) event.preventDefault();
       const id = document.getElementById("admProdId")?.value.trim();
@@ -9952,6 +10258,12 @@ if (typeof productOrId === "object") {
             KTS_KNOWN_CDN_MAP[actualTargetId] = image.trim();
             KTS_KNOWN_CDN_MAP[String(actualTargetId).toUpperCase()] = image.trim();
           }
+          if (generatedSlug) {
+            localStorage.setItem("mmo_custom_img_" + generatedSlug, image.trim());
+            localStorage.setItem("mmo_custom_img_" + String(generatedSlug).toLowerCase(), image.trim());
+            if (typeof KTS_PROD_TO_IILI !== "undefined") KTS_PROD_TO_IILI[generatedSlug] = image.trim();
+            if (typeof KTS_KNOWN_CDN_MAP !== "undefined") KTS_KNOWN_CDN_MAP[generatedSlug] = image.trim();
+          }
         } catch(eImg) {}
       }
       // [LƯU MÔ TẢ AN TOÀN TUYỆT ĐỐI]: Lưu riêng lẻ vào mmo_custom_desc_
@@ -9998,6 +10310,7 @@ if (typeof productOrId === "object") {
                 if (typeof saveProductsToStorage === "function") saveProductsToStorage();
                 if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
                 if (typeof renderProductGrid === "function") renderProductGrid();
+                if (typeof broadcastProductUpdateRealtime === "function") broadcastProductUpdateRealtime(MOCK_DATA.products[sIdx]);
               }
             }
           }
@@ -10065,14 +10378,8 @@ if (typeof productOrId === "object") {
         }
       } catch(e) {}
 
-      // TỰ ĐỘNG LÀM MỚI TOÀN BỘ GIAO DIỆN TRANG XEM CHI TIẾT SẢN PHẨM (viewProductDetail) NẾU ĐANG MỞ
-      const dtlView = document.getElementById("viewProductDetail");
-      const isDtlActive = dtlView && (dtlView.style.display !== "none" && !dtlView.classList.contains("hidden"));
-      if (isDtlActive) {
-        if (typeof openProductDetailById === "function") {
-          openProductDetailById(actualTargetId);
-        }
-      }
+      // ĐỒNG BỘ THỜI GIAN THỰC TỨC THÌ (REALTIME 0MS) CHO GIAO DIỆN VÀ TẤT CẢ CÁC TAB
+      broadcastProductUpdateRealtime(prodData);
       // Phát tín hiệu BroadcastChannel tức thì sang tất cả các tab / cửa sổ trình duyệt khác (<10ms)
       try {
         if (typeof BroadcastChannel !== "undefined") {
@@ -15166,32 +15473,9 @@ if (typeof productOrId === "object") {
           if (typeof renderAdminDashboard === "function") renderAdminDashboard();
           if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
           if (typeof currentSelectedProduct !== "undefined" && currentSelectedProduct) {
-            const freshCur = MOCK_DATA.products.find(p => p && p.id === currentSelectedProduct.id);
+            const freshCur = MOCK_DATA.products.find(p => p && (String(p.id) === String(currentSelectedProduct.id) || (currentSelectedProduct.slug && String(p.slug) === String(currentSelectedProduct.slug))));
             if (freshCur) {
-              currentSelectedProduct = freshCur;
-              const dtlImg = document.getElementById("dtlImage");
-              if (dtlImg && freshCur.image) dtlImg.src = (typeof resolveProductImage === "function") ? resolveProductImage(freshCur) : freshCur.image;
-              if (typeof renderDetailRelatedProducts === "function") renderDetailRelatedProducts(freshCur);
-              if (typeof syncDetailStockUI === "function") {
-                const curVIdx = (typeof currentSelectedVariantIndex === "number") ? currentSelectedVariantIndex : 0;
-                const vStk = (typeof getShopVariantStock === "function") ? getShopVariantStock(freshCur, curVIdx) : (freshCur.stock || 0);
-                syncDetailStockUI(vStk);
-              }
-              const pillsContainer = document.getElementById("dtlVariantPills");
-              if (pillsContainer && Array.isArray(freshCur.variants) && freshCur.variants.length > 0) {
-                const curVIdx = (typeof currentSelectedVariantIndex === "number") ? currentSelectedVariantIndex : 0;
-                pillsContainer.innerHTML = freshCur.variants.map((v, idx) => {
-                  let vStock = (v && typeof v.stock === "number" && v.stock > 0) ? v.stock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(freshCur, idx) : (freshCur.stock || 0));
-                  v.stock = vStock;
-                  const stockBadge = vStock > 0
-                    ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
-                    : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
-                  return '<div class="variant-pill-option ' + (idx === curVIdx ? 'active' : '') + '" onclick="selectVariant(' + idx + ', ' + (v.price || 0) + ')">' +
-                    '<span>' + (typeof escapeHtml === 'function' ? escapeHtml(v.name || ("Gói " + (idx + 1))) : (v.name || ("Gói " + (idx + 1)))) + stockBadge + '</span>' +
-                    '<span style="font-weight:700;">' + (typeof formatVND === 'function' ? formatVND(v.price || 0) : (v.price || 0)) + '</span>' +
-                  '</div>';
-                }).join("");
-              }
+              refreshActiveProductDetailUI(freshCur);
             }
           }
         }
@@ -25873,16 +26157,18 @@ function syncAllOpenViewsStock(changedProdId) {
               const curLiveStock = (typeof getShopVariantStock === "function") ? getShopVariantStock(p, currentSelectedVariantIndex) : (p.stock || 0);
               if (typeof syncDetailStockUI === "function") syncDetailStockUI(curLiveStock);
 
-              // CẬP NHẬT ẢNH TỪ CLOUD WORKER NẾU CÓ
-              if (wp.image && typeof wp.image === "string" && wp.image.trim() !== "") {
-                const low = wp.image.toLowerCase();
+              // CẬP NHẬT ẢNH TỪ CLOUD WORKER (Bảo vệ tuyệt đối ảnh Admin đã sửa)
+              const savedAdminImg = localStorage.getItem("mmo_custom_img_" + p.id) || (p.slug ? localStorage.getItem("mmo_custom_img_" + p.slug) : "");
+              const finalImgToUse = (savedAdminImg && savedAdminImg.trim()) ? savedAdminImg.trim() : (wp.image || "");
+              if (finalImgToUse && typeof finalImgToUse === "string" && finalImgToUse.trim() !== "") {
+                const low = finalImgToUse.toLowerCase();
                 if (!low.includes("selltainguyenmmo") && !low.includes("ultrammo") && !low.includes("placeholder")) {
-                  p.image = wp.image.trim();
-                  p.image_url = wp.image.trim();
-                  p.imageUrl = wp.image.trim();
+                  p.image = finalImgToUse.trim();
+                  p.image_url = finalImgToUse.trim();
+                  p.imageUrl = finalImgToUse.trim();
                   const dtlImgEl = document.getElementById("dtlImage");
-                  if (dtlImgEl) dtlImgEl.src = wp.image.trim();
-                  if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, wp.image.trim());
+                  if (dtlImgEl) dtlImgEl.src = finalImgToUse.trim();
+                  if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, finalImgToUse.trim());
                 }
               }
             }
