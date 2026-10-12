@@ -9665,9 +9665,11 @@ if (typeof productOrId === "object") {
       }
 
       const effectiveFinalPrice = effectivePrice || (oldProd ? oldProd.price : 20000);
+      const generatedSlug = (oldProd && oldProd.slug) || (typeof generateCleanKtsSlug === "function" ? generateCleanKtsSlug(name, actualTargetId) : ("kts-" + String(actualTargetId).toLowerCase()));
       const prodData = {
         id: actualTargetId,
         name: name,
+        slug: generatedSlug,
         category: category,
         price: effectiveFinalPrice,
         commission: commissionVal + "% (~" + formatVND(Math.round(effectiveFinalPrice * commissionVal / 100)) + ")",
@@ -14868,6 +14870,7 @@ if (typeof productOrId === "object") {
                 }
               }
               MOCK_DATA.products[existingIdx] = Object.assign({}, cur, {
+                slug: tp.slug || cur.slug || (typeof generateCleanKtsSlug === "function" ? generateCleanKtsSlug(tp.name || cur.name, cur.id) : cur.slug),
                 name: tp.name || cur.name,
                 category: tp.category || cur.category,
                 price: finalPrice,
@@ -14955,6 +14958,7 @@ if (typeof productOrId === "object") {
 
             MOCK_DATA.products.unshift({
               id: tp.id,
+              slug: tp.slug || (typeof generateCleanKtsSlug === "function" ? generateCleanKtsSlug(tp.name, tp.id) : ("kts-" + String(tp.id).toLowerCase())),
               name: tp.name,
               category: tp.category || "Tài Khoản Khác",
               price: Number(tp.price) || 0,
@@ -25188,6 +25192,20 @@ function syncAllOpenViewsStock(changedProdId) {
     window.handleProductNotFoundUI = handleProductNotFoundUI;
 
     function handleProductLoadRetryUI(cleanId, errMsg) {
+      // [BẢO VỆ CHỐNG GHI ĐÈ LỖI]: Nếu sản phẩm đã được hiển thị hợp lệ trên màn hình hoặc có trong bộ nhớ, tuyệt đối KHÔNG ghi đè thông báo lỗi!
+      if (window.currentSelectedProduct && (isProductMatch(window.currentSelectedProduct, cleanId) || String(window.currentSelectedProduct.id) === String(cleanId) || String(window.currentSelectedProduct.slug) === String(cleanId))) {
+        return;
+      }
+      const existingInMock = (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) ? MOCK_DATA.products.find(item => isProductMatch(item, cleanId)) : null;
+      if (existingInMock) {
+        openProductDetailById(existingInMock.id);
+        return;
+      }
+      const currentTitleEl = document.getElementById("dtlTitle");
+      if (currentTitleEl && currentTitleEl.innerText && !currentTitleEl.innerText.includes("Đang tải") && !currentTitleEl.innerText.includes("Không thể kết nối") && currentTitleEl.innerText.trim().length > 0) {
+        return;
+      }
+
       if (typeof switchView === "function") switchView("viewProductDetail");
       try { window.scrollTo(0, 0); } catch(e) {}
       const isRateLimit = (errMsg && (/429|quá nhanh|rate-limit|RATE_LIMIT/i.test(errMsg)));
@@ -25262,8 +25280,14 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       // BƯỚC 2: TÌM SẢN PHẨM TRONG BỘ NHỚ CỤC BỘ (CHỈ LẤY SẢN PHẨM HỢP LỆ, CHƯA BỊ XÓA)
-      const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
-      let p = allProds.find(item => isProductMatch(item, cleanId));
+      let p = null;
+      if (window.currentSelectedProduct && isProductMatch(window.currentSelectedProduct, cleanId)) {
+        p = window.currentSelectedProduct;
+      }
+      if (!p) {
+        const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
+        p = allProds.find(item => isProductMatch(item, cleanId));
+      }
 
       if (!p && typeof findShopProduct === "function") {
         const fp = findShopProduct(cleanId);
@@ -25295,6 +25319,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
       // TikTok Brazil legacy alias lookup ONLY
       if (!p && (cleanId === "PROD_MTPG0PUD" || cleanId === "PROD_MTPIJ9XV" || cleanId === "SP_TIKTOK_BRAZIL")) {
+        const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
         p = allProds.find(item => item && !(typeof isProductDeleted === "function" && isProductDeleted(item)) && (item.id === "PROD_MTPIJ9XV" || item.id === "PROD_MTPG0PUD" || (item.name && item.name.toUpperCase().includes("TIKTOK") && item.name.toUpperCase().includes("BRAZIL"))));
       }
 
@@ -25322,6 +25347,12 @@ function syncAllOpenViewsStock(changedProdId) {
         }
         try { window.scrollTo(0, 0); } catch(e) {}
       } else {
+        // Nếu tiêu đề trang đã hiển thị sản phẩm hợp lệ, không giật màn hình hoặc tải lại
+        const currentTitleEl = document.getElementById("dtlTitle");
+        if (currentTitleEl && currentTitleEl.innerText && !currentTitleEl.innerText.includes("Đang tải") && !currentTitleEl.innerText.includes("Không thể kết nối") && currentTitleEl.innerText.trim().length > 0) {
+          return;
+        }
+
         // NẾU CHƯA CÓ: Nạp siêu tốc từ Cloudflare Worker Turso API (100ms) - KHÔNG tạo dummy product
         if (typeof switchView === "function") switchView("viewProductDetail");
         const dtlTitleEl = document.getElementById("dtlTitle");
@@ -25334,10 +25365,20 @@ function syncAllOpenViewsStock(changedProdId) {
             if (res && res.success && res.product && !(typeof isProductDeleted === "function" && isProductDeleted(res.product))) {
               const wp = res.product;
               if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
-                if (!MOCK_DATA.products.some(x => x && x.id === wp.id)) {
+                const exIdx = MOCK_DATA.products.findIndex(x => x && (x.id === wp.id || x.slug === wp.slug));
+                if (exIdx === -1) {
                   MOCK_DATA.products.unshift(wp);
+                } else {
+                  MOCK_DATA.products[exIdx] = Object.assign({}, MOCK_DATA.products[exIdx], wp);
                 }
               }
+              try {
+                const curSaved = JSON.parse(localStorage.getItem("mmo_products") || "[]");
+                if (Array.isArray(curSaved) && !curSaved.some(x => x && x.id === wp.id)) {
+                  curSaved.unshift(wp);
+                  localStorage.setItem("mmo_products", JSON.stringify(curSaved));
+                }
+              } catch(e) {}
               openProductDetailById(wp.id);
             } else if (res && (res.notFound || res.code === "NOT_FOUND")) {
               handleProductNotFoundUI(cleanId);
@@ -33115,6 +33156,9 @@ function changeAdmUsersPage(p) {
         }
         if (prodParam) {
           setTimeout(function() {
+            if (window.currentSelectedProduct && (typeof isProductMatch === "function" ? isProductMatch(window.currentSelectedProduct, prodParam) : (window.currentSelectedProduct.id === prodParam || window.currentSelectedProduct.slug === prodParam))) {
+              return;
+            }
             if (typeof openProductDetailById === "function") {
               openProductDetailById(prodParam);
             }
