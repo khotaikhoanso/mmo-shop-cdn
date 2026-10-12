@@ -20,6 +20,17 @@ if (typeof window !== "undefined") {
   window.escapeHtml = escapeHtml;
 }
 
+
+// =========================================================================
+// [GLOBAL ANTI-TDZ SHIELD 2026]: PHÒNG VỆ TRIỆT ĐỂ TEMPORAL DEAD ZONE TRÊN ES6
+// =========================================================================
+var MMO_AI_KEYS = (typeof window !== "undefined" && window.MMO_AI_KEYS) ? window.MMO_AI_KEYS : null;
+var KTS_KNOWN_CDN_MAP = (typeof window !== "undefined" && window.KTS_KNOWN_CDN_MAP) ? window.KTS_KNOWN_CDN_MAP : null;
+var KTS_CLEAN_FALLBACK_SVG = (typeof window !== "undefined" && window.KTS_CLEAN_FALLBACK_SVG) ? window.KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg";
+var cachedCloudWalletHistory = [];
+var currentUser = (typeof window !== "undefined" && window.currentUser) ? window.currentUser : null;
+
+
 if (typeof window !== "undefined") {
   window.cookieChoices = {
     showCookieConsentBar: function() {},
@@ -3254,7 +3265,7 @@ if (typeof productOrId === "object") {
     }
     window.getEffectiveUser = getEffectiveUser;
 
-    let currentUser = (typeof window !== "undefined" && window.currentUser && window.currentUser.email) ? window.currentUser : null;
+    currentUser = (typeof window !== "undefined" && window.currentUser && window.currentUser.email) ? window.currentUser : currentUser;
     if (!currentUser) {
       try {
         const stored = localStorage.getItem("mmo_user");
@@ -12735,7 +12746,7 @@ if (typeof productOrId === "object") {
       "zalo_group.png": "https://iili.io/nGQBlvp.png"
 };
 
-    const KTS_KNOWN_CDN_MAP = {
+    var KTS_KNOWN_CDN_MAP = window.KTS_KNOWN_CDN_MAP = {
       "PROD_MUQIMRJYG0": "https://iili.io/nGQfXDX.png",
       "PROD_MU6R34FZ4Z": "https://iili.io/nGQfXDX.png",
       "PROD_MU5T3T47AE": "https://iili.io/nGQfXDX.png",
@@ -12805,7 +12816,7 @@ if (typeof productOrId === "object") {
       "PROD_MTU9F5HN": "https://iili.io/nGQqwmP.png"
 };
 
-    const KTS_CLEAN_FALLBACK_SVG = "https://iili.io/nGs8RDv.jpg";
+    var KTS_CLEAN_FALLBACK_SVG = window.KTS_CLEAN_FALLBACK_SVG = "https://iili.io/nGs8RDv.jpg";
     window.KTS_CLEAN_FALLBACK_SVG = KTS_CLEAN_FALLBACK_SVG;
 
     function resolveProductImage(p) {
@@ -13234,7 +13245,7 @@ if (typeof productOrId === "object") {
           window._recRotationIntervalSet = true;
           setInterval(function() {
             const rGrid = document.getElementById("recommendedGrid");
-            const curV = (typeof currentView !== "undefined") ? currentView : "viewStore";
+            const curV = (typeof window.currentView !== "undefined") ? window.currentView : "viewStore";
             if (rGrid && (curV === "viewStore" || !document.getElementById("viewStore")?.classList.contains("hidden"))) {
               _recRotationIndex += 6;
               try { sessionStorage.setItem("mmo_rec_rot_idx", String(_recRotationIndex)); } catch(e) {}
@@ -27665,7 +27676,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
     // ==================== ROBUST JSONP BLOGGER FEED SYNC (ANTI-REVERSE SYNC) ====================
     function fetchBloggerFeedPosts(isManual) {
-      if (typeof isManual === "undefined") isManual = false;
+      if (isManual === undefined) isManual = false;
       if (!isManual && window._bloggerFeedFetched) return;
       window._bloggerFeedFetched = true;
 
@@ -30264,7 +30275,7 @@ function syncAllOpenViewsStock(changedProdId) {
       let errorCount = 0;
 
       // Tra cứu trước từ Google Apps Script Backend nếu có
-      let preloadedData = null;
+      var preloadedData = null;
       try {
         const gasUrl = (typeof getGasApiUrl === 'function' ? getGasApiUrl() : (typeof API_URL !== 'undefined' ? API_URL : ''));
         if (gasUrl) {
@@ -31091,7 +31102,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }
     }
 
-    let cachedCloudWalletHistory = [];
+    var cachedCloudWalletHistory = [];
 
     var _lastWalletCloudFetchTime = 0;
     var _isLoadingWalletFromCloud = false;
@@ -34094,6 +34105,14 @@ function changeAdmUsersPage(p) {
       }
       window._mmoAppFullyInitialized = true;
       window._mmoCdnAppBooted = true;
+
+      // =========================================================================
+      // [ZERO-DELAY RENDER ENGINE]: RENDER SẢN PHẨM TỨC THÌ 0MS - KHÔNG CHỜ SETTINGS
+      // =========================================================================
+      try { if (typeof renderProductGrid === "function") renderProductGrid(); } catch(eGrid) { console.error("renderProductGrid early error:", eGrid); }
+      try { if (typeof renderBestSellers === "function") renderBestSellers(); } catch(eBs) { console.error("renderBestSellers early error:", eBs); }
+      try { if (typeof renderRecommended === "function") renderRecommended(); } catch(eRec) { console.error("renderRecommended early error:", eRec); }
+      try { if (typeof renderCategories === "function") renderCategories(); } catch(eCat) { console.error("renderCategories early error:", eCat); }
       try {
         if (typeof syncCloudOrdersToLocalUI === "function") {
           syncCloudOrdersToLocalUI(true);
@@ -41032,7 +41051,7 @@ async function confirmRefundOrder() {
 // ============================================================
 // HỆ THỐNG QUẢN LÝ & BẢO VỆ KEY AI ĐA TẦNG (ANTI-KEY-LOSS SHIELD)
 // ============================================================
-const MMO_AI_KEYS = {
+var MMO_AI_KEYS = window.MMO_AI_KEYS = {
   get: function(provider) {
     if (!provider) return '';
     var p = String(provider).toLowerCase().trim();
