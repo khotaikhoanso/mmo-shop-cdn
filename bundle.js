@@ -12059,6 +12059,8 @@ if (typeof productOrId === "object") {
         if (typeof renderAffiliateDashboard === "function") renderAffiliateDashboard();
       }
     }
+    window.switchProfileTab = switchProfileTab;
+    window._bundleSwitchProfileTab = switchProfileTab;
 
     function updateUserUI() {
       if (window._isUpdatingUserUIRecursion) return;
@@ -12192,6 +12194,23 @@ if (typeof productOrId === "object") {
         if (mobAdmOut) mobAdmOut.style.setProperty("display", isSessionAdm ? "flex" : "none", "important");
         if (navAdmin) navAdmin.style.setProperty("display", isSessionAdm ? "flex" : "none", "important");
         if (profAdminBtn) profAdminBtn.style.setProperty("display", isSessionAdm ? "flex" : "none", "important");
+        
+        // Guest Profile View DOM elements
+        const profNameEl = document.getElementById("profUserName");
+        const profEmailEl = document.getElementById("profUserEmail");
+        const profRoleEl = document.getElementById("profUserBadge") || document.getElementById("profUserRole");
+        const profAvatarEl = document.getElementById("profUserAvatar");
+        const profBalanceEl = document.getElementById("profDisplayBalance") || document.getElementById("profBalanceDisplay");
+        if (profNameEl) profNameEl.innerText = "Khách Hàng";
+        if (profEmailEl) profEmailEl.innerText = "Chưa đăng nhập";
+        if (profRoleEl) {
+          profRoleEl.innerText = "GUEST";
+          profRoleEl.className = "profile-sidebar-badge";
+          profRoleEl.style.color = "#94a3b8";
+        }
+        if (profAvatarEl) profAvatarEl.src = "https://api.dicebear.com/7.x/bottts/svg?seed=guest";
+        if (profBalanceEl) profBalanceEl.innerText = "0 đ";
+
         if (authArea) {
           authArea.innerHTML = `
             <button class="btn-auth" onclick="openAuthModal('login')">
@@ -12758,7 +12777,7 @@ if (typeof productOrId === "object") {
           if (typeof renderAdminNotifications === "function") renderAdminNotifications();
         }, 100);
       }
-      if (viewId === "viewProfile" || viewId === "viewDeposit" || viewId === "viewAdmin") {
+      if (viewId === "viewDeposit" || viewId === "viewAdmin") {
         if (viewId === "viewAdmin" && typeof isAdminUser === "function" && isAdminUser()) {
           // Admin session flag đã xác thực thành công, cho phép vào trực tiếp
         } else {
@@ -12766,7 +12785,7 @@ if (typeof productOrId === "object") {
 
           if (!checkUser || !checkUser.email) {
             try { sessionStorage.setItem("mmo_intended_view", viewId); } catch(e){}
-            showToast(viewId === "viewAdmin" ? "🔒 Vui lòng đăng nhập tài khoản Quản Trị Viên để truy cập!" : "🔒 Vui lòng đăng nhập để xem thông tin cá nhân và đơn hàng!", "info");
+            showToast(viewId === "viewAdmin" ? "🔒 Vui lòng đăng nhập tài khoản Quản Trị Viên để truy cập!" : "🔒 Vui lòng đăng nhập để nạp tiền!", "info");
             openAuthModal("login");
             return;
           }
@@ -12777,6 +12796,16 @@ if (typeof productOrId === "object") {
               return;
             }
           }
+        }
+      }
+
+      if (viewId === "viewProfile") {
+        let checkProfUser = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
+        if (!checkProfUser || !checkProfUser.email) {
+          try { sessionStorage.setItem("mmo_intended_view", "viewProfile"); } catch(e){}
+          setTimeout(function() {
+            if (typeof openAuthModal === "function") openAuthModal("login");
+          }, 250);
         }
       }
 
@@ -31951,6 +31980,9 @@ function syncAllOpenViewsStock(changedProdId) {
       localStorage.setItem("mmo_user_bank", JSON.stringify({ bankName: bName, bankAcc: bAcc, bankOwner: bOwner }));
       showToast("Đã lưu tài khoản ngân hàng nhận tiền thành công!", "success");
     }
+    window.handleProfileWithdraw = handleProfileWithdraw;
+    window.saveProfileInfo = saveProfileInfo;
+    window.saveProfileBankInfo = saveProfileBankInfo;
 
 
     // ==================== WITHDRAWAL REQUEST & PLATFORM FINANCE SYSTEM ====================
@@ -35261,12 +35293,7 @@ function getProductSchemaReviews(p, idx) {
     window.toggleMobileDrawer = toggleMobileDrawer;
 
     function handleMobileUserNav() {
-      if (typeof currentUser !== "undefined" && currentUser) {
-        switchView("viewProfile");
-      } else {
-        if (typeof openAuthModal === "function") openAuthModal();
-        else switchView("viewProfile");
-      }
+      switchView("viewProfile");
     }
     window.handleMobileUserNav = handleMobileUserNav;
 
