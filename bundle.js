@@ -6734,27 +6734,20 @@ if (typeof productOrId === "object") {
               if (!d) return false;
               const n = String(d.note || d.content || d.id || d.orderId || d.reason || d.type || "").toLowerCase();
               if (n.includes("đồng bộ") || n.includes("dong bo") || n.includes("hiệu chỉnh") || n.includes("hieu chinh") || n.includes("chuẩn hóa")) return false;
-              const pId = String(d.prodId || "");
               const oId = String(d.id || d.orderId || "");
+              const cleanId = oId.replace("#", "").trim();
+              const dBank = String(d.bank || d.bankName || d.gateway || "").toLowerCase();
+              if (n.includes("hoàn tiền") || n.includes("refund") || cleanId.startsWith("REFUND_")) return false;
+              const isMmoBank = dBank.includes("mmo") || dBank.includes("ví") || dBank.includes("vi");
+              if (cleanId.startsWith("NAP_") && (isMmoBank || n.includes("bảo hành") || n.includes("đơn hàng") || !d.bankAcc)) return false;
+              const pId = String(d.prodId || "");
               const pName = String(d.prodName || "").toLowerCase();
               const tType = String(d.type || "").toLowerCase();
               if (pId.startsWith("PROD_") || tType.includes("mua hàng") || tType.includes("thanh toán")) return false;
               const dNote = String(d.note || d.content || "");
-              if (pId.startsWith("PROD_") || tType.includes("mua hàng") || tType.includes("thanh toán")) return false;
               if (oId.startsWith("DH") && pId !== "NAP_VI" && !pName.includes("nạp tiền ví")) return false;
               if (d.accounts || d.credentials || dNote.includes("|") || dNote.includes("@hotmail") || dNote.includes("@gmail")) return false;
               return true;
-            }).map(d => {
-              const oId = String(d.id || d.orderId || "");
-              if (oId === "NAP_131154" && (!d.userEmail || d.userEmail.toLowerCase().trim() === "khotaikhoanso.net@gmail.com")) {
-                d.userEmail = "hoangtuananh0968@gmail.com";
-                d.email = "hoangtuananh0968@gmail.com";
-                d.userName = "hoangtuananh0968";
-                d.type = "Nạp tiền thủ công Admin";
-                d.handledBy = "Quản trị viên";
-                d.bank = "Ví MMO";
-              }
-              return d;
             });
             const dedupped = deduplicatePlatformDeposits(cleaned);
             localStorage.setItem("mmo_deposits", JSON.stringify(dedupped));
@@ -6804,7 +6797,7 @@ if (typeof productOrId === "object") {
           }
         });
 
-        // Đảm bảo số dư currentUser chuẩn xác theo SSOT 205.500 đ
+        // Đảm bảo số dư currentUser chuẩn xác
         const curUserRaw = localStorage.getItem("mmo_user");
         if (curUserRaw) {
           try {
@@ -6829,18 +6822,23 @@ if (typeof productOrId === "object") {
         if (!Array.isArray(list)) list = [];
       } catch(e) { list = []; }
 
-      // Lọc sạch toàn bộ các bản ghi giả lập/đồng bộ nội bộ và đơn mua hàng
+      // Lọc sạch toàn bộ các bản ghi giả lập/đồng bộ nội bộ, hoàn tiền và test
       const cleanList = list.filter(d => {
         if (!d) return false;
         const n = String(d.note || d.content || d.id || d.orderId || d.reason || d.type || "").toLowerCase();
         if (n.includes("đồng bộ") || n.includes("dong bo") || n.includes("hiệu chỉnh") || n.includes("hieu chinh") || n.includes("chuẩn hóa")) return false;
-        const pId = String(d.prodId || "");
         const oId = String(d.id || d.orderId || "");
+        const cleanId = oId.replace("#", "").trim();
+        const dBank = String(d.bank || d.bankName || d.gateway || "").toLowerCase();
+        if (n.includes("hoàn tiền") || n.includes("refund") || cleanId.startsWith("REFUND_")) return false;
+        const isMmoBank = dBank.includes("mmo") || dBank.includes("ví") || dBank.includes("vi");
+        if (cleanId.startsWith("NAP_") && (isMmoBank || n.includes("bảo hành") || n.includes("đơn hàng") || !d.bankAcc)) return false;
+
+        const pId = String(d.prodId || "");
         const pName = String(d.prodName || "").toLowerCase();
         const tType = String(d.type || "").toLowerCase();
         if (pId.startsWith("PROD_") || tType.includes("mua hàng") || tType.includes("thanh toán")) return false;
         const dNote = String(d.note || d.content || "");
-        if (pId.startsWith("PROD_") || tType.includes("mua hàng") || tType.includes("thanh toán")) return false;
         if (oId.startsWith("DH") && pId !== "NAP_VI" && !pName.includes("nạp tiền ví")) return false;
         if (d.accounts || d.credentials || dNote.includes("|") || dNote.includes("@hotmail") || dNote.includes("@gmail")) return false;
         return true;
@@ -6848,13 +6846,6 @@ if (typeof productOrId === "object") {
         const oId = String(d.id || d.orderId || "");
         let uMail = (d.userEmail || d.email || "").toLowerCase().trim();
         let uName = d.userName || d.name || "";
-        if (oId === "NAP_131154" && (!uMail || uMail === "khotaikhoanso.net@gmail.com")) {
-          uMail = "hoangtuananh0968@gmail.com";
-          uName = "hoangtuananh0968";
-          d.type = "Nạp tiền thủ công Admin";
-          d.handledBy = "Quản trị viên";
-          d.bank = "Ví MMO";
-        }
         if (!uMail || uMail.includes("khachhang@gmail.com") || !uName || uName === "Khách Hàng") {
           try {
             const allOrders = (typeof getAllOrders === "function") ? getAllOrders() : [];
@@ -6864,21 +6855,13 @@ if (typeof productOrId === "object") {
               uName = matchedO.userName || matchedO.buyerUsername || uMail.split("@")[0];
             }
           } catch(eO) {}
-          if (!uMail || uMail.includes("khachhang@gmail.com")) {
-            try {
-              const regUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
-              const nonAdmin = regUsers.find(u => {
-                const em = (u.email || "").toLowerCase().trim();
-                return em && em.includes("@") && em !== "khotaikhoanso.net@gmail.com" && em !== "your_usernamedz@gmail.com" && !em.includes("khachhang@gmail.com");
-              });
-              if (nonAdmin) {
-                uMail = nonAdmin.email.toLowerCase().trim();
-                uName = nonAdmin.name || uMail.split("@")[0];
-              }
-            } catch(eR) {}
-          }
         }
-        if (!uName) uName = uMail ? uMail.split("@")[0] : "Khách hàng";
+        if (!uMail || uMail.includes("khachhang@gmail.com") || uMail === "--") {
+          uMail = "Khách Hàng";
+        }
+        if (!uName || uName === "Khách Hàng") {
+          uName = (uMail && uMail !== "Khách Hàng" && uMail.includes("@")) ? uMail.split("@")[0] : "Khách Hàng";
+        }
         d.userEmail = uMail;
         d.email = uMail;
         d.userName = uName;
@@ -7172,39 +7155,6 @@ if (typeof productOrId === "object") {
       if (!cleanEmail) return { transactions: [], currentBalance: 0, totalDeposited: 0, totalSpent: 0 };
 
       const rawLogs = [];
-
-      if (cleanEmail === "hoangtuananh0968@gmail.com") {
-        rawLogs.push({
-          id: "ADM_NAP_20261009_2152",
-          orderId: "ADM_20261009_2152",
-          time: "21:52:56 9/10/2026",
-          date: "21:52:56 9/10/2026",
-          type: "Nạp thủ công Admin",
-          amount: 200000,
-          balanceAfter: 402000,
-          note: "Nạp tiền thủ công qua ngân hàng"
-        });
-        rawLogs.push({
-          id: "DEP_170248_0710",
-          orderId: "DH5814033791",
-          time: "17:02:48 7/10/2026",
-          date: "17:02:48 7/10/2026",
-          type: "Nạp tiền ví",
-          amount: 2000,
-          balanceAfter: 202000,
-          note: "MBVCB.16413333700.228806.DH5814033791..."
-        });
-        rawLogs.push({
-          id: "ADM_NAP_20261007_0023",
-          orderId: "ADM_20261007_0023",
-          time: "00:23:06 7/10/2026",
-          date: "00:23:06 7/10/2026",
-          type: "Nạp thủ công Admin",
-          amount: 200000,
-          balanceAfter: 200000,
-          note: "ADMIN Nạp tiền thủ công qua ngân hàng"
-        });
-      }
 
       // A. Lấy từ mmo_transaction_history (hệ thống giao dịch chuẩn)
       try {
@@ -31736,10 +31686,6 @@ function syncAllOpenViewsStock(changedProdId) {
           }
         }
 
-        if (cleanEmail === "hoangtuananh0968@gmail.com" && (authoritativeBal === null || authoritativeBal < 402000)) {
-          authoritativeBal = 402000;
-        }
-
         if (authoritativeBal !== null && !isNaN(authoritativeBal)) {
           currentUser.balance = authoritativeBal;
           try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
@@ -32518,7 +32464,13 @@ function syncAllOpenViewsStock(changedProdId) {
           : JSON.parse(localStorage.getItem("mmo_deposits") || "[]");
         if (Array.isArray(localList)) {
           localList.forEach(d => {
-            if (!d) return;
+            const oId = String(d.id || d.orderId || "");
+            const cleanId = oId.replace("#", "").trim();
+            const n = String(d.note || d.content || d.reason || d.type || "").toLowerCase();
+            const dBank = String(d.bank || d.bankName || d.gateway || "").toLowerCase();
+            if (n.includes("hoàn tiền") || n.includes("refund") || cleanId.startsWith("REFUND_")) return;
+            const isMmoBank = dBank.includes("mmo") || dBank.includes("ví") || dBank.includes("vi");
+            if (cleanId.startsWith("NAP_") && (isMmoBank || n.includes("bảo hành") || n.includes("đơn hàng") || !d.bankAcc)) return;
             const st = String(d.status || "").toLowerCase();
             if (st.includes("thành công") || st.includes("success") || st.includes("completed") || st.includes("paid") || !st) {
               rawAllDeposits.push(d);
@@ -32534,14 +32486,15 @@ function syncAllOpenViewsStock(changedProdId) {
           const t = String(ch.type || "").toLowerCase();
           const st = String(ch.status || "").toLowerCase();
           const chNoteLow = String(ch.note || ch.content || ch.reason || "").toLowerCase();
-          if (!chNoteLow.includes("đồng bộ") && !chNoteLow.includes("dong bo") && !chNoteLow.includes("hiệu chỉnh") && !chNoteLow.includes("chuẩn hóa") && (t.includes("nạp") || t.includes("vietqr") || t.includes("sepay")) && (!st || st.includes("thành công") || st.includes("success") || !st)) {
-            const cleanId = String(ch.id || ch.orderId || "").trim();
-            let uMail = (ch.userEmail || ch.email || "khachhang@gmail.com").toLowerCase().trim();
-            let uName = ch.userName || ch.name || (uMail ? uMail.split("@")[0] : "Khách Hàng");
-            if (cleanId === "NAP_131154" && (!uMail || uMail === "khotaikhoanso.net@gmail.com")) {
-              uMail = "hoangtuananh0968@gmail.com";
-              uName = "hoangtuananh0968";
-            }
+          const cleanId = String(ch.id || ch.orderId || "").replace("#", "").trim();
+          const chBank = String(ch.bank || ch.bankName || ch.gateway || "").toLowerCase();
+          if (chNoteLow.includes("hoàn tiền") || chNoteLow.includes("refund") || cleanId.startsWith("REFUND_")) return;
+          const isMmoBankCh = chBank.includes("mmo") || chBank.includes("ví") || chBank.includes("vi");
+          if (cleanId.startsWith("NAP_") && (isMmoBankCh || chNoteLow.includes("bảo hành") || chNoteLow.includes("đơn hàng") || !ch.bankAcc)) return;
+          if (chNoteLow.includes("đồng bộ") && !chNoteLow.includes("dong bo") && !chNoteLow.includes("hiệu chỉnh") && !chNoteLow.includes("chuẩn hóa")) return;
+          if ((t.includes("nạp") || t.includes("vietqr") || t.includes("sepay")) && (!st || st.includes("thành công") || st.includes("success") || !st)) {
+            let uMail = (ch.userEmail || ch.email || "Khách Hàng").toLowerCase().trim();
+            let uName = ch.userName || ch.name || (uMail && uMail.includes("@") ? uMail.split("@")[0] : "Khách Hàng");
             rawAllDeposits.push({
               id: cleanId,
               orderId: cleanId,
@@ -32569,12 +32522,14 @@ function syncAllOpenViewsStock(changedProdId) {
           const t = String(tx.type || "").toLowerCase();
           const amt = Number(tx.amount) || 0;
           const txNoteLow = String(tx.note || tx.reason || tx.type || "").toLowerCase();
-          if (amt > 0 && !txNoteLow.includes("đồng bộ") && !txNoteLow.includes("dong bo") && !txNoteLow.includes("hiệu chỉnh") && !txNoteLow.includes("chuẩn hóa") && (t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || t.includes("cộng tiền") || t.includes("topup"))) {
-            const cleanId = String(tx.txId || tx.id || "").trim();
+          const cleanId = String(tx.txId || tx.id || "").replace("#", "").trim();
+          if (cleanId.startsWith("REFUND_") || txNoteLow.includes("hoàn tiền") || txNoteLow.includes("refund")) return;
+          if (cleanId.startsWith("NAP_") && (txNoteLow.includes("bảo hành") || txNoteLow.includes("đơn hàng") || txNoteLow.includes("ví") || txNoteLow.includes("mmo"))) return;
+          if (amt > 0 && !txNoteLow.includes("đồng bộ") && !txNoteLow.includes("dong bo") && !txNoteLow.includes("hiệu chỉnh") && !txNoteLow.includes("chuẩn hóa") && (t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || t.includes("topup"))) {
             rawAllDeposits.push({
               id: cleanId,
               orderId: cleanId,
-              userEmail: tx.userEmail || "khachhang@gmail.com",
+              userEmail: tx.userEmail || "Khách Hàng",
               userName: tx.userName || "Khách Hàng",
               type: tx.type || "Nạp tiền VietQR / SePay",
               amount: amt,
@@ -32600,12 +32555,14 @@ function syncAllOpenViewsStock(changedProdId) {
               const amt = Number(lg.amount || lg.diff || 0);
               const t = String(lg.type || lg.reason || "").toLowerCase();
               const lgNoteLow = String(lg.reason || lg.description || lg.note || lg.type || "").toLowerCase();
-              if (amt > 0 && !lgNoteLow.includes("đồng bộ") && !lgNoteLow.includes("dong bo") && !lgNoteLow.includes("hiệu chỉnh") && !lgNoteLow.includes("chuẩn hóa") && (t.includes("nạp") || t.includes("deposit") || t.includes("cộng tiền"))) {
-                const cleanId = String(lg.id || ("DEP_LOG_" + idx)).trim();
+              const cleanId = String(lg.id || ("DEP_LOG_" + idx)).trim();
+              if (cleanId.startsWith("REFUND_") || lgNoteLow.includes("hoàn tiền") || lgNoteLow.includes("refund")) return;
+              if (/^NAP_\d{6}$/.test(cleanId) && lgNoteLow.includes("bảo hành")) return;
+              if (amt > 0 && !lgNoteLow.includes("đồng bộ") && !lgNoteLow.includes("dong bo") && !lgNoteLow.includes("hiệu chỉnh") && !lgNoteLow.includes("chuẩn hóa") && (t.includes("nạp") || t.includes("deposit"))) {
                 rawAllDeposits.push({
                   id: cleanId,
                   orderId: cleanId,
-                  userEmail: lg.userEmail || lg.email || "khachhang@gmail.com",
+                  userEmail: lg.userEmail || lg.email || "Khách Hàng",
                   userName: lg.userName || lg.name || "Khách Hàng",
                   type: "Nạp tiền VietQR / SePay",
                   amount: amt,
@@ -32976,7 +32933,18 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       const withdrawList = getWithdrawRequests();
-      const deposits = (typeof getPlatformDeposits === "function") ? getPlatformDeposits() : [];
+      const rawDeposits = (typeof getPlatformDeposits === "function") ? getPlatformDeposits() : [];
+      const deposits = rawDeposits.filter(d => {
+        if (!d) return false;
+        const oId = String(d.id || d.orderId || "");
+        const cleanId = oId.replace("#", "").trim();
+        const dNote = String(d.note || d.content || d.reason || d.type || "").toLowerCase();
+        const dBank = String(d.bank || d.bankName || d.gateway || "").toLowerCase();
+        if (dNote.includes("hoàn tiền") || dNote.includes("refund") || cleanId.startsWith("REFUND_")) return false;
+        const isMmoBank = dBank.includes("mmo") || dBank.includes("ví") || dBank.includes("vi");
+        if (cleanId.startsWith("NAP_") && (isMmoBank || dNote.includes("bảo hành") || dNote.includes("đơn hàng") || !d.bankAcc)) return false;
+        return true;
+      });
 
       // 1. Tính toán số liệu tài chính toàn sàn
       const users = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
@@ -33012,10 +32980,6 @@ function syncAllOpenViewsStock(changedProdId) {
         let hBy = d.handledBy ? d.handledBy : (isManual ? "Quản trị viên" : "Tự động SePay 24/7");
         let uMail = (d.userEmail || d.email || "").toLowerCase().trim();
         let uName = d.userName || d.name || "";
-        if ((oId === "NAP_131154" || oId === "131154") && (!uMail || uMail === "khotaikhoanso.net@gmail.com")) {
-          uMail = "hoangtuananh0968@gmail.com";
-          uName = "hoangtuananh0968";
-        }
         if (!uMail || uMail.includes("khachhang@gmail.com") || !uName || uName === "Khách Hàng") {
           const cleanOId = oId.replace("#", "").trim();
           const allOrders = (typeof getAllOrders === "function") ? getAllOrders() : [];
@@ -33024,19 +32988,9 @@ function syncAllOpenViewsStock(changedProdId) {
             uMail = (matchedO.email || matchedO.userEmail || matchedO.buyerEmail).toLowerCase().trim();
             uName = matchedO.userName || matchedO.buyerUsername || uMail.split("@")[0];
           }
-          if (!uMail || uMail.includes("khachhang@gmail.com")) {
-            const regUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
-            const nonAdmin = regUsers.find(u => {
-              const em = (u.email || "").toLowerCase().trim();
-              return em && em.includes("@") && em !== "khotaikhoanso.net@gmail.com" && em !== "your_usernamedz@gmail.com" && !em.includes("khachhang@gmail.com");
-            });
-            if (nonAdmin) {
-              uMail = nonAdmin.email.toLowerCase().trim();
-              uName = nonAdmin.name || uMail.split("@")[0];
-            }
-          }
         }
-        if (!uName) uName = uMail ? uMail.split("@")[0] : "Khách Hàng";
+        if (!uName) uName = (uMail && uMail.includes("@")) ? uMail.split("@")[0] : "Khách Hàng";
+        if (!uMail) uMail = "khachhang@gmail.com";
 
         const isPurchaseOrder = oId.startsWith("DH") || (d.type && (d.type.includes("mua hàng") || d.type.includes("thanh toán")));
 
@@ -37620,44 +37574,7 @@ function getProductSchemaReviews(p, idx) {
       });
 
       if (all.length === 0) {
-        const seedOrders = [
-          {"orderId":"DH9831603774","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH9343890402","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH2099863085","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH2671169257","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (kim long nguyen thi)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenthikimlong400@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH9990154374","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":10000,"totalAmount":10000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH_PRE614962","prodId":"PROD_MTVI44UK","prodName":"Đặt trước: Tiktok việt reg trên 4 tháng (Tik Tok việt trên 1 năm)","quantity":1,"price":8000,"totalAmount":8000,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH8723024085","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH5814033791","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH9309956105","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH355756","prodId":"PROD_MTQZT2Y1","prodName":"HOTMAIL - OUTLOOK ĐỘ TRUST CAO LIVE TRÂU","quantity":1,"price":600,"totalAmount":600,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH733910","prodId":"PROD_MTQQXO2E","prodName":"Gmail cho Thuê 24h","quantity":1,"price":400,"totalAmount":400,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH854746","prodId":"PROD_MTRB6000","prodName":"OUTLOOK TRUSTED - LIVE 6-12 Tháng","quantity":1,"price":400,"totalAmount":400,"email":"hoangtuananh0968@gmail.com","status":"PAID","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH5419121420","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Tuan anh)","quantity":1,"price":20000,"totalAmount":20000,"email":"hoangtuananh0968@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH3898951317","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (kim long nguyen thi)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenthikimlong400@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH6039586843","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH3760449145","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH1287347948","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH1050162980","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH3147162070","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH1915396459","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH9442915098","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH8229961848","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"COMPLETED","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH5159151378","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Vinh Nguyen)","quantity":1,"price":20000,"totalAmount":20000,"email":"nguyenvinh09678@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH3592018175","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH6874645436","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (Nguyễn Mạnh Đông)","quantity":1,"price":20000,"totalAmount":20000,"email":"digimarketmmo@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH4243925331","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH2691875954","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"},
-          {"orderId":"DH1282315997","prodId":"NAP_VI","prodName":"Nạp tiền vào ví điện tử (khotaikhoanso.net)","quantity":1,"price":20000,"totalAmount":20000,"email":"khotaikhoanso.net@gmail.com","status":"PENDING","createdAt":"18:32:33 9/10/2026"}
-        ];
-        all = seedOrders.map(function(o) {
-          return Object.assign({}, o, {
-            id: o.orderId,
-            totalPrice: o.totalAmount || o.price || 0,
-            total: o.totalAmount || o.price || 0,
-            date: o.createdAt || ""
-          });
-        });
+        all = [];
       }
 
       // Sắp xếp đơn mới nhất lên đầu (NEWEST FIRST)
@@ -41843,53 +41760,13 @@ async function confirmRefundOrder() {
       // 5. Đồng bộ số dư và đơn hàng lên Google Sheets: Dual-path sync
       const targetUser = users[uIdx];
       const adminEmail = (currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
-      const apiUrl = typeof getBackendApiUrl === "function" ? getBackendApiUrl() : "";
-
-      function syncRefundToWebhook() {
-        if (!apiUrl) return;
-        const cleanPrefix = finalEmail.split("@")[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const cleanUId = (targetUser.userId || targetUser.id || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const topupContent = "NAP " + (cleanUId || cleanPrefix) + " " + cleanPrefix;
-        
-        fetch(apiUrl, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({
-            transferAmount: refundAmt,
-            transferContent: topupContent,
-            gateway: "Ví MMO",
-            referenceCode: "REFUND_" + orderId + "_" + Date.now()
-          })
-        }).then(r => r.json()).then(webRes => {
-          if (webRes && webRes.success && webRes.newBalance !== undefined) {
-            let uList = getRegisteredUsers();
-            let uI = uList.findIndex(u => (u.email || "").toLowerCase().trim() === finalEmail);
-            if (uI !== -1) {
-              uList[uI].balance = Number(webRes.newBalance);
-              saveRegisteredUsers(uList);
-              if (currentUser && (currentUser.email || "").toLowerCase().trim() === finalEmail) {
-                currentUser.balance = Number(webRes.newBalance);
-                localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-                if (typeof updateUserUI === "function") updateUserUI();
-              }
-            }
-          }
-        }).catch(() => {});
-      }
-
       if (typeof callGasApi === "function") {
         callGasApi("adminUpdateBalance", {
           adminEmail: adminEmail,
           targetEmail: finalEmail,
           amount: refundAmt,
           reason: refundNote
-        }).then(res => {
-          if (!res || !res.success) {
-            syncRefundToWebhook();
-          }
-        }).catch(() => {
-          syncRefundToWebhook();
-        });
+        }).catch(function(e) {});
 
         callGasApi("adminUpdateOrderStatus", {
           adminEmail: adminEmail,
