@@ -24059,6 +24059,11 @@ function syncAllOpenViewsStock(changedProdId) {
             }).catch(() => {});
         }
 
+        const adminTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
+          ? MMO_WORKER_API.getAdminSecret() 
+          : (localStorage.getItem("mmo_admin_secret") || "");
+        const admHeaders = adminTok ? { "x-admin-token": adminTok } : {};
+
         let cloudOrders = [];
         if (cleanUserMail && !isAdm) {
           try {
@@ -24071,11 +24076,18 @@ function syncAllOpenViewsStock(changedProdId) {
           } catch(e) {}
         }
 
-        const res = await fetch(apiUrl + "/api/orders?limit=300", { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
-          const generalList = Array.isArray(data) ? data : (data.orders || []);
-          if (Array.isArray(generalList)) cloudOrders = cloudOrders.concat(generalList);
+        const fetchUrls = isAdm 
+          ? [apiUrl + "/api/admin/orders?limit=300", apiUrl + "/api/admin/preorders?limit=300"]
+          : [apiUrl + "/api/orders?limit=300"];
+        for (const u of fetchUrls) {
+          try {
+            const res = await fetch(u, { headers: admHeaders, cache: "no-store" });
+            if (res.ok) {
+              const data = await res.json();
+              const list = Array.isArray(data) ? data : (data.orders || data.preOrders || []);
+              if (Array.isArray(list)) cloudOrders = cloudOrders.concat(list);
+            }
+          } catch(eFetch) {}
         }
 
         // LỌC BỎ ĐƠN KHÔNG HỢP LỆ KHỎI CLOUD ORDERS TRƯỚC KHI XỬ LÝ
@@ -24142,7 +24154,7 @@ function syncAllOpenViewsStock(changedProdId) {
             createdTimestamp: ts,
             status: co.status || "WAITING_CONFIRM",
             statusText: co.statusText || (co.status === "COMPLETED" ? "Hoàn thành" : (co.status === "PROCESSING" ? "Đang gom hàng" : (co.status === "CANCELLED" ? "Đã hủy" : "Chờ xác nhận"))),
-            type: cleanId.startsWith("PRE") ? "PRE_ORDER" : "REGULAR",
+            type: (cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.includes("PO_") || co.type === "PRE_ORDER" || co.order_status === "WAITING_CONFIRM" || co.status === "WAITING_CONFIRM" || co.order_status === "PRE_ORDER") ? "PRE_ORDER" : "REGULAR",
             credentials: credsStr,
             deliveredAccounts: accsArr,
             accounts: accsArr,
@@ -24205,7 +24217,7 @@ function syncAllOpenViewsStock(changedProdId) {
           }
 
           // 5. Thêm/cập nhật vào mmo_pre_orders (Kho đơn đặt trước Admin)
-          const isPreOrder = normOrder.type === "PRE_ORDER" || cleanId.startsWith("PRE") || (normOrder.statusText && normOrder.statusText.includes("đặt trước")) || (normOrder.productName && normOrder.productName.includes("Đặt trước"));
+          const isPreOrder = normOrder.type === "PRE_ORDER" || cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.includes("PO_") || (normOrder.statusText && normOrder.statusText.includes("đặt trước")) || (normOrder.productName && normOrder.productName.includes("Đặt trước")) || co.order_status === "WAITING_CONFIRM" || co.status === "WAITING_CONFIRM";
           if (isPreOrder) {
             const pIdx = preOrders.findIndex(p => (p && String(p.id || p.orderId || p.orderCode || "").replace("#","").trim() === cleanId));
             if (pIdx === -1) {
@@ -38129,6 +38141,8 @@ function getProductSchemaReviews(p, idx) {
         type: "PRE_ORDER",
         status: "WAITING_CONFIRM",
         statusText: "Chờ xác nhận",
+        paymentStatus: "PAID",
+        paymentMethod: "BALANCE",
         buyerId: user.id || user.email,
         buyerUsername: user.username || user.fullname || user.email.split("@")[0],
         buyerEmail: user.email,
@@ -38269,12 +38283,19 @@ function getProductSchemaReviews(p, idx) {
       // Đồng bộ Turso Worker và BroadcastChannel Realtime 0ms
       try {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+          const sTok = (typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
             body: JSON.stringify({ orders: [newPreOrder] }),
             keepalive: true
           }).catch(function(err) { console.warn("Turso pre-order sync notice:", err); });
+          fetch(MMO_WORKER_API.getApiUrl() + "/api/user/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+            body: JSON.stringify({ email: user.email, balance: user.balance }),
+            keepalive: true
+          }).catch(function() {});
         }
       } catch(eTurso) {}
       broadcastPreOrderEvent({ type: "NEW_PREORDER", order: newPreOrder });
@@ -38982,9 +39003,10 @@ function getProductSchemaReviews(p, idx) {
       // 6. Đồng bộ Turso Worker Database
       try {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
             body: JSON.stringify({ orders: [order] }),
             keepalive: true
           }).catch(function(e) { console.warn("Turso sync confirm error:", e); });
@@ -39079,9 +39101,10 @@ function getProductSchemaReviews(p, idx) {
       // Phát sóng đa tab Realtime 0ms & Turso Sync
       try {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
             body: JSON.stringify({ orders: [order] }),
             keepalive: true
           }).catch(function(e) { console.warn("Turso sync fulfill error:", e); });
@@ -39201,9 +39224,10 @@ function getProductSchemaReviews(p, idx) {
       // Phát sóng đa tab Realtime 0ms & Turso Sync
       try {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
             body: JSON.stringify({ orders: [order] }),
             keepalive: true
           }).catch(function(e) { console.warn("Turso sync cancel error:", e); });
@@ -39219,6 +39243,119 @@ function getProductSchemaReviews(p, idx) {
       updateAdminPreOrdersBadge();
     }
     window.adminCancelAndRefundPreOrder = adminCancelAndRefundPreOrder;
+
+    // =========================================================================
+    // REALTIME LIVE MONITORING CHO ĐƠN ĐẶT HÀNG TRƯỚC (ADMIN LIVE UPDATES)
+    // =========================================================================
+    var _adminPreOrdersPollingInterval = null;
+    function startAdminPreOrdersRealtimePolling() {
+      if (_adminPreOrdersPollingInterval) return;
+      _adminPreOrdersPollingInterval = setInterval(async function() {
+        try {
+          const curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
+          const isAdm = (curUser && typeof isAdminUser === "function" && isAdminUser(curUser));
+          if (!isAdm) return;
+
+          const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+            ? MMO_WORKER_API.getApiUrl()
+            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+          const adminTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
+            ? MMO_WORKER_API.getAdminSecret() 
+            : (localStorage.getItem("mmo_admin_secret") || "");
+
+          const r = await fetch(apiUrl + "/api/admin/preorders?limit=50", {
+            headers: adminTok ? { "x-admin-token": adminTok } : {},
+            cache: "no-store"
+          });
+          if (!r.ok) return;
+          const data = await r.json();
+          const cloudPreList = Array.isArray(data) ? data : (data.orders || data.preOrders || []);
+          if (!Array.isArray(cloudPreList) || cloudPreList.length === 0) return;
+
+          let preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
+          let hasNewOrChanged = false;
+
+          cloudPreList.forEach(function(cp) {
+            if (!cp || isForbiddenLegacyOrder(cp)) return;
+            const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim();
+            if (!cId) return;
+
+            const existingIdx = preOrders.findIndex(function(p) {
+              return String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase() === cId.toLowerCase();
+            });
+
+            if (existingIdx === -1) {
+              hasNewOrChanged = true;
+              const formattedDate = cp.createdAt || cp.date || new Date().toLocaleString("vi-VN");
+              const newPre = {
+                id: cId,
+                orderId: cId,
+                orderCode: cId,
+                productId: cp.productId || cp.product_id || "",
+                productName: cp.productName || cp.product_name || "Sản phẩm đặt trước",
+                variant: cp.variantName || cp.variant || "Mặc định",
+                variantName: cp.variantName || cp.variant || "Mặc định",
+                quantity: cp.quantity || cp.qty || 1,
+                qty: cp.quantity || cp.qty || 1,
+                price: Number(cp.price) || 0,
+                total: Number(cp.total || cp.totalPrice || cp.totalAmount || cp.amount || 0),
+                totalPrice: Number(cp.total || cp.totalPrice || cp.totalAmount || cp.amount || 0),
+                date: formattedDate,
+                createdAt: formattedDate,
+                createdTimestamp: cp.createdTimestamp || Date.now(),
+                status: cp.status || "WAITING_CONFIRM",
+                statusText: cp.statusText || "Chờ xác nhận",
+                type: "PRE_ORDER",
+                credentials: cp.credentials || cp.accounts || "",
+                deliveredAccounts: cp.deliveredAccounts || [],
+                email: cp.email || cp.userEmail || cp.customerEmail || "",
+                userEmail: cp.userEmail || cp.email || cp.customerEmail || "",
+                buyerEmail: cp.buyerEmail || cp.customerEmail || cp.email || cp.userEmail || "",
+                userName: cp.userName || cp.username || cp.customerName || "Khách",
+                buyerUsername: cp.buyerUsername || cp.customerName || cp.userName || "Khách",
+                maxDays: cp.maxDays || 7,
+                customNotes: cp.customNotes || ""
+              };
+              preOrders.unshift(newPre);
+
+              try {
+                if (typeof playNotificationSound === "function") playNotificationSound();
+                if (typeof showToast === "function") {
+                  showToast("🔔 Đơn đặt hàng trước mới #" + cId + " (" + (newPre.productName || "Sản phẩm") + ")!", "info");
+                }
+                if (typeof addUserNotification === "function") {
+                  addUserNotification({
+                    title: "⏳ Đơn đặt trước mới #" + cId,
+                    message: "Khách [" + (newPre.buyerEmail || "Khách") + "] vừa đặt trước " + newPre.quantity + "x " + newPre.productName + ".",
+                    type: "PRE_ORDER",
+                    orderId: cId,
+                    forAdmin: true,
+                    playSound: false
+                  });
+                }
+              } catch(eAlert) {}
+            } else {
+              if (preOrders[existingIdx].status !== cp.status) {
+                preOrders[existingIdx].status = cp.status;
+                preOrders[existingIdx].statusText = cp.statusText || preOrders[existingIdx].statusText;
+                hasNewOrChanged = true;
+              }
+            }
+          });
+
+          if (hasNewOrChanged) {
+            _cachedPreOrdersList = null;
+            _lastPreOrdersFetchTime = 0;
+            if (typeof savePreOrders === "function") savePreOrders(preOrders);
+            else localStorage.setItem("mmo_pre_orders", JSON.stringify(preOrders));
+            if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+            if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
+          }
+        } catch(ePoll) {}
+      }, 10000);
+    }
+    window.startAdminPreOrdersRealtimePolling = startAdminPreOrdersRealtimePolling;
+    try { setTimeout(startAdminPreOrdersRealtimePolling, 3000); } catch(eStartPoll) {}
   
     function switchAdmTxSubTab(subTab) {
       const ordersSub = document.getElementById("admOrdersSubView");
@@ -39534,51 +39671,22 @@ function getProductSchemaReviews(p, idx) {
     }
     window.changeAdmOrdersPage = changeAdmOrdersPage;
 
-    // Tự động tải danh sách đơn hàng từ Google Sheets
+    // Tự động tải danh sách đơn hàng & đơn đặt trước từ Turso Cloud
     async function fetchAdminOrdersFromCloud() {
-      if (typeof callGasApi !== "function") return;
-      const callerEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
       try {
-        showToast("⏳ Đang đồng bộ đơn hàng từ Google Sheets...", "info");
-        const res = await callGasApi("adminGetAllOrders", { adminEmail: callerEmail });
-        if (res && (res.orders || (res.success && Array.isArray(res.orders)))) {
-          const cloudOrdersList = res.orders || [];
-          let localOrders = getAllOrders();
-          cloudOrdersList.forEach(function(cloudOrd) {
-            if (!cloudOrd || (typeof isForbiddenLegacyOrder === "function" && isForbiddenLegacyOrder(cloudOrd))) return;
-            const idx = localOrders.findIndex(o => (o.orderId === cloudOrd.orderId || o.id === cloudOrd.orderId));
-            if (idx !== -1) {
-              localOrders[idx].status = cloudOrd.status || localOrders[idx].status;
-              if (cloudOrd.accounts) localOrders[idx].credentials = cloudOrd.accounts;
-            } else {
-              localOrders.push({
-                orderId: cloudOrd.orderId,
-                id: cloudOrd.orderId,
-                productId: cloudOrd.prodId,
-                productName: cloudOrd.prodName,
-                quantity: cloudOrd.quantity,
-                price: cloudOrd.price,
-                totalPrice: cloudOrd.totalAmount,
-                total: cloudOrd.totalAmount,
-                date: cloudOrd.createdAt,
-                status: cloudOrd.status,
-                credentials: cloudOrd.accounts,
-                email: cloudOrd.email,
-                userEmail: cloudOrd.email,
-                userName: cloudOrd.email ? cloudOrd.email.split("@")[0] : "Khách Hàng"
-              });
-            }
-          });
-          saveAllOrders(localOrders);
-          _cachedPreOrdersList = null;
-          _lastPreOrdersFetchTime = 0;
-          getPreOrders(true);
-          renderAdminOrdersTable();
-          if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
-          if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
-          if (typeof renderSystemOverview === "function") renderSystemOverview();
-          showToast("🎉 Đã đồng bộ " + cloudOrdersList.length + " đơn hàng từ Google Sheets!", "success");
+        if (typeof showToast === "function") showToast("⏳ Đang đồng bộ đơn hàng & đơn đặt trước từ Turso Cloud...", "info");
+        if (typeof syncCloudOrdersToLocalUI === "function") {
+          await syncCloudOrdersToLocalUI(true);
         }
+        _cachedPreOrdersList = null;
+        _lastPreOrdersFetchTime = 0;
+        if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
+        if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
+        if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+        if (typeof renderSystemOverview === "function") renderSystemOverview();
+        const preLen = (typeof getPreOrders === "function") ? getPreOrders(true).length : 0;
+        const ordLen = (typeof getAllOrders === "function") ? getAllOrders().length : 0;
+        if (typeof showToast === "function") showToast("🎉 Đã đồng bộ " + ordLen + " đơn hàng & " + preLen + " đơn đặt trước từ Turso Cloud!", "success");
       } catch(e) {
         console.warn("fetchAdminOrdersFromCloud error:", e);
       }
