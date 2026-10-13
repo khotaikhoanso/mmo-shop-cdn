@@ -12947,6 +12947,12 @@ if (typeof productOrId === "object") {
         setTimeout(function() {
           if (typeof loadUserWalletFromCloud === "function") loadUserWalletFromCloud();
         }, 80);
+        // Tự động kéo đơn hàng đặt trước đã bàn giao mới nhất từ Turso Cloud về cho khách
+        if (typeof syncCloudOrdersToLocalUI === "function") {
+          syncCloudOrdersToLocalUI(true).then(function() {
+            if (typeof renderProfileOrders === "function") renderProfileOrders();
+          }).catch(function() {});
+        }
       }
 
       if (viewId === "viewAdmin") {
@@ -24163,15 +24169,42 @@ function syncAllOpenViewsStock(changedProdId) {
             buyerUsername: co.buyerUsername || co.customerName || co.userName || co.username || "Khách Hàng"
           };
 
+          const hasDeliveredAccounts = (normOrder.deliveredAccounts && normOrder.deliveredAccounts.length > 0) || Boolean(normOrder.credentials);
+          const isCloudCompleted = normOrder.status === "COMPLETED" || normOrder.status === "DELIVERED" || hasDeliveredAccounts;
+
+          // Helper cập nhật dữ liệu đồng bộ cho 1 đối tượng đơn hàng trong mảng
+          function applySyncToTarget(targetItem) {
+            let changed = false;
+            if (isCloudCompleted) {
+              if (targetItem.status !== "COMPLETED") {
+                targetItem.status = "COMPLETED";
+                targetItem.statusText = "Đã giao hàng";
+                changed = true;
+              }
+              if (normOrder.credentials && (!targetItem.credentials || targetItem.credentials.includes("đặt trước") || targetItem.credentials.includes("pre-order"))) {
+                targetItem.credentials = normOrder.credentials;
+                changed = true;
+              }
+              if (normOrder.deliveredAccounts && normOrder.deliveredAccounts.length > 0) {
+                targetItem.deliveredAccounts = normOrder.deliveredAccounts;
+                targetItem.accounts = normOrder.deliveredAccounts;
+                changed = true;
+              }
+            } else if (normOrder.status && normOrder.status !== targetItem.status) {
+              targetItem.status = normOrder.status;
+              targetItem.statusText = normOrder.statusText || targetItem.statusText;
+              changed = true;
+            }
+            return changed;
+          }
+
           // 1. Thêm vào In-Memory
           if (!window._mmoInMemoryOrders) window._mmoInMemoryOrders = [];
           const memIdx = window._mmoInMemoryOrders.findIndex(m => m && String(m.id || m.orderId || "").replace("#","").trim() === cleanId);
           if (memIdx === -1) {
             window._mmoInMemoryOrders.unshift(normOrder);
           } else {
-            if (!window._mmoInMemoryOrders[memIdx].credentials && normOrder.credentials) {
-              window._mmoInMemoryOrders[memIdx].credentials = normOrder.credentials;
-            }
+            applySyncToTarget(window._mmoInMemoryOrders[memIdx]);
           }
 
           // 2. Thêm vào mmo_all_orders (toàn sàn)
@@ -24180,10 +24213,7 @@ function syncAllOpenViewsStock(changedProdId) {
             all.unshift(normOrder);
             modified = true;
           } else {
-            if (!all[aIdx].credentials && normOrder.credentials) {
-              all[aIdx].credentials = normOrder.credentials;
-              modified = true;
-            }
+            if (applySyncToTarget(all[aIdx])) modified = true;
           }
 
           // 3. Thêm vào mmo_orders
@@ -24192,10 +24222,7 @@ function syncAllOpenViewsStock(changedProdId) {
             orders.unshift(normOrder);
             modified = true;
           } else {
-            if (!orders[oIdx].credentials && normOrder.credentials) {
-              orders[oIdx].credentials = normOrder.credentials;
-              modified = true;
-            }
+            if (applySyncToTarget(orders[oIdx])) modified = true;
           }
 
           // 4. Thêm vào mmo_user_orders (Kho người dùng)
@@ -24207,10 +24234,7 @@ function syncAllOpenViewsStock(changedProdId) {
               userOrders.unshift(normOrder);
               modified = true;
             } else {
-              if (!userOrders[uIdx].credentials && normOrder.credentials) {
-                userOrders[uIdx].credentials = normOrder.credentials;
-                modified = true;
-              }
+              if (applySyncToTarget(userOrders[uIdx])) modified = true;
             }
           }
 
@@ -24663,12 +24687,6 @@ function syncAllOpenViewsStock(changedProdId) {
       
       const cleanId = String(orderId).replace("#", "").trim();
 
-      // Nếu là đơn hàng đặt trước (PRE...) -> Chuyển sang xem đơn đặt trước
-      if (cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_")) {
-        openPreOrderDetailView(cleanId);
-        return;
-      }
-
       syncUserOrdersWithWarrantyUpdates();
       const orders = getUserOrders();
       let order = orders.find(o => (o.orderId === cleanId || o.id === cleanId));
@@ -24678,9 +24696,42 @@ function syncAllOpenViewsStock(changedProdId) {
         order = all.find(o => (o.orderId === cleanId || o.id === cleanId));
       }
 
-      if (order && (order.type === "PRE_ORDER" || String(order.id || "").startsWith("PRE") || String(order.id || "").startsWith("DH_PRE") || String(order.id || "").startsWith("POD_"))) {
-        openPreOrderDetailView(cleanId);
-        return;
+      // Tra cứu thêm trong kho đơn đặt trước getPreOrders nếu chưa thấy
+      if (!order && typeof getPreOrders === "function") {
+        try {
+          const pList = getPreOrders(true);
+          const fPo = pList.find(p => String(p.orderCode || p.id) === cleanId);
+          if (fPo) {
+            order = {
+              id: cleanId,
+              orderId: cleanId,
+              type: "PRE_ORDER",
+              productName: fPo.productName || "Sản phẩm đặt trước",
+              variant: fPo.variantName || fPo.variant || "",
+              quantity: fPo.qty || fPo.quantity || 1,
+              total: fPo.total || fPo.totalPrice || 0,
+              credentials: (fPo.deliveredAccounts && fPo.deliveredAccounts.length > 0) ? fPo.deliveredAccounts.join("\n") : (fPo.credentials || ""),
+              deliveredAccounts: fPo.deliveredAccounts || [],
+              status: fPo.status || "COMPLETED"
+            };
+          }
+        } catch(ePo) {}
+      }
+
+      // Nếu là đơn hàng đặt trước chưa được giao tài khoản
+      if (order && (order.type === "PRE_ORDER" || cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_"))) {
+        const poCreds = order.credentials || (Array.isArray(order.deliveredAccounts) ? order.deliveredAccounts.join("\n") : "");
+        const isNotDone = (order.status === "WAITING_CONFIRM" || order.status === "PROCESSING") && !poCreds;
+        if (isNotDone) {
+          if (typeof showToast === "function") {
+            showToast("Đơn hàng #" + cleanId + " đang được shop chuẩn bị tài khoản. Vui lòng chờ shop bàn giao!", "info");
+          }
+          return;
+        }
+        // Đảm bảo đơn đã giao có credentials chuẩn để hiển thị trong modal
+        if (poCreds && !order.credentials) {
+          order.credentials = poCreds;
+        }
       }
 
       // Fallback lấy tài khoản từ phiên vừa giao
@@ -25165,17 +25216,34 @@ function syncAllOpenViewsStock(changedProdId) {
                   const effectiveStatus = (freshPO ? freshPO.status : order.status) || rawStatus || "WAITING_CONFIRM";
                   const effectiveDelivered = (freshPO && freshPO.deliveredAccounts && freshPO.deliveredAccounts.length > 0) ? freshPO.deliveredAccounts : (order.deliveredAccounts || (rawCreds ? [rawCreds] : []));
 
-                  orderCodeHtml = `
-                    <a href="javascript:void(0)" onclick="openPreOrderDetailView('${cleanOId}')" style="color:#f59e0b; font-weight:800; font-family:monospace; text-decoration:none; font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer; white-space:nowrap;" title="👉 Bấm để mở xem chi tiết đơn hàng đặt trước #${cleanOId}">${cleanOId} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem;"></i></a>
-                    <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:3px; display:inline-block; white-space:nowrap;">ĐẶT TRƯỚC</span>
-                  `;
+                  const isAdmOrderAction = (typeof isAdminUser === "function" && isAdminUser()) ||
+                    (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
+                    (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
+
+                  // Mã ĐH: Chỉ Admin mới có link mở viewPreOrderDetail (Hình 1). Khách thường chỉ hiện text mã đơn #PRE... kèm badge
+                  if (isAdmOrderAction) {
+                    orderCodeHtml = `
+                      <a href="javascript:void(0)" onclick="openPreOrderDetailView('${cleanOId}')" style="color:#f59e0b; font-weight:800; font-family:monospace; text-decoration:none; font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer; white-space:nowrap;" title="👉 Bấm để mở xem chi tiết đơn hàng đặt trước #${cleanOId}">${cleanOId} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem;"></i></a>
+                      <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:3px; display:inline-block; white-space:nowrap;">ĐẶT TRƯỚC</span>
+                    `;
+                  } else {
+                    orderCodeHtml = `
+                      <div style="color:#f59e0b; font-weight:800; font-family:monospace; font-size:0.9rem; margin-bottom:4px; white-space:nowrap;">#${cleanOId}</div>
+                      <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:3px; display:inline-block; white-space:nowrap;">ĐẶT TRƯỚC</span>
+                    `;
+                  }
 
                   prodTitleHtml = `
                     <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.83rem; cursor:pointer; line-height:1.35; white-space:normal; word-break:break-word; max-width:280px; text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.68rem; opacity:0.8; color:#f59e0b;"></i></div>
                     ${vName ? `<div style="color:#38bdf8; font-size:0.72rem; margin-top:2px; white-space:nowrap;">Loại: ${vName}</div>` : ''}
                   `;
 
-                  if (effectiveStatus === "COMPLETED" || (effectiveDelivered && effectiveDelivered.length > 0)) {
+                  const hasValidDelivered = (effectiveDelivered && effectiveDelivered.length > 0 && effectiveDelivered.some(function(item) {
+                    return typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(item) : Boolean(item);
+                  }));
+                  const isDonePreOrder = effectiveStatus === "COMPLETED" || effectiveStatus === "DELIVERED" || hasValidDelivered;
+
+                  if (isDonePreOrder) {
                     statusBadgeHtml = `
                       <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid #10b981; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
                         <i class="fa-solid fa-circle-check"></i> Đã Giao Hàng
@@ -25183,7 +25251,7 @@ function syncAllOpenViewsStock(changedProdId) {
                     `;
                     actionBtnsHtml = `
                       <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
-                        <button onclick="openPreOrderDetailView('${cleanOId}')" title="Bấm để mở xem và sao chép tài khoản đã nhận" style="background:#0b111e; color:#10b981; border:1px solid rgba(16,185,129,0.4); border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.76rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                        <button onclick="openOrderCredentialsModal('${cleanOId}')" title="Bấm để mở xem và sao chép tài khoản đã nhận" style="background:#0b111e; color:#10b981; border:1px solid rgba(16,185,129,0.4); border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.76rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                           <i class="fa-solid fa-key" style="color:#10b981;"></i> Nhận Acc
                         </button>
                         <button onclick="openOrderReviewModal('${cleanOId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#0b111e; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
@@ -25192,6 +25260,7 @@ function syncAllOpenViewsStock(changedProdId) {
                         <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
                           <i class="fa-solid fa-shield-halved" style="color:#f87171;"></i> Khiếu Nại
                         </button>
+                        ${isAdmOrderAction ? `<button onclick="openPreOrderDetailView('${cleanOId}')" title="Xem chi tiết quản trị" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; border-radius:6px; padding:6px 9px; cursor:pointer; font-size:0.74rem;"><i class="fa-solid fa-gear"></i></button>` : ''}
                       </div>
                     `;
                   } else if (effectiveStatus === "PROCESSING") {
@@ -25201,18 +25270,20 @@ function syncAllOpenViewsStock(changedProdId) {
                       </span>
                       <span style="color:#38bdf8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Shop đang chuẩn bị acc</span>
                     `;
-                    const isAdmOrderAction = (typeof isAdminUser === "function" && isAdminUser()) ||
-                      (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
-                      (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
-
-                    actionBtnsHtml = `
-                      <div style="display:inline-flex; gap:4px; align-items:center;">
-                        ${isAdmOrderAction ? `<button onclick="openAdminFulfillModal('${cleanOId}')" title="Admin bàn giao tài khoản cho đơn này" style="background:#10b981; color:#0b111e; border:none; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><i class="fa-solid fa-key"></i> Giao</button>` : ''}
-                        <button onclick="openPreOrderDetailView('${cleanOId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:5px; padding:5px 9px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
-                          <i class="fa-solid fa-hourglass-half"></i> Theo Dõi
-                        </button>
-                      </div>
-                    `;
+                    if (isAdmOrderAction) {
+                      actionBtnsHtml = `
+                        <div style="display:inline-flex; gap:4px; align-items:center;">
+                          <button onclick="openAdminFulfillModal('${cleanOId}')" title="Admin bàn giao tài khoản cho đơn này" style="background:#10b981; color:#0b111e; border:none; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><i class="fa-solid fa-key"></i> Giao</button>
+                          <button onclick="openPreOrderDetailView('${cleanOId}')" title="Quản trị đơn đặt trước" style="background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:700;"><i class="fa-solid fa-sliders"></i> Chi Tiết</button>
+                        </div>
+                      `;
+                    } else {
+                      actionBtnsHtml = `
+                        <span style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); border-radius:5px; padding:5px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                          <i class="fa-solid fa-boxes-packing"></i> Đang gom hàng
+                        </span>
+                      `;
+                    }
                   } else if (effectiveStatus === "CANCELLED") {
                     statusBadgeHtml = `
                       <span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
@@ -25220,22 +25291,29 @@ function syncAllOpenViewsStock(changedProdId) {
                       </span>
                     `;
                     actionBtnsHtml = `
-                      <button onclick="openPreOrderDetailView('${cleanOId}')" title="Xem chi tiết đơn hoàn tiền" style="background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-eye"></i> Chi Tiết
-                      </button>
+                      <span style="color:#94a3b8; font-size:0.74rem; font-weight:600;">Đã hoàn tiền</span>
                     `;
                   } else {
                     statusBadgeHtml = `
                       <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid #f59e0b; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-clock"></i> Chờ Xác Nhận
+                        <i class="fa-solid fa-clock"></i> Chờ Gom Hàng
                       </span>
-                      <span style="color:#94a3b8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Hạn gom hàng: ${order.maxDays || 7} ngày</span>
+                      <span style="color:#94a3b8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Hạn gom: ${order.maxDays || 7} ngày</span>
                     `;
-                    actionBtnsHtml = `
-                      <button onclick="openPreOrderDetailView('${cleanOId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-hourglass-half"></i> Theo Dõi
-                      </button>
-                    `;
+                    if (isAdmOrderAction) {
+                      actionBtnsHtml = `
+                        <div style="display:inline-flex; gap:4px; align-items:center;">
+                          <button onclick="openAdminFulfillModal('${cleanOId}')" title="Admin bàn giao tài khoản cho đơn này" style="background:#10b981; color:#0b111e; border:none; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><i class="fa-solid fa-key"></i> Giao</button>
+                          <button onclick="openPreOrderDetailView('${cleanOId}')" title="Quản trị đơn đặt trước" style="background:#1e293b; color:#f59e0b; border:1px solid #f59e0b; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:700;"><i class="fa-solid fa-sliders"></i> Chi Tiết</button>
+                        </div>
+                      `;
+                    } else {
+                      actionBtnsHtml = `
+                        <span style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); border-radius:5px; padding:5px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                          <i class="fa-solid fa-clock"></i> Đang chuẩn bị acc
+                        </span>
+                      `;
+                    }
                   }
                 } else {
                   // Đơn hàng mua thông thường
@@ -38467,17 +38545,49 @@ function getProductSchemaReviews(p, idx) {
 
     // Xem chi tiết đơn hàng đặt trước (Hình 4 - Nền Đen Dark Theme)
     function openPreOrderDetailView(orderId) {
+      if (!orderId) {
+        if (typeof showToast === "function") showToast("Mã đơn đặt trước không hợp lệ!", "warning");
+        return;
+      }
+      const cleanId = String(orderId).replace(/#/g, "").trim();
+
+      // KIỂM TRA QUYỀN ADMIN: Trang chi tiết Stepper (Hình 1) chỉ dành riêng cho Admin Quản Trị
+      const isAdmUser = (typeof isAdminUser === "function" && isAdminUser()) ||
+        (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
+        (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
+
+      if (!isAdmUser) {
+        // Khách hàng thông thường: BỎ HOÀN TOÀN HÌNH 1, không mở viewPreOrderDetail
+        // Tra cứu nhanh nếu đơn đã giao -> mở popup Nhận Acc trực tiếp ngay trên trang cá nhân
+        let chkPO = null;
+        try {
+          const allPOs = (typeof getPreOrders === "function") ? getPreOrders() : [];
+          chkPO = allPOs.find(p => String(p.orderCode || p.id) === cleanId);
+        } catch(e) {}
+        if (!chkPO) {
+          const uOrds = (typeof getUserOrders === "function") ? getUserOrders() : [];
+          chkPO = uOrds.find(o => String(o.id || o.orderId || o.orderCode) === cleanId);
+        }
+
+        const hasAcc = chkPO && ((chkPO.deliveredAccounts && chkPO.deliveredAccounts.length > 0) || Boolean(chkPO.credentials));
+        const isDone = chkPO && (chkPO.status === "COMPLETED" || hasAcc);
+        if (isDone) {
+          if (typeof openOrderCredentialsModal === "function") {
+            openOrderCredentialsModal(cleanId);
+          }
+        } else {
+          if (typeof showToast === "function") {
+            showToast("Đơn hàng #" + cleanId + " đang được shop chuẩn bị tài khoản. Vui lòng theo dõi trạng thái tại bảng đơn hàng!", "info");
+          }
+        }
+        return;
+      }
+
       const activeViewNow = localStorage.getItem("mmo_current_view") || "viewStore";
       if (activeViewNow !== "viewPreOrderDetail") {
         _previousView = activeViewNow;
         window._previousView = activeViewNow;
       }
-      if (!orderId) {
-        if (typeof showToast === "function") showToast("Mã đơn đặt trước không hợp lệ!", "warning");
-        return;
-      }
-
-      const cleanId = String(orderId).replace(/#/g, "").trim();
       let preOrders = getPreOrders();
       let order = (typeof findPreOrderById === "function") ? findPreOrderById(preOrders, cleanId) : preOrders.find(function(o) { return String(o.id) === cleanId || String(o.orderCode) === cleanId; });
 
@@ -39229,7 +39339,9 @@ function getProductSchemaReviews(p, idx) {
       // Phát sóng đa tab Realtime 0ms & Turso Sync
       try {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) 
+            ? MMO_WORKER_API.getAdminSecret() 
+            : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-admin-token": sTok },
@@ -39238,10 +39350,24 @@ function getProductSchemaReviews(p, idx) {
           }).catch(function(e) { console.warn("Turso sync fulfill error:", e); });
         }
       } catch(eTurso) {}
-      broadcastPreOrderEvent({ type: "ORDER_STATUS_CHANGED", orderId: cleanId, status: "COMPLETED", statusText: "Đang giao hàng", deliveredAccounts: lines, credentials: lines.join("\n") });
+      broadcastPreOrderEvent({ type: "ORDER_STATUS_CHANGED", orderId: cleanId, status: "COMPLETED", statusText: "Đã giao hàng", deliveredAccounts: lines, credentials: lines.join("\n") });
+
+      // Cập nhật ngay vào In-Memory Orders
+      if (Array.isArray(window._mmoInMemoryOrders)) {
+        window._mmoInMemoryOrders.forEach(function(item) {
+          const iId = String(item.orderId || item.id || item.orderCode || "");
+          if (iId === cleanId || iId === order.orderCode || iId === order.id) {
+            item.status = "COMPLETED";
+            item.statusText = "Đã giao hàng";
+            item.deliveredAccounts = lines;
+            item.credentials = lines.join("\n");
+            item.accounts = lines;
+          }
+        });
+      }
 
       // Cập nhật ngay vào toàn bộ các kho localStorage của thành viên
-      const uKeys = ["mmo_orders", "mmo_user_orders", "mmo_all_orders"];
+      const uKeys = ["mmo_orders", "mmo_user_orders", "mmo_all_orders", "mmo_pre_orders"];
       uKeys.forEach(function(k) {
         try {
           const raw = localStorage.getItem(k);
@@ -39255,6 +39381,7 @@ function getProductSchemaReviews(p, idx) {
               item.statusText = "Đã giao hàng";
               item.deliveredAccounts = lines;
               item.credentials = lines.join("\n");
+              item.accounts = lines;
             }
           });
           localStorage.setItem(k, JSON.stringify(list));
