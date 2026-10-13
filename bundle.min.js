@@ -6839,7 +6839,7 @@ if (typeof productOrId === "object") {
         const tType = String(d.type || "").toLowerCase();
         if (pId.startsWith("PROD_") || tType.includes("mua hàng") || tType.includes("thanh toán")) return false;
         const dNote = String(d.note || d.content || "");
-        if (oId.startsWith("DH") && pId !== "NAP_VI" && !pName.includes("nạp tiền ví")) return false;
+        if ((cleanId.startsWith("DH") || oId.startsWith("DH")) && pId !== "NAP_VI" && !pName.includes("nạp tiền")) return false;
         if (d.accounts || d.credentials || dNote.includes("|") || dNote.includes("@hotmail") || dNote.includes("@gmail")) return false;
         return true;
       }).map(d => {
@@ -32943,6 +32943,11 @@ function syncAllOpenViewsStock(changedProdId) {
         if (dNote.includes("hoàn tiền") || dNote.includes("refund") || cleanId.startsWith("REFUND_")) return false;
         const isMmoBank = dBank.includes("mmo") || dBank.includes("ví") || dBank.includes("vi");
         if (cleanId.startsWith("NAP_") && (isMmoBank || dNote.includes("bảo hành") || dNote.includes("đơn hàng") || !d.bankAcc)) return false;
+        // Bỏ qua hoàn toàn các đơn hàng mua tài khoản / sản phẩm thông thường (không phải đơn nạp tiền ví)
+        const pId = String(d.prodId || "").toUpperCase();
+        const pName = String(d.prodName || "").toLowerCase();
+        const tType = String(d.type || "").toLowerCase();
+        if (pId.startsWith("PROD_") || (d.accounts && !dNote.includes("đã cộng")) || dNote.includes("mua sp") || (tType.includes("mua hàng") && !dBank && !tType.includes("nạp"))) return false;
         return true;
       });
 
@@ -32972,7 +32977,7 @@ function syncAllOpenViewsStock(changedProdId) {
       // 3. Kết hợp danh sách nạp tiền thành công và tất cả yêu cầu rút tiền
       const combinedList = [];
 
-      // A. Nạp tiền & Giao dịch đơn hàng
+      // A. Nạp tiền thành công
       deposits.forEach(d => {
         const oId = String(d.id || d.orderId || "");
         let isManual = (d.type && d.type.includes("thủ công")) || (d.note && d.note.includes("ADMIN"));
@@ -32992,16 +32997,13 @@ function syncAllOpenViewsStock(changedProdId) {
         if (!uName) uName = (uMail && uMail.includes("@")) ? uMail.split("@")[0] : "Khách Hàng";
         if (!uMail) uMail = "khachhang@gmail.com";
 
-        const isPurchaseOrder = oId.startsWith("DH") || (d.type && (d.type.includes("mua hàng") || d.type.includes("thanh toán")));
-
         combinedList.push({
-          isDeposit: !isPurchaseOrder,
-          isPurchaseOrder: isPurchaseOrder,
+          isDeposit: true,
           id: d.id || d.orderId || "DEP",
           userEmail: uMail,
           userName: uName,
-          type: isPurchaseOrder ? "Thanh toán mua hàng" : (isManual ? "Nạp tiền thủ công Admin" : (d.type || "Nạp tiền VietQR / SePay")),
-          amount: Number(d.amount) || 0,
+          type: isManual ? "Nạp tiền thủ công Admin" : (d.type || "Nạp tiền VietQR / SePay"),
+          amount: Math.abs(Number(d.amount) || 0),
           bankInfo: bInfo,
           time: d.time || d.date || "",
           status: "Thành công",
@@ -33115,11 +33117,6 @@ function syncAllOpenViewsStock(changedProdId) {
           typeBadge = '<span style="display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); white-space:nowrap;"><i class="fa-solid fa-circle-arrow-down"></i> Nạp tiền</span>';
           amtHtml = '<span style="font-size:0.92rem; font-weight:800; color:#10b981; font-family:monospace; white-space:nowrap;">+' + formatVND(item.amount) + '</span>';
           statusBadge = '<span class="badge-verified" style="font-size:0.72rem; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); white-space:nowrap;">✅ Thành công</span>';
-          actionHtml = '<span style="font-size:0.75rem; color:#64748b; white-space:nowrap;"><i class="fa-solid fa-check-double"></i> Đã hoàn tất</span>';
-        } else if (item.isPurchaseOrder) {
-          typeBadge = '<span style="display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); white-space:nowrap;"><i class="fa-solid fa-cart-shopping"></i> Mua hàng</span>';
-          amtHtml = '<span style="font-size:0.92rem; font-weight:800; color:#ef4444; font-family:monospace; white-space:nowrap;">-' + formatVND(item.amount) + '</span>';
-          statusBadge = '<span class="badge-verified" style="font-size:0.72rem; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); white-space:nowrap;">✅ Đã nhận tiền</span>';
           actionHtml = '<span style="font-size:0.75rem; color:#64748b; white-space:nowrap;"><i class="fa-solid fa-check-double"></i> Đã hoàn tất</span>';
         } else {
           typeBadge = '<span style="display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); white-space:nowrap;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Rút tiền</span>';
