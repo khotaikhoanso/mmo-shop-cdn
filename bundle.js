@@ -25201,10 +25201,17 @@ function syncAllOpenViewsStock(changedProdId) {
                       </span>
                       <span style="color:#38bdf8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Shop đang chuẩn bị acc</span>
                     `;
+                    const isAdmOrderAction = (typeof isAdminUser === "function" && isAdminUser()) ||
+                      (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
+                      (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
+
                     actionBtnsHtml = `
-                      <button onclick="openPreOrderDetailView('${cleanOId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-hourglass-half"></i> Theo Dõi
-                      </button>
+                      <div style="display:inline-flex; gap:4px; align-items:center;">
+                        ${isAdmOrderAction ? `<button onclick="openAdminFulfillModal('${cleanOId}')" title="Admin bàn giao tài khoản cho đơn này" style="background:#10b981; color:#0b111e; border:none; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><i class="fa-solid fa-key"></i> Giao</button>` : ''}
+                        <button onclick="openPreOrderDetailView('${cleanOId}')" title="Theo dõi tiến độ đơn đặt trước" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#0b111e; border:none; border-radius:5px; padding:5px 9px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
+                          <i class="fa-solid fa-hourglass-half"></i> Theo Dõi
+                        </button>
+                      </div>
                     `;
                   } else if (effectiveStatus === "CANCELLED") {
                     statusBadgeHtml = `
@@ -34021,6 +34028,14 @@ function changeAdmUsersPage(p) {
         if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
         if (typeof renderProfileOrders === "function") renderProfileOrders();
         if (typeof renderSystemOverview === "function") renderSystemOverview();
+        try {
+          if (typeof openPreOrderDetailView === "function" && window._currentViewingPreOrder) {
+            const vId = String(window._currentViewingPreOrder.orderCode || window._currentViewingPreOrder.id).replace(/#/g, "").trim().toLowerCase();
+            if (vId === cleanId) {
+              openPreOrderDetailView(cleanId);
+            }
+          }
+        } catch(eBcView) {}
 
         // 4. Phát âm thanh chuông và hiển thị thông báo toast nếu là Admin
         if (typeof isAdminUser === "function" && isAdminUser()) {
@@ -37766,12 +37781,13 @@ function getProductSchemaReviews(p, idx) {
           } catch(e) {}
         });
 
-        // Đồng bộ lên Cloudflare Worker Turso Database
+        // Đồng bộ lên Cloudflare Worker Turso Database (Kèm x-admin-token bảo mật)
         try {
           if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+            const sTok = (typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
             fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", "x-admin-token": sTok },
               body: JSON.stringify({ orders: orders || [] }),
               keepalive: true
             }).catch(function(err) { console.warn("Worker orders sync notice:", err); });
@@ -38586,6 +38602,29 @@ function getProductSchemaReviews(p, idx) {
         if (deliveredWrap) deliveredWrap.style.display = "none";
       }
 
+      // HIỂN THỊ THANH ĐIỀU HÀNH BÀN GIAO CHO ADMIN TRONG TRANG CHI TIẾT ĐƠN ĐẶT TRƯỚC
+      const isAdmCur = (typeof isAdminUser === "function" && isAdminUser()) ||
+        (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
+        (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
+
+      const podAdmWrap = document.getElementById("podAdminActionWrap");
+      if (podAdmWrap) {
+        if (isAdmCur && st !== "CANCELLED") {
+          podAdmWrap.style.display = "flex";
+          const bFulfill = document.getElementById("btnPodAdminFulfill");
+          if (bFulfill) {
+            bFulfill.style.display = "inline-flex";
+            bFulfill.innerHTML = (st === "COMPLETED") ? "<i class='fa-solid fa-pen-to-square'></i> Sửa tài khoản đã giao" : "<i class='fa-solid fa-key'></i> Giao hàng ngay";
+          }
+          const bConfirm = document.getElementById("btnPodAdminConfirm");
+          if (bConfirm) bConfirm.style.display = (st === "WAITING_CONFIRM") ? "inline-flex" : "none";
+          const bAdmCancel = document.getElementById("btnPodAdminCancel");
+          if (bAdmCancel) bAdmCancel.style.display = (st !== "COMPLETED") ? "inline-flex" : "none";
+        } else {
+          podAdmWrap.style.display = "none";
+        }
+      }
+
       // Hạn xử lý & ghi chú
       const elDays = document.getElementById("podMaxDaysText");
       if (elDays) elDays.innerText = (order.maxDays || 7) + " ngày";
@@ -38649,6 +38688,33 @@ function getProductSchemaReviews(p, idx) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
     window.openPreOrderDetailView = openPreOrderDetailView;
+
+    function executePodAdminFulfill() {
+      const ord = window._currentViewingPreOrder;
+      const oCode = ord ? (ord.orderCode || ord.id) : (document.getElementById("podCode") ? document.getElementById("podCode").innerText.replace(/#/g, "").trim() : "");
+      if (oCode && typeof openAdminFulfillModal === "function") {
+        openAdminFulfillModal(oCode);
+      }
+    }
+    window.executePodAdminFulfill = executePodAdminFulfill;
+
+    function executePodAdminConfirm() {
+      const ord = window._currentViewingPreOrder;
+      const oCode = ord ? (ord.orderCode || ord.id) : (document.getElementById("podCode") ? document.getElementById("podCode").innerText.replace(/#/g, "").trim() : "");
+      if (oCode && typeof adminConfirmPreOrder === "function") {
+        adminConfirmPreOrder(oCode);
+      }
+    }
+    window.executePodAdminConfirm = executePodAdminConfirm;
+
+    function executePodAdminCancel() {
+      const ord = window._currentViewingPreOrder;
+      const oCode = ord ? (ord.orderCode || ord.id) : (document.getElementById("podCode") ? document.getElementById("podCode").innerText.replace(/#/g, "").trim() : "");
+      if (oCode && typeof adminCancelAndRefundPreOrder === "function") {
+        adminCancelAndRefundPreOrder(oCode);
+      }
+    }
+    window.executePodAdminCancel = executePodAdminCancel;
 
     // Khách hàng bấm Hủy đơn (khi đang chờ xác nhận)
     function customerCancelPreOrder() {
@@ -39216,6 +39282,14 @@ function getProductSchemaReviews(p, idx) {
       if (typeof renderProfileOrders === "function") renderProfileOrders();
       if (typeof updateUserUI === "function") updateUserUI();
       updateAdminPreOrdersBadge();
+      try {
+        if (typeof openPreOrderDetailView === "function") {
+          const curViewing = window._currentViewingPreOrder;
+          if (curViewing && String(curViewing.orderCode || curViewing.id).replace(/#/g, "").trim().toLowerCase() === cleanId.toLowerCase()) {
+            openPreOrderDetailView(cleanId);
+          }
+        }
+      } catch(eRefreshView) {}
     }
     window.executeAdminFulfillPreOrder = executeAdminFulfillPreOrder;
 
@@ -39429,9 +39503,27 @@ function getProductSchemaReviews(p, idx) {
                 }
               }
             } else {
-              if (preOrders[existingIdx].status !== cp.status) {
-                preOrders[existingIdx].status = cp.status;
-                preOrders[existingIdx].statusText = cp.statusText || preOrders[existingIdx].statusText;
+              const localOrder = preOrders[existingIdx];
+              const localIsDone = (localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED") && (localOrder.deliveredAccounts && localOrder.deliveredAccounts.length > 0);
+              const cloudIsDone = (cp.status === "COMPLETED" || cp.status === "DELIVERED");
+
+              if (localIsDone && !cloudIsDone) {
+                // Đơn đã giao thành công tại local, đồng bộ lại lên cloud thay vì bị ghi đè thành chờ xác nhận
+                if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+                  fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-admin-token": adminTok },
+                    body: JSON.stringify({ orders: [localOrder] }),
+                    keepalive: true
+                  }).catch(function() {});
+                }
+              } else if (cp.status && localOrder.status !== cp.status) {
+                localOrder.status = cp.status;
+                localOrder.statusText = cp.statusText || localOrder.statusText;
+                if (cp.deliveredAccounts && cp.deliveredAccounts.length > 0) {
+                  localOrder.deliveredAccounts = cp.deliveredAccounts;
+                  localOrder.credentials = Array.isArray(cp.deliveredAccounts) ? cp.deliveredAccounts.join("\n") : cp.deliveredAccounts;
+                }
                 hasNewOrChanged = true;
               }
             }
