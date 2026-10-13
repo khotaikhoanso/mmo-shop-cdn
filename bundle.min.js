@@ -3246,13 +3246,15 @@ if (typeof productOrId === "object") {
     let currentBlogCategory = "Tất cả";
 
     // CORE AUTH RESOLVER: Đồng bộ tức thì phiên đăng nhập người dùng giữa mọi script, iframe & storage
+    var _mmoInternalUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
+
     function getEffectiveUser() {
       let u = null;
-      if (typeof window !== "undefined" && window.currentUser && (window.currentUser.email || window.currentUser.userId)) {
-        u = window.currentUser;
+      if (typeof _mmoInternalUser !== "undefined" && _mmoInternalUser && (_mmoInternalUser.email || _mmoInternalUser.userId)) {
+        u = _mmoInternalUser;
       }
-      if (!u && typeof currentUser !== "undefined" && currentUser && (currentUser.email || currentUser.userId)) {
-        u = currentUser;
+      if (!u && typeof window !== "undefined" && window.currentUser && (window.currentUser.email || window.currentUser.userId)) {
+        u = window.currentUser;
       }
       if (!u) {
         try {
@@ -3276,43 +3278,39 @@ if (typeof productOrId === "object") {
         if (!u.email) {
           u.email = (u.userId && u.userId.includes("@")) ? u.userId : ((u.username || u.name || u.userId || "user") + "@gmail.com");
         }
-        currentUser = u;
-        try {
-          if (typeof window !== "undefined" && window.currentUser !== u) {
-            window.currentUser = u;
-          }
-        } catch(eW) {}
+        _mmoInternalUser = u;
       }
       return u;
     }
     window.getEffectiveUser = getEffectiveUser;
 
-    currentUser = (typeof window !== "undefined" && window.currentUser && window.currentUser.email) ? window.currentUser : currentUser;
-    if (!currentUser) {
+    if (!_mmoInternalUser) {
       try {
         const stored = localStorage.getItem("mmo_user");
-        if (stored) currentUser = JSON.parse(stored);
+        if (stored) _mmoInternalUser = JSON.parse(stored);
       } catch(e) {}
     }
 
     try {
       Object.defineProperty(window, "currentUser", {
         get: function() {
-          return currentUser || (function() {
-            try {
-              const raw = localStorage.getItem("mmo_user");
-              return raw ? JSON.parse(raw) : null;
-            } catch(e) { return null; }
-          })();
+          if (_mmoInternalUser) return _mmoInternalUser;
+          try {
+            const raw = localStorage.getItem("mmo_user");
+            if (raw) {
+              _mmoInternalUser = JSON.parse(raw);
+              return _mmoInternalUser;
+            }
+          } catch(e) {}
+          return null;
         },
         set: function(val) {
-          currentUser = val;
+          _mmoInternalUser = val;
         },
         configurable: true,
         enumerable: true
       });
     } catch(eProp) {}
-
     let currentSelectedProduct = null;
     let currentSelectedVariantIndex = 0;
     let currentSelectedPrice = 0;
@@ -38282,8 +38280,8 @@ function getProductSchemaReviews(p, idx) {
         }
 
         // BƯỚC QUAN TRỌNG: ĐÓNG MODAL ĐẶT TRƯỚC VÀ MỞ POPUP THÀNH CÔNG NGAY LẬP TỨC!
-        closePreOrderModal();
-        openPreOrderSuccessModal(newPreOrder);
+        try { closePreOrderModal(); } catch(eClose) {}
+        try { openPreOrderSuccessModal(newPreOrder); } catch(eOpen) {}
 
         // Tạo thông báo chuông và popup thông báo cho khách hàng
         try {
