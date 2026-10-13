@@ -12976,6 +12976,15 @@ if (typeof productOrId === "object") {
       }
 
       if (viewId === "viewThankYou") {
+        if (typeof closeModal === "function") {
+          closeModal("orderDeliveryModal");
+          closeModal("directPaymentModal");
+          closeModal("modalQuickBuy");
+          closeModal("quickBuyModal");
+        }
+        const dlvModal = document.getElementById("orderDeliveryModal");
+        if (dlvModal) dlvModal.style.display = "none";
+
         const tyCreds = document.getElementById("tyCredentials");
         if (tyCreds && (!tyCreds.value || tyCreds.value.trim() === "")) {
           const creds = window.lastDeliveredCredentials || document.getElementById("dlvCredentials")?.value || "";
@@ -24668,6 +24677,14 @@ function syncAllOpenViewsStock(changedProdId) {
     window.goToMyOrders = goToMyOrders;
 
     function openCurrentOrderCredentials() {
+      const currentThankYouView = document.getElementById("viewThankYou");
+      const tyBox = document.getElementById("tyCredentialsBox");
+      if (currentThankYouView && currentThankYouView.style.display !== "none" && tyBox) {
+        tyBox.scrollIntoView({ behavior: "smooth", block: "center" });
+        const ta = document.getElementById("tyCredentials");
+        if (ta) ta.focus();
+        return;
+      }
       const oid = window.currentThankYouOrderId || window.lastDeliveredOrderId || (document.getElementById("tyOrderId")?.innerText.replace("#", "").trim());
       if (oid) {
         openOrderCredentialsModal(oid);
@@ -24675,12 +24692,6 @@ function syncAllOpenViewsStock(changedProdId) {
         const orders = getUserOrders();
         if (orders && orders.length > 0) {
           openOrderCredentialsModal(orders[0].orderId || orders[0].id);
-        } else {
-          const dlvModal = document.getElementById("orderDeliveryModal");
-          if (dlvModal) {
-            dlvModal.style.display = "flex";
-            dlvModal.style.zIndex = "9999999";
-          }
         }
       }
     }
@@ -27486,10 +27497,16 @@ function syncAllOpenViewsStock(changedProdId) {
         const tySumTotal = document.getElementById("tySummaryTotal");
         if (tySumTotal) tySumTotal.innerText = formatVND(totalCost) + " VND";
 
+        // [QUY TẮC MỚI]: ĐÃ XEM ĐƯỢC TÀI KHOẢN TRỰC TIẾP TRÊN TRANG CẢM ƠN -> KHÔNG BẬT POPUP ĐÈ LÊN NỮA
+        if (typeof closeModal === "function") {
+          closeModal("orderDeliveryModal");
+          closeModal("directPaymentModal");
+          closeModal("modalQuickBuy");
+          closeModal("quickBuyModal");
+        }
         const dlvModal = document.getElementById("orderDeliveryModal");
         if (dlvModal) {
-          dlvModal.style.setProperty("display", "flex", "important");
-          dlvModal.style.setProperty("z-index", "10000005", "important");
+          dlvModal.style.display = "none";
         }
 
         if (typeof switchView === "function") {
@@ -27712,10 +27729,17 @@ function syncAllOpenViewsStock(changedProdId) {
     if (dlvQ) dlvQ.innerText = qty + " tài khoản";
     const dlvTot = document.getElementById("dlvTotal");
     if (dlvTot) dlvTot.innerText = formatVND(totalCost);
+
+    // [QUY TẮC MỚI]: KHÔNG BẬT POPUP ĐÈ LÊN MÀN HÌNH CẢM ƠN (CHỈ HIỂN THỊ KHI XEM TRÊN TRANG ĐƠN HÀNG)
+    if (typeof closeModal === "function") {
+      closeModal("orderDeliveryModal");
+      closeModal("directPaymentModal");
+      closeModal("modalQuickBuy");
+      closeModal("quickBuyModal");
+    }
     const dlvModal = document.getElementById("orderDeliveryModal");
     if (dlvModal) {
-      dlvModal.style.display = "flex";
-      dlvModal.style.zIndex = "9999999";
+      dlvModal.style.display = "none";
     }
 
     refreshAllShopStockUI(product.id);
