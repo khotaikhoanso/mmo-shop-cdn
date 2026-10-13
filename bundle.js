@@ -25372,14 +25372,16 @@ function syncAllOpenViewsStock(changedProdId) {
                   } else {
                     statusBadgeHtml = `
                       <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid #f59e0b; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-clock"></i> Chờ Gom Hàng
+                        <i class="fa-solid fa-clock-rotate-left"></i> Chờ Duyệt
                       </span>
-                      <span style="color:#94a3b8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Hạn gom: ${order.maxDays || 7} ngày</span>
+                      <span style="color:#94a3b8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Chờ shop xác nhận</span>
                     `;
                     actionBtnsHtml = `
-                      <span style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); border-radius:5px; padding:5px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-clock"></i> Đang chuẩn bị acc
-                      </span>
+                      <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
+                        <button onclick="cancelUserPreOrder('${cleanOId}')" title="Bấm để hủy đơn đặt trước và nhận lại 100% tiền vào ví" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.5); border-radius:6px; padding:6px 12px; cursor:pointer; font-size:0.76rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                          <i class="fa-solid fa-ban" style="color:#ef4444;"></i> Hủy Đơn
+                        </button>
+                      </div>
                     `;
                   }
                 } else {
@@ -38739,22 +38741,22 @@ function getProductSchemaReviews(p, idx) {
 
       if (st === "WAITING_CONFIRM") {
         if (circle2) { circle2.style.background = "#f59e0b"; circle2.style.color = "#0b111e"; circle2.innerHTML = "2"; }
-        if (label2) { label2.style.color = "#f59e0b"; label2.innerText = "2. Xác nhận"; }
+        if (label2) { label2.style.color = "#f59e0b"; label2.innerText = "2. Chờ duyệt"; }
         if (line23) line23.style.background = "#1e293b";
         if (circle3) { circle3.style.background = "#1e293b"; circle3.style.color = "#64748b"; circle3.innerHTML = "3"; }
         if (label3) label3.style.color = "#64748b";
-        if (badge) { badge.style.background = "#f59e0b"; badge.style.color = "#0b111e"; badge.innerText = "Chờ xác nhận"; }
-        if (desc) desc.innerText = "Đơn hàng đang chờ shop duyệt và chuẩn bị gom hàng theo yêu cầu.";
+        if (badge) { badge.style.background = "#f59e0b"; badge.style.color = "#0b111e"; badge.innerText = "Chờ Duyệt"; }
+        if (desc) desc.innerText = "Đơn hàng đang chờ shop duyệt. Bạn có thể bấm Hủy đơn bên dưới bất cứ lúc nào khi còn chờ duyệt.";
         if (btnCancel) btnCancel.style.display = "inline-flex";
         if (deliveredWrap) deliveredWrap.style.display = "none";
       } else if (st === "PROCESSING") {
         if (circle2) { circle2.style.background = "#38bdf8"; circle2.style.color = "#0b111e"; circle2.innerHTML = "<i class='fa-solid fa-spinner fa-spin'></i>"; }
-        if (label2) { label2.style.color = "#38bdf8"; label2.innerText = "2. Đang xử lý"; }
+        if (label2) { label2.style.color = "#38bdf8"; label2.innerText = "2. Đang gom hàng"; }
         if (line23) line23.style.background = "#1e293b";
         if (circle3) { circle3.style.background = "#1e293b"; circle3.style.color = "#64748b"; circle3.innerHTML = "3"; }
         if (label3) label3.style.color = "#64748b";
-        if (badge) { badge.style.background = "#38bdf8"; badge.style.color = "#0b111e"; badge.innerText = "Đang xử lý / Gom hàng"; }
-        if (desc) desc.innerText = "Shop đã tiếp nhận đơn và đang tiến hành chuẩn bị tài khoản giao cho bạn.";
+        if (badge) { badge.style.background = "#38bdf8"; badge.style.color = "#0b111e"; badge.innerText = "Đang Gom Hàng"; }
+        if (desc) desc.innerText = "Shop đã duyệt đơn và đang tiến hành gom tài khoản giao cho bạn.";
         if (btnCancel) btnCancel.style.display = "none";
         if (deliveredWrap) deliveredWrap.style.display = "none";
       } else if (st === "COMPLETED") {
@@ -38779,27 +38781,11 @@ function getProductSchemaReviews(p, idx) {
         if (deliveredWrap) deliveredWrap.style.display = "none";
       }
 
-      // HIỂN THỊ THANH ĐIỀU HÀNH BÀN GIAO CHO ADMIN TRONG TRANG CHI TIẾT ĐƠN ĐẶT TRƯỚC
-      const isAdmCur = (typeof isAdminUser === "function" && isAdminUser()) ||
-        (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
-        (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
-
+      // TRANG NGƯỜI DÙNG: TUYỆT ĐỐI ẨN 100% 3 NÚT ĐIỀU HÀNH ADMIN (HÌNH 2)
       const podAdmWrap = document.getElementById("podAdminActionWrap");
       if (podAdmWrap) {
-        if (isAdmCur && st !== "CANCELLED") {
-          podAdmWrap.style.display = "flex";
-          const bFulfill = document.getElementById("btnPodAdminFulfill");
-          if (bFulfill) {
-            bFulfill.style.display = "inline-flex";
-            bFulfill.innerHTML = (st === "COMPLETED") ? "<i class='fa-solid fa-pen-to-square'></i> Sửa tài khoản đã giao" : "<i class='fa-solid fa-key'></i> Giao hàng ngay";
-          }
-          const bConfirm = document.getElementById("btnPodAdminConfirm");
-          if (bConfirm) bConfirm.style.display = (st === "WAITING_CONFIRM") ? "inline-flex" : "none";
-          const bAdmCancel = document.getElementById("btnPodAdminCancel");
-          if (bAdmCancel) bAdmCancel.style.display = (st !== "COMPLETED") ? "inline-flex" : "none";
-        } else {
-          podAdmWrap.style.display = "none";
-        }
+        podAdmWrap.style.display = "none";
+        podAdmWrap.style.setProperty("display", "none", "important");
       }
 
       // Hạn xử lý & ghi chú
@@ -39379,7 +39365,203 @@ function getProductSchemaReviews(p, idx) {
     window.closeAdminFulfillModal = closeAdminFulfillModal;
 
     // Admin bàn giao tài khoản & hoàn thành đơn
-    function executeAdminFulfillPreOrder() {
+    
+    // =========================================================================
+    // HỦY ĐƠN ĐẶT TRƯỚC VÀ HOÀN TIỀN 100% VÀO VÍ DÀNH CHO KHÁCH HÀNG
+    // =========================================================================
+    function cancelUserPreOrder(orderId) {
+      if (!orderId) {
+        const curOrder = window._currentViewingPreOrder;
+        orderId = curOrder ? (curOrder.orderCode || curOrder.id) : "";
+      }
+      if (!orderId) {
+        if (typeof showToast === "function") showToast("Mã đơn đặt trước không hợp lệ!", "warning");
+        return;
+      }
+      const cleanId = String(orderId).replace(/#/g, "").trim();
+      const cleanLower = cleanId.toLowerCase();
+
+      let preOrders = typeof getPreOrders === "function" ? getPreOrders(true) : [];
+      let order = typeof findPreOrderById === "function" ? findPreOrderById(preOrders, cleanId) : preOrders.find(function(o) {
+        return String(o.id || o.orderCode || "").replace(/#/g, "").trim().toLowerCase() === cleanLower;
+      });
+
+      if (!order) {
+        const uOrders = typeof getUserOrders === "function" ? getUserOrders() : [];
+        order = uOrders.find(function(o) {
+          return String(o.id || o.orderId || o.orderCode || "").replace(/#/g, "").trim().toLowerCase() === cleanLower;
+        });
+      }
+
+      if (!order) {
+        if (typeof showToast === "function") showToast("Không tìm thấy đơn hàng #" + cleanId, "error");
+        return;
+      }
+
+      const st = String(order.status || "").toUpperCase();
+      if (st !== "WAITING_CONFIRM" && st !== "PENDING") {
+        if (typeof showToast === "function") showToast("Đơn hàng này đang ở trạng thái (" + (order.statusText || st) + "), không thể hủy tự động!", "warning");
+        return;
+      }
+
+      const refAmt = Number(order.total || order.totalPrice || order.amount || 0);
+      const fmtRef = typeof formatVND === "function" ? formatVND(refAmt) : (refAmt.toLocaleString("vi-VN") + " đ");
+
+      if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng đặt trước #" + cleanId + "?\n\nToàn bộ số tiền " + fmtRef + " sẽ được hoàn trả 100% ngay lập tức vào ví của bạn.")) {
+        return;
+      }
+
+      let user = null;
+      try {
+        user = JSON.parse(localStorage.getItem("mmo_user") || "null");
+      } catch(e) {}
+      if (!user && typeof currentUser !== "undefined" && currentUser) user = currentUser;
+
+      if (!user) {
+        if (typeof showToast === "function") showToast("Vui lòng đăng nhập để thực hiện hủy đơn!", "error");
+        return;
+      }
+
+      // 1. Hoàn 100% tiền vào ví
+      const cleanUE = (user.email || "").toLowerCase().trim();
+      const allUsers = typeof getRegisteredUsers === "function" ? getRegisteredUsers() : JSON.parse(localStorage.getItem("mmo_registered_users") || "[]");
+      const uIdx = allUsers.findIndex(function(u) {
+        return (u.id && u.id === user.id) || ((u.email || "").toLowerCase().trim() === cleanUE);
+      });
+      let finalBal = 0;
+      if (uIdx !== -1) {
+        allUsers[uIdx].balance = (Number(allUsers[uIdx].balance) || 0) + refAmt;
+        finalBal = allUsers[uIdx].balance;
+        if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
+        else localStorage.setItem("mmo_registered_users", JSON.stringify(allUsers));
+      } else {
+        finalBal = (Number(user.balance) || 0) + refAmt;
+      }
+
+      user.balance = finalBal;
+      currentUser = user;
+      try {
+        localStorage.setItem("mmo_user", JSON.stringify(user));
+        localStorage.setItem("mmo_users", JSON.stringify(allUsers));
+      } catch(e) {}
+
+      // 2. Ghi nhật ký biến động số dư & giao dịch
+      try {
+        if (typeof recordTransaction === "function") {
+          recordTransaction(cleanUE, user.username || user.fullname || cleanUE.split("@")[0], "Hoàn tiền hủy đơn đặt trước", +refAmt, finalBal, "Hoàn 100% tiền hủy đơn đặt trước #" + cleanId + " (" + (order.productName || "Sản phẩm") + ")");
+        }
+        const balanceLogs = JSON.parse(localStorage.getItem("mmo_balance_logs") || "[]");
+        balanceLogs.unshift({
+          id: "TX_REF_" + Date.now(),
+          orderId: cleanId,
+          userId: user.id || cleanUE,
+          userEmail: cleanUE,
+          username: user.username || user.fullname || cleanUE.split("@")[0],
+          type: "REFUND",
+          typeText: "Hoàn tiền hủy đơn đặt trước",
+          amount: +refAmt,
+          balanceAfter: finalBal,
+          time: new Date().toLocaleString("vi-VN"),
+          createdAt: new Date().toISOString(),
+          timestamp: Date.now(),
+          note: "Hoàn 100% tiền khách hủy đơn đặt trước #" + cleanId
+        });
+        localStorage.setItem("mmo_balance_logs", JSON.stringify(balanceLogs));
+      } catch(eTx) {}
+
+      // 3. Cập nhật trạng thái đơn thành CANCELLED
+      order.status = "CANCELLED";
+      order.statusText = "Đã hủy đơn";
+      order.isCancelled = true;
+      order.isRefunded = true;
+      order.cancelledBy = "CUSTOMER";
+      order.refundedAt = new Date().toLocaleString("vi-VN");
+
+      // Cập nhật vào mmo_pre_orders
+      let poList = typeof getPreOrders === "function" ? getPreOrders(true) : [];
+      let foundPoIdx = poList.findIndex(function(p) {
+        return String(p.id || p.orderCode || p.orderId).replace(/#/g, "").trim().toLowerCase() === cleanLower;
+      });
+      if (foundPoIdx !== -1) {
+        poList[foundPoIdx] = Object.assign({}, poList[foundPoIdx], order);
+        savePreOrders(poList);
+      }
+
+      // Cập nhật vào tất cả các kho lưu trữ cục bộ
+      const syncKeys = ["mmo_orders", "mmo_user_orders", "mmo_all_orders"];
+      syncKeys.forEach(function(k) {
+        try {
+          let list = JSON.parse(localStorage.getItem(k) || "[]");
+          if (Array.isArray(list)) {
+            list.forEach(function(item) {
+              if (String(item.id || item.orderCode || item.orderId || "").replace(/#/g, "").trim().toLowerCase() === cleanLower) {
+                item.status = "CANCELLED";
+                item.statusText = "Đã hủy đơn";
+                item.isCancelled = true;
+                item.isRefunded = true;
+                item.refundedAt = order.refundedAt;
+              }
+            });
+            localStorage.setItem(k, JSON.stringify(list));
+          }
+        } catch(eK) {}
+      });
+
+      // 4. Phát sóng Realtime & Đồng bộ Turso Cloud
+      try {
+        if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) 
+            ? MMO_WORKER_API.getAdminSecret() 
+            : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+          fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+            body: JSON.stringify({ orders: [order] }),
+            keepalive: true
+          }).catch(function() {});
+          fetch(MMO_WORKER_API.getApiUrl() + "/api/user/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+            body: JSON.stringify({ email: cleanUE, balance: finalBal }),
+            keepalive: true
+          }).catch(function() {});
+        }
+      } catch(eCloud) {}
+
+      try {
+        if (typeof broadcastPreOrderEvent === "function") {
+          broadcastPreOrderEvent({ type: "ORDER_STATUS_CHANGED", orderId: cleanId, status: "CANCELLED", statusText: "Đã hủy đơn" });
+        }
+      } catch(eBc) {}
+
+      // 5. Cập nhật giao diện
+      if (typeof updateWalletUI === "function") updateWalletUI();
+      if (typeof updateUserUI === "function") updateUserUI();
+      if (typeof renderProfileOrders === "function") renderProfileOrders();
+      if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
+      if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+
+      // Nếu đang mở trang chi tiết đơn đặt trước -> refresh view sang CANCELLED
+      try {
+        const curView = localStorage.getItem("mmo_current_view");
+        if (curView === "viewPreOrderDetail" && typeof openPreOrderDetailView === "function") {
+          window._currentViewingPreOrder = order;
+          openPreOrderDetailView(cleanId);
+        }
+      } catch(eR) {}
+
+      if (typeof showToast === "function") {
+        showToast("🎉 Đã hủy đơn đặt trước #" + cleanId + " thành công! Đã hoàn " + fmtRef + " vào ví của bạn.", "success");
+      }
+    }
+    window.cancelUserPreOrder = cancelUserPreOrder;
+    window.customerCancelPreOrder = function() {
+      const cur = window._currentViewingPreOrder;
+      const oid = cur ? (cur.orderCode || cur.id) : (document.getElementById("podCode") ? document.getElementById("podCode").innerText : "");
+      cancelUserPreOrder(oid);
+    };
+
+function executeAdminFulfillPreOrder() {
       const orderId = document.getElementById("admFulfillOrderId") ? document.getElementById("admFulfillOrderId").value : "";
       const rawText = document.getElementById("admFulfillAccountsInput") ? document.getElementById("admFulfillAccountsInput").value.trim() : "";
       if (!rawText) {
