@@ -40837,6 +40837,14 @@ function executeAdminFulfillPreOrder() {
     // Mở modal chi tiết đơn hàng (hỗ trợ mode: 'exchange' hoặc 'refund')
     function openAdminOrderDetailModal(orderId, mode) {
       if (!orderId) return;
+      const isAdm = (typeof isAdminUser === "function" && isAdminUser()) || (typeof currentUser !== "undefined" && currentUser && currentUser.role === "ADMIN");
+      if (!isAdm) {
+        console.warn("[SECURITY] Chỉ Admin mới có quyền truy cập Modal Xử Lý Đổi Trả / Hoàn Tiền!");
+        if (typeof openOrderCredentialsModal === "function") {
+          openOrderCredentialsModal(orderId);
+        }
+        return;
+      }
       const cleanId = String(orderId).replace("#", "").trim();
 
       // Sử dụng resolver tìm kiếm thông tin đơn hàng chính xác
@@ -41051,6 +41059,30 @@ function executeAdminFulfillPreOrder() {
 
       let availList = [];
 
+      // 0. ƯU TIÊN 100%: Tìm trong Turso Cloud Database cache
+      if (prodId) {
+        try {
+          // Thử tìm theo variant index
+          for (let vi = 0; vi < 10; vi++) {
+            const cachedTurso = localStorage.getItem("mmo_turso_accs_" + prodId + "_" + vi);
+            if (cachedTurso) {
+              const parsed = JSON.parse(cachedTurso);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                availList = [...parsed];
+                break;
+              }
+            }
+          }
+          if (availList.length === 0) {
+            const cachedMain = localStorage.getItem("mmo_turso_accs_" + prodId + "_0");
+            if (cachedMain) {
+              const parsed = JSON.parse(cachedMain);
+              if (Array.isArray(parsed) && parsed.length > 0) availList = [...parsed];
+            }
+          }
+        } catch(eTursoCache) {}
+      }
+
       // 1. Tìm theo kho riêng của biến thể từ MMO_WAREHOUSE & MOCK_DATA
       if (typeof MOCK_DATA !== "undefined" && MOCK_DATA.products) {
         const prod = MOCK_DATA.products.find(p => p.id === prodId || (prodName && p.name === prodName));
@@ -41245,6 +41277,9 @@ function executeAdminFulfillPreOrder() {
       // 2. Cập nhật đơn hàng
       const newStatus = "Đã Bảo Hành (Đã Đổi Trả 1-1)";
       currentAdminOrderDetail.status = newStatus;
+      currentAdminOrderDetail.statusText = "Đã Đổi Trả 1-1";
+      currentAdminOrderDetail.isExchanged = true;
+      currentAdminOrderDetail.replacementAccount = newCreds;
       currentAdminOrderDetail.credentials = (currentAdminOrderDetail.credentials ? (currentAdminOrderDetail.credentials + "\n--- TÀI KHOẢN MỚI ĐỔI TRẢ (1-ĐỔI-1) ---\n" + newCreds) : newCreds);
       if (targetEmail) {
         currentAdminOrderDetail.email = targetEmail;
@@ -41705,32 +41740,35 @@ async function confirmRefundOrder() {
     function handleOpenOrderDetailsFromChat(orderCode) {
       if (!orderCode) return;
       const cleanCode = String(orderCode).replace("#", "").trim();
+      const isAdm = (typeof isAdminUser === "function" && isAdminUser()) || (typeof currentUser !== "undefined" && currentUser && currentUser.role === "ADMIN");
 
-      // 1. Chuyển sang giao diện Admin nếu chưa ở đó
-      if (typeof switchView === "function") {
-        switchView("viewAdmin");
-      }
-
-      // 2. Chuyển sang Tab Lịch Sử Đơn Hàng & Đổi Trả
-      if (typeof switchAdminTab === "function") {
-        switchAdminTab("tabAdmOrders");
-      }
-
-      // 3. Mở ngay lập tức Modal Chi Tiết Đơn Hàng & Đổi Trả
-      setTimeout(function() {
-        openAdminOrderDetailModal(cleanCode);
-
-        // Cuộn tới dòng của đơn hàng và tạo hiệu ứng phát sáng
+      if (isAdm) {
+        // [ADMIN]: Chỉ Admin mới được phép mở trang Admin và Modal Xử Lý Đổi Trả / Hoàn Tiền
+        if (typeof switchView === "function") {
+          switchView("viewAdmin");
+        }
+        if (typeof switchAdminTab === "function") {
+          switchAdminTab("tabAdmOrders");
+        }
         setTimeout(function() {
-          const rowEl = document.getElementById("admOrderRow_" + cleanCode);
-          if (rowEl) {
-            rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
-            rowEl.style.transition = "background 0.5s ease";
-            rowEl.style.background = "rgba(56,189,248,0.25)";
-            setTimeout(function() { rowEl.style.background = ""; }, 3000);
-          }
-        }, 300);
-      }, 100);
+          openAdminOrderDetailModal(cleanCode);
+          setTimeout(function() {
+            const rowEl = document.getElementById("admOrderRow_" + cleanCode);
+            if (rowEl) {
+              rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+              rowEl.style.transition = "background 0.5s ease";
+              rowEl.style.background = "rgba(56,189,248,0.25)";
+              setTimeout(function() { rowEl.style.background = ""; }, 3000);
+            }
+          }, 300);
+        }, 100);
+      } else {
+        // [NGƯỜI DÙNG THƯỜNG]: TUYỆT ĐỐI CẤM MỞ TRANG ADMIN HOẶC MODAL ADMIN!
+        // Người dùng chỉ xem modal thông tin đơn hàng / tài khoản đã nhận
+        if (typeof openOrderCredentialsModal === "function") {
+          openOrderCredentialsModal(cleanCode);
+        }
+      }
     }
     window.handleOpenOrderDetailsFromChat = handleOpenOrderDetailsFromChat;
 
