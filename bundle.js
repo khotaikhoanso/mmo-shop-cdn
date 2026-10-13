@@ -36808,6 +36808,43 @@ function getProductSchemaReviews(p, idx) {
       if (totalVal > 0) msgText += "\n💰 Tổng tiền: " + formatVND(totalVal);
       msgText += "\n❓ Lý do: Tài khoản gặp sự cố không đăng nhập được, yêu cầu Admin kiểm tra bảo hành và đổi trả 1-ĐỔI-1.";
 
+      // CẬP NHẬT ĐƠN HÀNG VÀO DANH SÁCH BẢO HÀNH & ĐỔI TRẢ
+      try {
+        localStorage.setItem("mmo_complaint_" + cleanId, "true");
+        let all = typeof getAllOrders === "function" ? getAllOrders() : [];
+        all.forEach(function(item) {
+          if (item && String(item.orderId || item.id || "").replace("#","").trim() === cleanId) {
+            item.hasComplaint = true;
+            item.isWarranty = true;
+            item.complaintTime = Date.now();
+            const curSt = String(item.status || "").toLowerCase();
+            if (!curSt.includes("đổi trả") && !curSt.includes("hoàn tiền") && !item.isExchanged && !item.isRefunded) {
+              item.status = "Khiếu Nại / Cần Bảo Hành";
+              item.statusText = "Khiếu Nại / Bảo Hành";
+            }
+          }
+        });
+        if (typeof saveAllOrders === "function") saveAllOrders(all);
+
+        let uOrders = typeof getUserOrders === "function" ? getUserOrders() : [];
+        uOrders.forEach(function(item) {
+          if (item && String(item.orderId || item.id || "").replace("#","").trim() === cleanId) {
+            item.hasComplaint = true;
+            item.isWarranty = true;
+            item.complaintTime = Date.now();
+            const curSt = String(item.status || "").toLowerCase();
+            if (!curSt.includes("đổi trả") && !curSt.includes("hoàn tiền") && !item.isExchanged && !item.isRefunded) {
+              item.status = "Khiếu Nại / Cần Bảo Hành";
+              item.statusText = "Khiếu Nại / Bảo Hành";
+            }
+          }
+        });
+        if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
+
+        if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
+        if (typeof renderProfileOrders === "function") renderProfileOrders();
+      } catch(eComp) {}
+
       if (typeof toggleChatWidget === "function") toggleChatWidget(true);
       if (typeof sendChatMessage === "function") {
         sendChatMessage(msgText, {
@@ -36869,7 +36906,7 @@ function getProductSchemaReviews(p, idx) {
           let s = escapeHtml(t).replace(/\n/g, "<br/>");
           return s.replace(/(#?(DH\d{6,15}|MMO\d{6,15}))/gi, function(match, fullCode, cleanCode) {
             const code = cleanCode || fullCode.replace('#', '');
-            return '<button type="button" class="btn-chat-order-link" onclick="handleOpenOrderDetailsFromChat(\'' + code + '\')" title="Bấm để mở Lịch Sử Đơn Hàng &amp; Xử Lý Đổi Trả / Hoàn Tiền" style="display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.25); border:1px solid #38bdf8; color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:800; font-size:0.8rem; cursor:pointer; vertical-align:middle; text-decoration:none; margin:2px 4px; box-shadow:0 0 10px rgba(56,189,248,0.25);"><i class="fa-solid fa-box-archive"></i> #' + code + ' <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.68rem;"></i></button>';
+            return '<span class="badge-chat-order-code" style="display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-weight:800; font-family:monospace; font-size:0.8rem; margin:2px 4px; vertical-align:middle; cursor:default; user-select:text;"><i class="fa-solid fa-box-archive"></i> #' + code + '</span>';
           });
         })(cleanText) + "</div>") : "";
 
@@ -40152,12 +40189,39 @@ function executeAdminFulfillPreOrder() {
 
       let allOrders = (getAllOrders() || []).filter(function(o) { return typeof isForbiddenLegacyOrder === "function" ? !isForbiddenLegacyOrder(o) : true; });
 
+      // ĐỒNG BỘ CÁC ĐƠN KHIẾU NẠI TỪ TIN NHẮN CHAT VÀO DANH SÁCH BẢO HÀNH
+      try {
+        const chatMsgs = typeof getAllChatMessages === "function" ? getAllChatMessages() : [];
+        chatMsgs.forEach(function(m) {
+          if (!m || !m.text) return;
+          const match = m.text.match(/KHIẾU NẠI & BẢO HÀNH ĐƠN HÀNG\s*#?([A-Za-z0-9_]+)/i);
+          if (match && match[1]) {
+            const compId = match[1].trim();
+            localStorage.setItem("mmo_complaint_" + compId, "true");
+            allOrders.forEach(function(ord) {
+              if (ord && String(ord.orderId || ord.id || "").replace("#","").trim() === compId) {
+                ord.hasComplaint = true;
+                ord.isWarranty = true;
+                const sLow = String(ord.status || "").toLowerCase();
+                if (!sLow.includes("đổi trả") && !sLow.includes("hoàn tiền") && !ord.isExchanged && !ord.isRefunded) {
+                  ord.status = "Khiếu Nại / Cần Bảo Hành";
+                  ord.statusText = "Khiếu Nại / Bảo Hành";
+                }
+              }
+            });
+          }
+        });
+      } catch(eScan) {}
+
       const isWarrantyOrder = function(o) {
         if (!o) return false;
-        if (typeof isOrderWarrantyOrExchange === "function") return isOrderWarrantyOrExchange(o);
+        const oId = String(o.orderId || o.id || "").replace("#", "").trim();
+        if (localStorage.getItem("mmo_complaint_" + oId) === "true") return true;
+        if (o.hasComplaint || o.complaint || o.isWarranty || o.isExchanged || o.isRefunded) return true;
+        if (typeof isOrderWarrantyOrExchange === "function" && isOrderWarrantyOrExchange(o)) return true;
         const st = String(o.status || o.statusText || "").toLowerCase();
         const cred = String(o.credentials || o.accounts || "").toLowerCase();
-        return st.includes("khiếu nại") || st.includes("khieu nai") || st.includes("bảo hành") || st.includes("bao hanh") || st.includes("đổi trả") || st.includes("doi tra") || st.includes("hoàn tiền") || st.includes("hoan tien") || st.includes("1-đổi-1") || st.includes("đổi 1-1") || cred.includes("đổi trả") || o.hasComplaint || o.complaint || o.isWarranty || o.isExchanged || o.isRefunded;
+        return st.includes("khiếu nại") || st.includes("khieu nai") || st.includes("bảo hành") || st.includes("bao hanh") || st.includes("đổi trả") || st.includes("doi tra") || st.includes("hoàn tiền") || st.includes("hoan tien") || st.includes("1-đổi-1") || st.includes("đổi 1-1") || cred.includes("đổi trả");
       };
 
       // Cập nhật huy hiệu số lượng
