@@ -41484,6 +41484,24 @@ function executeAdminFulfillPreOrder() {
         sendAdminAutoMessage(targetEmail, messageToCustomer);
       }
 
+      try {
+        const guestChatId = localStorage.getItem("mmo_guest_chat_id");
+        if (guestChatId && guestChatId !== targetEmail && typeof sendAdminAutoMessage === "function") {
+          sendAdminAutoMessage(guestChatId, messageToCustomer);
+        }
+      } catch(eG) {}
+
+      if (typeof renderChatMessageList === "function") renderChatMessageList();
+      if (typeof updateChatUnreadBadge === "function") updateChatUnreadBadge();
+      if (typeof addUserNotification === "function") {
+        addUserNotification({
+          email: targetEmail,
+          title: "❌ Từ chối bảo hành đơn hàng #" + cleanId,
+          message: "Lý do: " + reason,
+          type: "warning"
+        });
+      }
+
       // 3. Đồng bộ lên Google Sheets
       if (typeof callGasApi === "function") {
         const adminEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "admin@cuahangcuaban.com";
@@ -41543,6 +41561,19 @@ function executeAdminFulfillPreOrder() {
       }
     }
     window.ensureRejectWarrantyButtonInDom = ensureRejectWarrantyButtonInDom;
+
+    try {
+      if (typeof document !== "undefined") {
+        document.addEventListener("DOMContentLoaded", ensureRejectWarrantyButtonInDom);
+      }
+      if (typeof setInterval !== "undefined") {
+        setInterval(function() {
+          if (document.getElementById("admOrderDetailModal") && !document.getElementById("btnAdmRejectWarranty")) {
+            ensureRejectWarrantyButtonInDom();
+          }
+        }, 1500);
+      }
+    } catch(eInitBtn) {}
 
 
     // Quản lý số tiền hoàn lại tùy chỉnh (cho đơn nhiều sản phẩm lỗi 1 phần)
@@ -41785,8 +41816,29 @@ async function confirmRefundOrder() {
       if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
 
       // 4. Tự động gửi tin nhắn thông báo vào khung chat cho khách
-      const messageToCustomer = "💰 ADMIN ĐÃ HOÀN TIỀN THÀNH CÔNG CHO ĐƠN HÀNG #" + orderId + "!\nSố tiền +" + formatVND(refundAmt) + " đã được cộng hoàn trả vào ví của bạn trên hệ thống. Quý khách vui lòng kiểm tra lại số dư ví!";
+      const messageToCustomer = "💰 ĐÃ HOÀN TIỀN CHO ĐƠN HÀNG BẢO HÀNH #" + orderId + "!\n" +
+        "Số tiền +" + formatVND(refundAmt) + " đã được cộng hoàn trả vào ví của bạn trên hệ thống.\n" +
+        "📌 Lý do: Hoàn tiền đơn hàng bảo hành.\n" +
+        "Quý khách vui lòng kiểm tra lại số dư ví!";
       sendAdminAutoMessage(finalEmail, messageToCustomer);
+
+      try {
+        const guestChatId = localStorage.getItem("mmo_guest_chat_id");
+        if (guestChatId && guestChatId !== finalEmail) {
+          sendAdminAutoMessage(guestChatId, messageToCustomer);
+        }
+      } catch(eGRef) {}
+
+      if (typeof renderChatMessageList === "function") renderChatMessageList();
+      if (typeof updateChatUnreadBadge === "function") updateChatUnreadBadge();
+      if (typeof addUserNotification === "function") {
+        addUserNotification({
+          email: finalEmail,
+          title: "💰 Đã hoàn tiền cho đơn hàng bảo hành #" + orderId,
+          message: "Số tiền +" + formatVND(refundAmt) + " đã được hoàn lại vào ví của bạn.",
+          type: "success"
+        });
+      }
 
       // 5. Đồng bộ số dư và đơn hàng lên Google Sheets: Dual-path sync
       const targetUser = users[uIdx];
@@ -41939,6 +41991,8 @@ async function confirmRefundOrder() {
       }
       if (typeof renderAdminChatList === "function") renderAdminChatList();
       if (typeof broadcastChatMessage === "function") broadcastChatMessage(newMsg);
+      if (typeof renderChatMessageList === "function") renderChatMessageList();
+      if (typeof updateChatUnreadBadge === "function") updateChatUnreadBadge();
     }
     window.sendAdminAutoMessage = sendAdminAutoMessage;
 
