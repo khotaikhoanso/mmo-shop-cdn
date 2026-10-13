@@ -24681,7 +24681,7 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.syncUserOrdersWithWarrantyUpdates = syncUserOrdersWithWarrantyUpdates;
 
-    function openOrderCredentialsModal(orderId) {
+    async function openOrderCredentialsModal(orderId) {
       if (!orderId) orderId = window.currentThankYouOrderId || window.lastDeliveredOrderId;
       if (!orderId) return;
       
@@ -24712,26 +24712,107 @@ function syncAllOpenViewsStock(changedProdId) {
               total: fPo.total || fPo.totalPrice || 0,
               credentials: (fPo.deliveredAccounts && fPo.deliveredAccounts.length > 0) ? fPo.deliveredAccounts.join("\n") : (fPo.credentials || ""),
               deliveredAccounts: fPo.deliveredAccounts || [],
-              status: fPo.status || "COMPLETED"
+              status: fPo.status || "WAITING_CONFIRM"
             };
           }
         } catch(ePo) {}
       }
 
-      // Nếu là đơn hàng đặt trước chưa được giao tài khoản
-      if (order && (order.type === "PRE_ORDER" || cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_"))) {
-        const poCreds = order.credentials || (Array.isArray(order.deliveredAccounts) ? order.deliveredAccounts.join("\n") : "");
-        const isNotDone = (order.status === "WAITING_CONFIRM" || order.status === "PROCESSING") && !poCreds;
-        if (isNotDone) {
+      const isPreOrder = cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_") || (order && (order.type === "PRE_ORDER" || String(order.statusText || "").includes("đặt trước")));
+
+      let poCreds = (order && (order.credentials || (Array.isArray(order.deliveredAccounts) && order.deliveredAccounts.length > 0 ? order.deliveredAccounts.join("\n") : "") || order.accountData)) || "";
+
+      // NẾU CHƯA CÓ CREDENTIALS HOẶC LÀ ĐƠN ĐẶT TRƯỚC, TỰ ĐỘNG GỌI API TURSO ĐỂ TẢI DỮ LIỆU BÀN GIAO MỚI NHẤT
+      if (!poCreds || isPreOrder) {
+        try {
+          const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") 
+            ? MMO_WORKER_API.getApiUrl() 
+            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+          const adminTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) 
+            ? MMO_WORKER_API.getAdminSecret() 
+            : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+          const sessionTok = localStorage.getItem("mmo_session_token") || "";
+          const hdrs = {};
+          if (adminTok) hdrs["x-admin-token"] = adminTok;
+          if (sessionTok) hdrs["x-session-token"] = sessionTok;
+
+          const res = await fetch(apiUrl + "/api/orders/" + encodeURIComponent(cleanId), {
+            headers: hdrs,
+            cache: "no-store"
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const cOrder = data.order || data;
+            if (cOrder) {
+              const accs = Array.isArray(cOrder.accounts) ? cOrder.accounts : (cOrder.credentials ? String(cOrder.credentials).split("\n").filter(Boolean) : []);
+              if (accs.length > 0) {
+                poCreds = accs.join("\n");
+                if (order) {
+                  order.credentials = poCreds;
+                  order.deliveredAccounts = accs;
+                  order.accounts = accs;
+                  order.status = cOrder.order_status || cOrder.status || "COMPLETED";
+                  order.statusText = "Đã giao hàng";
+                } else {
+                  order = {
+                    id: cleanId,
+                    orderId: cleanId,
+                    type: isPreOrder ? "PRE_ORDER" : "REGULAR",
+                    productName: cOrder.product_name || cOrder.productName || "Sản phẩm MMO",
+                    variant: cOrder.variant_name || cOrder.variantName || "",
+                    quantity: cOrder.quantity || cOrder.qty || 1,
+                    total: cOrder.amount || cOrder.total || 0,
+                    credentials: poCreds,
+                    deliveredAccounts: accs,
+                    accounts: accs,
+                    status: cOrder.order_status || cOrder.status || "COMPLETED",
+                    statusText: "Đã giao hàng"
+                  };
+                }
+                // Đồng bộ dữ liệu mới nhận vào localStorage
+                const syncKeys = ["mmo_orders", "mmo_user_orders", "mmo_all_orders", "mmo_pre_orders"];
+                syncKeys.forEach(function(k) {
+                  try {
+                    let list = JSON.parse(localStorage.getItem(k) || "[]");
+                    if (Array.isArray(list)) {
+                      let found = false;
+                      list.forEach(function(item) {
+                        if (String(item.orderId || item.id || item.orderCode || "").replace("#","").trim() === cleanId) {
+                          item.credentials = poCreds;
+                          item.deliveredAccounts = accs;
+                          item.accounts = accs;
+                          item.status = "COMPLETED";
+                          item.statusText = "Đã giao hàng";
+                          found = true;
+                        }
+                      });
+                      if (!found && (k === "mmo_orders" || k === "mmo_user_orders")) {
+                        list.unshift(order);
+                      }
+                      localStorage.setItem(k, JSON.stringify(list));
+                    }
+                  } catch(eK) {}
+                });
+              }
+            }
+          }
+        } catch(eFetch) {
+          console.warn("fetch cloud order details error:", eFetch);
+        }
+      }
+
+      // KIỂM TRA ĐƠN ĐẶT TRƯỚC CHƯA BÀN GIAO: TUYỆT ĐỐI KHÔNG MỞ MODAL RỖNG!
+      if (!poCreds) {
+        if (isPreOrder || (order && (order.status === "WAITING_CONFIRM" || order.status === "PROCESSING"))) {
           if (typeof showToast === "function") {
-            showToast("Đơn hàng #" + cleanId + " đang được shop chuẩn bị tài khoản. Vui lòng chờ shop bàn giao!", "info");
+            showToast("⏳ Đơn hàng #" + cleanId + " đang được shop gom và chuẩn bị tài khoản. Vui lòng chờ shop bàn giao!", "info");
           }
           return;
         }
-        // Đảm bảo đơn đã giao có credentials chuẩn để hiển thị trong modal
-        if (poCreds && !order.credentials) {
-          order.credentials = poCreds;
+        if (typeof showToast === "function") {
+          showToast("⚠️ Đơn hàng #" + cleanId + " chưa có thông tin tài khoản bàn giao. Vui lòng liên hệ hỗ trợ!", "warning");
         }
+        return;
       }
 
       // Fallback lấy tài khoản từ phiên vừa giao
@@ -24743,7 +24824,7 @@ function syncAllOpenViewsStock(changedProdId) {
           variant: document.getElementById("tyProdVariant")?.innerText || "",
           quantity: parseInt(document.getElementById("tyProdQty")?.innerText || "1") || 1,
           total: document.getElementById("tyOrderTotal")?.innerText || "",
-          credentials: window.lastDeliveredCredentials || document.getElementById("dlvCredentials")?.value || "",
+          credentials: poCreds || window.lastDeliveredCredentials || "",
           status: "HOÀN TẤT"
         };
       }
@@ -24752,6 +24833,7 @@ function syncAllOpenViewsStock(changedProdId) {
         showToast("Không tìm thấy dữ liệu đơn hàng: " + cleanId, "warning");
         return;
       }
+      order.credentials = poCreds;
       window.currentViewingDeliveryOrder = order;
       window.currentViewingDeliveryOrderId = cleanId;
       const dlvId = document.getElementById("dlvOrderId");
@@ -24761,25 +24843,39 @@ function syncAllOpenViewsStock(changedProdId) {
       const dlvQtyEl = document.getElementById("dlvQty");
       if (dlvQtyEl) dlvQtyEl.innerText = (order.quantity || order.qty || 1) + " sản phẩm";
       const dlvTot = document.getElementById("dlvTotal");
-      if (dlvTot) dlvTot.innerText = formatVND(order.total || order.totalPrice || 0);
+      if (dlvTot) dlvTot.innerText = (typeof formatVND === "function") ? formatVND(order.total || order.totalPrice || 0) : ((order.total || order.totalPrice || 0).toLocaleString("vi-VN") + " đ");
       const dlvCreds = document.getElementById("dlvCredentials");
-      const creds = order.credentials || order.accountData || "";
-      if (dlvCreds) dlvCreds.value = creds;
+      if (dlvCreds) dlvCreds.value = poCreds;
       const tyCreds = document.getElementById("tyCredentials");
-      if (tyCreds) tyCreds.value = creds;
-      window.lastDeliveredCredentials = creds;
+      if (tyCreds) tyCreds.value = poCreds;
+      window.lastDeliveredCredentials = poCreds;
       window.lastDeliveredOrderId = cleanId;
       window.currentThankYouOrderId = cleanId;
 
+      // Cập nhật tiêu đề Modal linh hoạt theo loại đơn
+      const modalHeaderTitle = document.querySelector("#orderDeliveryModal .modal-title");
+      if (modalHeaderTitle) {
+        if (isPreOrder) {
+          modalHeaderTitle.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đơn Hàng Đặt Trước Đã Bàn Giao Thành Công!';
+        } else if (String(order.status || "").includes("Đổi Trả") || String(poCreds).includes("TÀI KHOẢN MỚI ĐỔI TRẢ")) {
+          modalHeaderTitle.innerHTML = '<i class="fa-solid fa-rotate"></i> Bàn Giao Tài Khoản Đổi Trả Thành Công!';
+        } else {
+          modalHeaderTitle.innerHTML = '<i class="fa-solid fa-circle-check"></i> Mua Hàng &amp; Giao Tự Động Thành Công!';
+        }
+      }
+
       // Hiển thị banner đổi trả nếu đơn đã được cấp tài khoản mới
       const noticeBanner = document.getElementById("dlvExchangeNotice");
-      const isExchanged = String(order.status || "").includes("Đổi Trả") || String(creds).includes("TÀI KHOẢN MỚI ĐỔI TRẢ");
+      const isExchanged = String(order.status || "").includes("Đổi Trả") || String(poCreds).includes("TÀI KHOẢN MỚI ĐỔI TRẢ");
       if (noticeBanner) {
         noticeBanner.style.display = isExchanged ? "block" : "none";
       }
 
       const dlvModal = document.getElementById("orderDeliveryModal");
-      if (dlvModal) dlvModal.style.display = "flex";
+      if (dlvModal) {
+        dlvModal.style.setProperty("display", "flex", "important");
+        dlvModal.style.setProperty("z-index", "10000005", "important");
+      }
     }
     window.openOrderCredentialsModal = openOrderCredentialsModal;
 
