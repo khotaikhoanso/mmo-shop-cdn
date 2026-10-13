@@ -5091,7 +5091,7 @@ if (typeof productOrId === "object") {
 
           // Bỏ qua đơn đặt trước vì đã gom vào waitingPreOrders
           const oId = String(o.id || o.orderCode || o.orderId || "");
-          if (o.type === "PRE_ORDER" || oId.startsWith("PRE")) {
+          if (o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_")) {
             return false;
           }
 
@@ -24359,7 +24359,7 @@ function syncAllOpenViewsStock(changedProdId) {
               return;
             }
 
-            if (k === "mmo_pre_orders" || cleanId.startsWith("PRE") || cleanId.startsWith("POD_")) {
+            if (k === "mmo_pre_orders" || cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_")) {
               o.type = "PRE_ORDER";
             }
 
@@ -24393,7 +24393,7 @@ function syncAllOpenViewsStock(changedProdId) {
               }));
             } else {
               const existing = idMap.get(cleanId);
-              if (o.type === "PRE_ORDER" || cleanId.startsWith("PRE") || cleanId.startsWith("POD_")) {
+              if (o.type === "PRE_ORDER" || cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_")) {
                 existing.type = "PRE_ORDER";
               }
               if (isOrderWarrantyOrExchange(o)) {
@@ -24489,7 +24489,7 @@ function syncAllOpenViewsStock(changedProdId) {
       userOrders.forEach(function(uo) {
         if (!uo) return;
         const uId = String(uo.id || uo.orderId || uo.orderCode || "");
-        if (uId.startsWith("PRE") || uId.startsWith("POD_") || (uo.statusText && uo.statusText.includes("đặt trước"))) {
+        if (uId.startsWith("PRE") || uId.startsWith("DH_PRE") || uId.startsWith("POD_") || (uo.statusText && uo.statusText.includes("đặt trước"))) {
           uo.type = "PRE_ORDER";
         }
       });
@@ -24666,7 +24666,7 @@ function syncAllOpenViewsStock(changedProdId) {
       const cleanId = String(orderId).replace("#", "").trim();
 
       // Nếu là đơn hàng đặt trước (PRE...) -> Chuyển sang xem đơn đặt trước
-      if (cleanId.startsWith("PRE")) {
+      if (cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_")) {
         openPreOrderDetailView(cleanId);
         return;
       }
@@ -24680,7 +24680,7 @@ function syncAllOpenViewsStock(changedProdId) {
         order = all.find(o => (o.orderId === cleanId || o.id === cleanId));
       }
 
-      if (order && (order.type === "PRE_ORDER" || String(order.id || "").startsWith("PRE"))) {
+      if (order && (order.type === "PRE_ORDER" || String(order.id || "").startsWith("PRE") || String(order.id || "").startsWith("DH_PRE") || String(order.id || "").startsWith("POD_"))) {
         openPreOrderDetailView(cleanId);
         return;
       }
@@ -25041,7 +25041,7 @@ function syncAllOpenViewsStock(changedProdId) {
       const isPreOrderCheck = function(o) {
         if (!o) return false;
         const oId = String(o.orderId || o.id || o.orderCode || "");
-        return o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("POD_") || (o.statusText && o.statusText.includes("đặt trước"));
+        return o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_") || (o.statusText && o.statusText.includes("đặt trước"));
       };
 
       // Đếm số lượng đơn theo phân loại
@@ -34011,6 +34011,9 @@ function changeAdmUsersPage(p) {
         if (!curOrders.some(p => String(p.orderCode || p.id).replace("#","").toLowerCase() === ordCode)) {
           curOrders.unshift(newOrd);
           try { localStorage.setItem("mmo_pre_orders", JSON.stringify(curOrders)); } catch(e) {}
+          if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
+          if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+          if (typeof renderProfileOrders === "function") renderProfileOrders();
         }
 
         // 2. Cập nhật mmo_all_orders và mmo_orders để bảng Lịch sử đơn hàng toàn sàn thấy ngay lập tức
@@ -37533,6 +37536,7 @@ function getProductSchemaReviews(p, idx) {
                 if (!p || isForbiddenLegacyOrder(p)) return;
                 const cId = String(p.orderCode || p.id || p.orderId || "").replace("#", "").trim();
                 if (cId) {
+                  if (cId.startsWith("TX_PO_") || cId.startsWith("TX_")) return;
                   // Lọc bỏ ghi chú giả mạo tài khoản
                   let pAccs = [];
                   if (Array.isArray(p.deliveredAccounts)) {
@@ -37560,7 +37564,7 @@ function getProductSchemaReviews(p, idx) {
         } catch(e) {}
 
         // 2. Quét toàn diện từ tất cả các nguồn lưu trữ đơn hàng trên toàn hệ thống
-        const checkKeys = ["mmo_all_orders", "mmo_orders", "mmo_user_orders", "mmo_balance_logs"];
+        const checkKeys = ["mmo_all_orders", "mmo_orders", "mmo_user_orders"];
         checkKeys.forEach(function(k) {
           try {
             const raw = localStorage.getItem(k);
@@ -37573,15 +37577,18 @@ function getProductSchemaReviews(p, idx) {
               const rawOrderId = String(o.orderId || o.orderCode || o.id || "");
               
               let cleanCode = "";
-              if (rawOrderId.startsWith("PRE") || rawOrderId.startsWith("#PRE")) cleanCode = rawOrderId.replace("#", "").trim();
-              else if (rawId.startsWith("PRE") || rawId.startsWith("#PRE")) cleanCode = rawId.replace("#", "").trim();
-              else if (o.orderCode && String(o.orderCode).includes("PRE")) cleanCode = String(o.orderCode).replace("#", "").trim();
-              else if (rawId.includes("PO_") || rawId.includes("PO")) cleanCode = rawId.replace("#", "").trim();
+              if (rawOrderId.startsWith("PRE") || rawOrderId.startsWith("#PRE") || rawOrderId.startsWith("DH_PRE") || rawOrderId.startsWith("#DH_PRE")) cleanCode = rawOrderId.replace("#", "").trim();
+              else if (rawId.startsWith("PRE") || rawId.startsWith("#PRE") || rawId.startsWith("DH_PRE") || rawId.startsWith("#DH_PRE")) cleanCode = rawId.replace("#", "").trim();
+              else if (o.orderCode && (String(o.orderCode).includes("PRE") || String(o.orderCode).includes("DH_PRE"))) cleanCode = String(o.orderCode).replace("#", "").trim();
+              else if (rawId.startsWith("POD_")) cleanCode = rawId.replace("#", "").trim();
               else cleanCode = (rawOrderId || rawId).replace("#", "").trim();
+
+              if (cleanCode.startsWith("TX_PO_") || cleanCode.startsWith("TX_")) return;
 
               const isPre = (o.type === "PRE_ORDER") ||
                 cleanCode.startsWith("PRE") ||
-                cleanCode.includes("PO_") ||
+                cleanCode.startsWith("DH_PRE") ||
+                cleanCode.startsWith("POD_") ||
                 String(o.statusText || "").toLowerCase().includes("đặt trước") ||
                 String(o.note || "").toLowerCase().includes("đặt trước") ||
                 String(o.typeText || "").toLowerCase().includes("đặt trước") ||
@@ -38066,7 +38073,7 @@ function getProductSchemaReviews(p, idx) {
         return;
       }
 
-      const orderCode = "DH_PRE" + Math.floor(100000 + Math.random() * 900000);
+      const orderCode = "PRE" + Math.floor(100000 + Math.random() * 900000);
       const createdTs = Date.now();
       const nowIso = new Date(createdTs).toISOString();
       const nowStr = (typeof formatVNDDate === "function") ? formatVNDDate(createdTs) : new Date(createdTs).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
@@ -39253,7 +39260,7 @@ function getProductSchemaReviews(p, idx) {
       _adminPreOrdersPollingInterval = setInterval(async function() {
         try {
           const curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
-          const isAdm = (curUser && typeof isAdminUser === "function" && isAdminUser(curUser));
+          const isAdm = (typeof isAdminUser === "function" && isAdminUser(curUser)) || (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_admin_authenticated") === "true"));
           if (!isAdm) return;
 
           const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
@@ -39352,7 +39359,7 @@ function getProductSchemaReviews(p, idx) {
             if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
           }
         } catch(ePoll) {}
-      }, 10000);
+      }, 5000);
     }
     window.startAdminPreOrdersRealtimePolling = startAdminPreOrdersRealtimePolling;
     try { setTimeout(startAdminPreOrdersRealtimePolling, 3000); } catch(eStartPoll) {}
@@ -39581,7 +39588,7 @@ function getProductSchemaReviews(p, idx) {
 
         let statusText = o.status || "Đã Giao Tự Động";
         const stLower = String(statusText).toLowerCase();
-        const isPreOrder = o.type === "PRE_ORDER" || String(oid).startsWith("PRE") || String(o.id).startsWith("PRE");
+        const isPreOrder = o.type === "PRE_ORDER" || String(oid).startsWith("PRE") || String(oid).startsWith("DH_PRE") || String(oid).startsWith("POD_") || String(o.id).startsWith("PRE") || String(o.id).startsWith("DH_PRE");
 
         let statusBadge = "<span class='badge-verified' style='background:rgba(59,130,246,0.18); border:1px solid #3b82f6; color:#60a5fa; font-size:0.68rem; padding:2px 5px; border-radius:4px; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:3px;'><i class='fa-solid fa-bolt' style='font-size:0.6rem;'></i> Đã giao</span>";
 
@@ -44198,7 +44205,7 @@ function getStoredNotifications(userEmail) {
           var pName = o.productName || o.productTitle || (o.items && o.items[0] && o.items[0].name) || "Sản phẩm";
           var q = o.quantity || 1;
           var totalVnd = (typeof formatVND === "function") ? formatVND(o.total || o.finalTotal || 0) : (o.total || 0).toLocaleString("vi-VN") + " đ";
-          var isPre = !!(o.isPreOrder || o.type === "PRE_ORDER" || String(oid).startsWith("POD_"));
+          var isPre = !!(o.isPreOrder || o.type === "PRE_ORDER" || String(oid).startsWith("PRE") || String(oid).startsWith("DH_PRE") || String(oid).startsWith("POD_"));
           addNotifItem({
             id: "ORD_NOTIF_" + oid,
             title: isPre ? ("Đơn đặt trước #" + oid) : ("Đơn hàng #" + oid + " thành công"),
