@@ -12956,6 +12956,20 @@ if (typeof productOrId === "object") {
         }
       }
 
+      if (viewId === "viewThankYou") {
+        const tyCreds = document.getElementById("tyCredentials");
+        if (tyCreds && (!tyCreds.value || tyCreds.value.trim() === "")) {
+          const creds = window.lastDeliveredCredentials || document.getElementById("dlvCredentials")?.value || "";
+          if (creds) tyCreds.value = creds;
+        }
+        if (window.lastDeliveredOrderId) {
+          const tyId = document.getElementById("tyOrderId");
+          if (tyId && (tyId.innerText === "#DH..." || !tyId.innerText.includes("#"))) {
+            tyId.innerText = "#" + window.lastDeliveredOrderId;
+          }
+        }
+      }
+
       // Cuộn lên đầu tức thì 0ms khi chuyển view
       try { window.scrollTo(0, 0); } catch(e) {}
 
@@ -24675,6 +24689,11 @@ function syncAllOpenViewsStock(changedProdId) {
       const dlvCreds = document.getElementById("dlvCredentials");
       const creds = order.credentials || order.accountData || "";
       if (dlvCreds) dlvCreds.value = creds;
+      const tyCreds = document.getElementById("tyCredentials");
+      if (tyCreds) tyCreds.value = creds;
+      window.lastDeliveredCredentials = creds;
+      window.lastDeliveredOrderId = cleanId;
+      window.currentThankYouOrderId = cleanId;
 
       // Hiển thị banner đổi trả nếu đơn đã được cấp tài khoản mới
       const noticeBanner = document.getElementById("dlvExchangeNotice");
@@ -27107,6 +27126,11 @@ function syncAllOpenViewsStock(changedProdId) {
         if (dlvTot) dlvTot.innerText = formatVND(totalCost);
         const dlvCreds = document.getElementById("dlvCredentials");
         if (dlvCreds) dlvCreds.value = credsText;
+        const tyCreds = document.getElementById("tyCredentials");
+        if (tyCreds) tyCreds.value = credsText;
+        window.lastDeliveredCredentials = credsText;
+        window.lastDeliveredOrderId = orderId;
+        window.currentThankYouOrderId = orderId;
 
         const subtotalVal = unitPrice * qty;
         const discountVal = (window.currentAppliedDiscount > 0) ? Math.round(subtotalVal * window.currentAppliedDiscount / 100) : 0;
@@ -27370,6 +27394,11 @@ function syncAllOpenViewsStock(changedProdId) {
 
     const dlvCreds = document.getElementById("dlvCredentials");
     if (dlvCreds) dlvCreds.value = credsText;
+    const tyCreds = document.getElementById("tyCredentials");
+    if (tyCreds) tyCreds.value = credsText;
+    window.lastDeliveredCredentials = credsText;
+    window.lastDeliveredOrderId = orderId;
+    window.currentThankYouOrderId = orderId;
 
     const dlvId = document.getElementById("dlvOrderId");
     if (dlvId) dlvId.innerText = "#" + orderId;
@@ -27408,16 +27437,23 @@ function syncAllOpenViewsStock(changedProdId) {
   window.handleDetailBuyAction = executeBuyCurrentProduct;
 
     function copyDeliveredCreds() {
-      const text = document.getElementById("dlvCredentials")?.value || window.lastDeliveredCredentials;
+      const text = document.getElementById("tyCredentials")?.value || document.getElementById("dlvCredentials")?.value || window.lastDeliveredCredentials;
       if (text) {
         copyTextDirect(text);
         showToast("Đã sao chép toàn bộ thông tin tài khoản!", "success");
+      } else {
+        showToast("Chưa có thông tin tài khoản để sao chép!", "warning");
       }
     }
+    window.copyDeliveredCreds = copyDeliveredCreds;
 
     function downloadDeliveredFile() {
-      const text = document.getElementById("dlvCredentials")?.value || window.lastDeliveredCredentials;
-      const orderId = window.lastDeliveredOrderId || "DonHang";
+      const text = document.getElementById("tyCredentials")?.value || document.getElementById("dlvCredentials")?.value || window.lastDeliveredCredentials;
+      const orderId = window.lastDeliveredOrderId || (document.getElementById("tyOrderId")?.innerText.replace("#", "").trim()) || "DonHang";
+      if (!text) {
+        showToast("Chưa có thông tin tài khoản để tải về!", "warning");
+        return;
+      }
       const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -27427,6 +27463,7 @@ function syncAllOpenViewsStock(changedProdId) {
       document.body.removeChild(a);
       showToast("Đã tải xuống file " + a.download, "success");
     }
+    window.downloadDeliveredFile = downloadDeliveredFile;
 
     function viewOrderHistoryFromModal() {
       if (typeof closeModal === "function") {
