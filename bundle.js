@@ -40216,6 +40216,7 @@ function executeAdminFulfillPreOrder() {
       const isWarrantyOrder = function(o) {
         if (!o) return false;
         const oId = String(o.orderId || o.id || "").replace("#", "").trim();
+        if (localStorage.getItem("mmo_warranty_rejected_" + oId) === "true" || o.warrantyStatus === "REJECTED") return false;
         if (localStorage.getItem("mmo_complaint_" + oId) === "true") return true;
         if (o.hasComplaint || o.complaint || o.isWarranty || o.isExchanged || o.isRefunded) return true;
         if (typeof isOrderWarrantyOrExchange === "function" && isOrderWarrantyOrExchange(o)) return true;
@@ -41402,6 +41403,119 @@ function executeAdminFulfillPreOrder() {
       showToast("🎉 Đã thực hiện đổi trả 1-1 thành công và gửi tài khoản mới cho khách!", "success");
     }
     window.confirmExchangeOrder = confirmExchangeOrder;
+
+    // [BẢO HÀNH]: Từ chối bảo hành đơn hàng, chuyển trạng thái về Hoàn Thành & gửi tin nhắn lý do cho khách
+    function rejectWarrantyOrder() {
+      if (!currentAdminOrderDetail) return;
+      const orderId = currentAdminOrderDetail.orderId || currentAdminOrderDetail.id;
+      const cleanId = String(orderId).replace("#", "").trim();
+      const inp = document.getElementById("admOrdNewCredsInput");
+      let reason = (inp ? inp.value : "").trim();
+
+      if (!reason) {
+        reason = prompt("Vui lòng nhập lý do từ chối bảo hành gửi cho khách hàng:", "Sản phẩm không đủ điều kiện bảo hành theo quy định của shop.");
+        if (reason === null) return;
+        reason = reason.trim();
+        if (!reason) {
+          reason = "Sản phẩm không đủ điều kiện bảo hành theo chính sách của shop.";
+        }
+        if (inp) inp.value = reason;
+      }
+
+      if (!confirm("Xác nhận TỪ CHỐI bảo hành cho đơn hàng #" + cleanId + "?\n\n- Lý do: " + reason + "\n- Trạng thái đơn hàng sẽ chuyển sang: Hoàn Thành.\n- Tin nhắn giải thích lý do sẽ tự động gửi đến khách hàng.")) {
+        return;
+      }
+
+      const emailInputEl = document.getElementById("admOrdCustEmailInput");
+      const targetEmail = (currentAdminOrderDetail.email || currentAdminOrderDetail.userEmail || (emailInputEl ? emailInputEl.value : "") || "").toLowerCase().trim();
+
+      const nowTimeStr = new Date().toLocaleString("vi-VN");
+      currentAdminOrderDetail.status = "COMPLETED";
+      currentAdminOrderDetail.statusText = "Hoàn thành";
+      currentAdminOrderDetail.hasComplaint = false;
+      currentAdminOrderDetail.isWarranty = false;
+      currentAdminOrderDetail.complaint = null;
+      currentAdminOrderDetail.warrantyStatus = "REJECTED";
+      currentAdminOrderDetail.rejectReason = reason;
+      currentAdminOrderDetail.rejectedAt = nowTimeStr;
+      currentAdminOrderDetail.note = (currentAdminOrderDetail.note ? (currentAdminOrderDetail.note + " | ") : "") + "Từ chối bảo hành: " + reason;
+
+      try {
+        localStorage.removeItem("mmo_complaint_" + cleanId);
+        localStorage.setItem("mmo_warranty_rejected_" + cleanId, "true");
+      } catch(e) {}
+
+      // Cập nhật mmo_all_orders
+      let all = (typeof getAllOrders === "function") ? getAllOrders() : [];
+      const idx = all.findIndex(o => String(o.orderId || o.id || "").replace("#","").trim() === cleanId);
+      if (idx !== -1) {
+        all[idx] = Object.assign({}, all[idx], currentAdminOrderDetail);
+        if (typeof saveAllOrders === "function") saveAllOrders(all);
+      }
+
+      // Cập nhật mmo_user_orders
+      let uOrders = (typeof getUserOrders === "function") ? getUserOrders() : [];
+      const uIdx = uOrders.findIndex(o => String(o.orderId || o.id || "").replace("#","").trim() === cleanId);
+      if (uIdx !== -1) {
+        uOrders[uIdx] = Object.assign({}, uOrders[uIdx], currentAdminOrderDetail);
+        if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
+      }
+
+      // Cập nhật mmo_orders
+      try {
+        let rawOrders = JSON.parse(localStorage.getItem("mmo_orders") || "[]");
+        if (Array.isArray(rawOrders)) {
+          rawOrders.forEach(o => {
+            if (String(o.orderId || o.id || "").replace("#","").trim() === cleanId) {
+              Object.assign(o, currentAdminOrderDetail);
+            }
+          });
+          localStorage.setItem("mmo_orders", JSON.stringify(rawOrders));
+        }
+      } catch(eO) {}
+
+      // 2. Gửi tin nhắn chat đến khách hàng giải thích lý do từ chối
+      const messageToCustomer = "❌ THÔNG BÁO TỪ CHỐI BẢO HÀNH ĐƠN HÀNG #" + cleanId + "!\n" +
+        "📌 Lý do: " + reason + "\n" +
+        "Đơn hàng của bạn đã được chuyển về trạng thái Hoàn thành. Nếu có thắc mắc thêm, quý khách vui lòng phản hồi trực tiếp tại đây để được hỗ trợ.";
+
+      if (targetEmail && targetEmail !== "--" && typeof sendAdminAutoMessage === "function") {
+        sendAdminAutoMessage(targetEmail, messageToCustomer);
+      }
+
+      // 3. Đồng bộ lên Google Sheets
+      if (typeof callGasApi === "function") {
+        const adminEmail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email : "admin@cuahangcuaban.com";
+        callGasApi("adminUpdateOrderStatus", {
+          adminEmail: adminEmail,
+          orderId: cleanId,
+          status: "COMPLETED",
+          note: "Admin từ chối bảo hành: " + reason
+        }).catch(function(e) {});
+      }
+
+      // 4. Phát sóng thời gian thực qua BroadcastChannel
+      try {
+        if (typeof BroadcastChannel !== "undefined") {
+          const bc = new BroadcastChannel("mmo_realtime_sync");
+          bc.postMessage({
+            type: "WARRANTY_REJECTED",
+            orderId: cleanId,
+            email: targetEmail,
+            reason: reason
+          });
+        }
+      } catch(eBc) {}
+
+      // 5. Đóng modal và làm mới bảng đơn hàng
+      if (typeof closeModal === "function") closeModal("admOrderDetailModal");
+      if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
+      if (typeof renderProfileOrders === "function") renderProfileOrders();
+      if (typeof showToast === "function") {
+        showToast("Đã từ chối bảo hành đơn hàng #" + cleanId + " và gửi tin nhắn lý do cho khách!", "info");
+      }
+    }
+    window.rejectWarrantyOrder = rejectWarrantyOrder;
 
     // Quản lý số tiền hoàn lại tùy chỉnh (cho đơn nhiều sản phẩm lỗi 1 phần)
     function handleAdmOrdRefundAmountChange(val) {
