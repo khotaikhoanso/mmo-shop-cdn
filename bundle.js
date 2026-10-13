@@ -14615,7 +14615,13 @@ if (typeof productOrId === "object") {
 
         if (hasVars && selectedVVal !== "ALL") {
           const vObj = curProd.variants[Number(selectedVVal)] || curProd.variants[0];
-          const c = (vObj && Array.isArray(vObj.accounts)) ? vObj.accounts.length : 0;
+          let c = (vObj && Array.isArray(vObj.accounts) && vObj.accounts.length > 0) ? vObj.accounts.length : 0;
+          if (c === 0 && vObj && typeof vObj.stock === "number" && vObj.stock > 0) {
+            c = vObj.stock;
+          }
+          if (c === 0 && curProd && typeof curProd.stock === "number" && curProd.stock > 0 && curProd.variants.length === 1) {
+            c = curProd.stock;
+          }
           if (countLabel) countLabel.innerText = "Tồn kho biến thể " + (Number(selectedVVal) + 1) + ":";
           if (targetBadge) {
             targetBadge.innerText = vObj ? vObj.name : "Biến thể";
@@ -14627,7 +14633,20 @@ if (typeof productOrId === "object") {
             countDisp.style.color = c === 0 ? "#ef4444" : (c < 5 ? "#f59e0b" : "#10b981");
           }
           if (currentView && document.activeElement !== currentView) {
-            currentView.value = (vObj && Array.isArray(vObj.accounts)) ? vObj.accounts.join("\n") : "";
+            if (vObj && Array.isArray(vObj.accounts) && vObj.accounts.length > 0) {
+              currentView.value = vObj.accounts.join("\n");
+            } else {
+              try {
+                const cached = localStorage.getItem("mmo_turso_accs_" + curProd.id + "_" + selectedVVal);
+                if (cached) {
+                  const parsed = JSON.parse(cached);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    currentView.value = parsed.join("\n");
+                    if (vObj) vObj.accounts = parsed;
+                  }
+                }
+              } catch(eC) {}
+            }
           }
         } else {
           // Toàn bộ kho sản phẩm hoặc không có biến thể
@@ -14755,7 +14774,7 @@ if (typeof productOrId === "object") {
           const data = await res.json().catch(() => ({}));
           return data;
         } catch(err) {
-          if (err.name === 'AbortError' || err.name === 'TimeoutError' || (err.message && (err.message.includes('rate-limited') || err.message.includes('Failed to fetch')))) {
+          if (err.message && (err.message.includes('rate-limited') || err.message.includes('429'))) {
             this._markWorkerDead(err.message);
           }
           throw err;
@@ -14996,7 +15015,7 @@ if (typeof productOrId === "object") {
         if (variantIdx !== null && variantIdx !== undefined && variantIdx !== "ALL") {
           u += "?variant=" + variantIdx;
         }
-        return await this._fetchJson(u, { headers: headers, cache: "no-store" }, 1200);
+        return await this._fetchJson(u, { headers: headers, cache: "no-store" }, 8000);
       },
 
       adminClearInventory: async function(productId, variantIdx) {
@@ -15007,7 +15026,7 @@ if (typeof productOrId === "object") {
         if (variantIdx !== null && variantIdx !== undefined && variantIdx !== "ALL") {
           u += "?variant=" + variantIdx;
         }
-        return await this._fetchJson(u, { method: "DELETE", headers: headers }, 1500);
+        return await this._fetchJson(u, { method: "DELETE", headers: headers }, 8000);
       },
 
       adminClearSold: async function(productId, variantIdx) {
@@ -15018,7 +15037,7 @@ if (typeof productOrId === "object") {
         if (variantIdx !== null && variantIdx !== undefined && variantIdx !== "ALL") {
           u += "?variant=" + variantIdx;
         }
-        return await this._fetchJson(u, { method: "DELETE", headers: headers }, 1500);
+        return await this._fetchJson(u, { method: "DELETE", headers: headers }, 8000);
       }
     };
 
@@ -15040,23 +15059,75 @@ if (typeof productOrId === "object") {
         return MMO_WORKER_API.getApiUrl();
       },
       getAvailableAccounts: async function(productId, variantIdx) {
+        const vKey = (variantIdx !== null && variantIdx !== undefined && variantIdx !== "ALL" && variantIdx !== "") ? String(variantIdx) : "0";
+        const cacheKey = "mmo_turso_accs_" + productId + "_" + vKey;
         try {
           if (MMO_WORKER_API._checkWorkerAvailable()) {
             const res = await MMO_WORKER_API.adminGetInventory(productId, variantIdx);
-            if (res && Array.isArray(res.available)) return res.available;
+            if (res && Array.isArray(res.available)) {
+              try { localStorage.setItem(cacheKey, JSON.stringify(res.available)); } catch(eC) {}
+              if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+                const p = MOCK_DATA.products.find(x => x && (String(x.id).toLowerCase() === String(productId).toLowerCase()));
+                if (p) {
+                  const vIdxNum = Number(vKey) || 0;
+                  if (Array.isArray(p.variants) && p.variants[vIdxNum]) {
+                    p.variants[vIdxNum].accounts = res.available;
+                    p.variants[vIdxNum].stock = res.available.length;
+                  } else {
+                    p.accounts = res.available;
+                    p.stock = res.available.length;
+                  }
+                }
+              }
+              return res.available;
+            }
           }
         } catch(e) {
           console.warn("TURSO_CLIENT.getAvailableAccounts offline fallback:", e.message);
         }
-        return (typeof MMO_WAREHOUSE !== "undefined") ? MMO_WAREHOUSE.getAvailable(productId, variantIdx) : [];
+        // Fallback 1: Đọc từ localStorage cache
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch(eC) {}
+        // Fallback 2: MMO_WAREHOUSE
+        const localAccs = (typeof MMO_WAREHOUSE !== "undefined") ? MMO_WAREHOUSE.getAvailable(productId, variantIdx) : [];
+        if (Array.isArray(localAccs) && localAccs.length > 0) return localAccs;
+        // Fallback 3: Kiểm tra RAM MOCK_DATA.products
+        if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+          const p = MOCK_DATA.products.find(x => x && (String(x.id).toLowerCase() === String(productId).toLowerCase()));
+          if (p) {
+            const vIdxNum = Number(vKey) || 0;
+            if (Array.isArray(p.variants) && p.variants[vIdxNum] && Array.isArray(p.variants[vIdxNum].accounts) && p.variants[vIdxNum].accounts.length > 0) {
+              return p.variants[vIdxNum].accounts;
+            }
+            if (Array.isArray(p.accounts) && p.accounts.length > 0) return p.accounts;
+          }
+        }
+        return [];
       },
       fetchSoldAccounts: async function(productId, variantIdx) {
+        const vKey = (variantIdx !== null && variantIdx !== undefined && variantIdx !== "ALL" && variantIdx !== "") ? String(variantIdx) : "0";
+        const cacheKey = "mmo_turso_sold_" + productId + "_" + vKey;
         try {
           if (MMO_WORKER_API._checkWorkerAvailable()) {
             const res = await MMO_WORKER_API.adminGetInventory(productId, variantIdx);
-            if (res && Array.isArray(res.sold)) return res.sold;
+            if (res && Array.isArray(res.sold)) {
+              try { localStorage.setItem(cacheKey, JSON.stringify(res.sold)); } catch(eC) {}
+              return res.sold;
+            }
           }
         } catch(e) {}
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch(eC) {}
         return (typeof MMO_WAREHOUSE !== "undefined") ? MMO_WAREHOUSE.getSold(productId, variantIdx) : [];
       },
       clearSoldAccounts: async function(productId, variantIdx) {
@@ -15426,6 +15497,28 @@ if (typeof productOrId === "object") {
               cur.image = targetImage;
               cur.image_url = targetImage;
               cur.imageUrl = targetImage;
+              // BẢO TOÀN DANH SÁCH ACCOUNTS CỦA BIẾN THỂ TỪ RAM HOẶC CACHE LOCALSTORAGE (TRÁNH BỊ WIPE VỀ 0)
+              if (Array.isArray(variants)) {
+                variants.forEach((v, vIdx) => {
+                  const oldV = (Array.isArray(cur.variants) && cur.variants[vIdx]) ? cur.variants[vIdx] : null;
+                  if (oldV && Array.isArray(oldV.accounts) && oldV.accounts.length > 0) {
+                    v.accounts = oldV.accounts;
+                    if (v.stock < v.accounts.length) v.stock = v.accounts.length;
+                  } else {
+                    try {
+                      const cached = localStorage.getItem("mmo_turso_accs_" + tp.id + "_" + vIdx);
+                      if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                          v.accounts = parsed;
+                          if (v.stock < v.accounts.length) v.stock = v.accounts.length;
+                        }
+                      }
+                    } catch(eC) {}
+                  }
+                  if (!v.accounts) v.accounts = [];
+                });
+              }
               cur.variants = variants;
               cur.deliveryType = tp.delivery_type || tp.deliveryType || cur.deliveryType || "local";
               cur.delivery_type = cur.deliveryType;
@@ -41744,6 +41837,8 @@ async function confirmRefundOrder() {
               warningBox.style.display = "none";
             }
           }
+          renderSoldStockAccountsView(prodId, vVal);
+          return; // [QUAN TRỌNG]: Đã tải Turso thành công -> Dừng ngay, không chạy đè xuống local fallback!
         } catch(tursoLoadErr) {
           console.warn("Turso load failed, falling back to local warehouse:", tursoLoadErr);
           if (currentView) currentView.placeholder = "Đang dùng kho nội bộ (Turso API tạm thời ngoại tuyến)";
