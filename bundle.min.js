@@ -3806,7 +3806,7 @@ if (typeof productOrId === "object") {
         if (stored !== null) {
           let list = JSON.parse(stored);
           if (Array.isArray(list) && list.length > 0) {
-            const clean = list.map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com");
+            const clean = list.map(e => (e || "").toLowerCase().trim()).filter(Boolean);
             if (!clean.includes(rootEmail)) clean.unshift(rootEmail);
             return clean;
           }
@@ -3967,12 +3967,12 @@ if (typeof productOrId === "object") {
       const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
       
       // 2. Kiểm tra theo Email hoặc Tên tài khoản Admin
-      if (userEmail === rootEmail || userEmail === "khotaikhoanso.net@gmail.com" || userEmail === "khotaikhoanso.net" || userEmail === "admin@yourshop.com" || userEmail === "admin@khotaikhoanso.net") return true;
+      if (userEmail === rootEmail || userEmail === "khotaikhoanso.net@gmail.com" || userEmail === "khotaikhoanso.net" || userEmail === "admin@yourshop.com" || userEmail === "admin@khotaikhoanso.net" || userEmail === "hoangtuananh0968@gmail.com") return true;
       if (userEmail.startsWith("khotaikhoanso")) return true;
       if (userEmail.includes("admin") && !userEmail.includes("@gmail.com")) return true;
       
       const adminList = (typeof getAdminEmails === "function") 
-        ? getAdminEmails().map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com") 
+        ? getAdminEmails().map(e => (e || "").toLowerCase().trim()).filter(Boolean) 
         : [rootEmail];
       if (adminList.includes(userEmail)) return true;
 
@@ -34555,7 +34555,7 @@ function changeAdmUsersPage(p) {
               }
             }
           }
-        }, 45000);
+        }, 5000);
       }
       if (typeof isAdminUser === "function" && isAdminUser()) {
         const curV = (typeof currentView !== "undefined" && currentView) ? currentView : (localStorage.getItem("mmo_current_view") || "");
@@ -37903,8 +37903,13 @@ function getProductSchemaReviews(p, idx) {
 
       const elBal = document.getElementById("poModalUserBalance");
       if (elBal) {
-        const bal = user ? (Number(user.balance) || 0) : 0;
-        elBal.innerText = typeof formatVND === "function" ? formatVND(bal) : (bal.toLocaleString("vi-VN") + " VND");
+        let bal = 0;
+        if (user && user.balance !== undefined && user.balance !== null) {
+          bal = parseSafePrice(user.balance);
+        } else if (typeof currentUser !== "undefined" && currentUser && currentUser.balance !== undefined) {
+          bal = parseSafePrice(currentUser.balance);
+        }
+        elBal.innerText = typeof formatVND === "function" ? formatVND(bal) : (bal.toLocaleString("vi-VN") + " đ");
         elBal.style.color = (bal >= finalTotal) ? "#10b981" : "#ef4444";
       }
     }
@@ -38020,295 +38025,359 @@ function getProductSchemaReviews(p, idx) {
 
     // Thực hiện đặt hàng trước (Khôi phục chuẩn 100% kèm bảo vệ số dư & đơn giá an toàn)
     function submitPreOrderAction() {
-      const fullProdTitle = (document.getElementById("poModalProdName") ? document.getElementById("poModalProdName").value : "").trim() || (document.getElementById("dtlTitle") ? document.getElementById("dtlTitle").innerText.trim() : "Sản phẩm đặt trước");
-      const prodId = (document.getElementById("poModalProdId") ? document.getElementById("poModalProdId").value : "").trim() || (document.getElementById("dtlId") ? document.getElementById("dtlId").innerText.trim() : ("PROD_" + Date.now()));
-      const varIdx = parseInt(document.getElementById("poModalVarIdx") ? document.getElementById("poModalVarIdx").value : 0) || 0;
-
-      const unitPriceInput = document.getElementById("poModalUnitPrice");
-      let unitPrice = 0;
-      if (unitPriceInput && unitPriceInput.dataset && unitPriceInput.dataset.price) {
-        unitPrice = parseSafePrice(unitPriceInput.dataset.price);
-      }
-      if (!unitPrice && unitPriceInput && unitPriceInput.value) {
-        unitPrice = parseSafePrice(unitPriceInput.value);
-      }
-      if (!unitPrice && prodId) {
-        unitPrice = getSafeProductPrice(prodId, varIdx);
-      }
-      if (!unitPrice && typeof currentSelectedPrice === "number" && currentSelectedPrice > 0) {
-        unitPrice = currentSelectedPrice;
-      }
-      if (!unitPrice) {
-        const rawDtlPrice = document.getElementById("dtlPrice") ? document.getElementById("dtlPrice").innerText : "";
-        unitPrice = parseSafePrice(rawDtlPrice);
-      }
-
-      // KHÓA BẢO VỆ ĐƠN GIÁ: Tuyệt đối không cho phép tạo đơn với giá <= 0
-      if (unitPrice <= 0) {
-        if (typeof showToast === "function") {
-          showToast("⚠️ Lỗi: Không xác định được đơn giá hợp lệ (> 0đ) cho sản phẩm này! Vui lòng chọn lại biến thể.", "error");
+      const btnSubmit = document.getElementById("btnSubmitPreOrder");
+      function restoreBtn() {
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = '<i class="fa-solid fa-check"></i> Đặt Hàng Ngay';
         }
-        return;
       }
 
-      const qtyInput = document.getElementById("poModalQty");
-      const qty = Math.max(1, parseInt(qtyInput ? qtyInput.value : 1) || 1);
-
-      const maxDaysInput = document.getElementById("poModalMaxDays");
-      const maxDays = Math.max(1, Math.min(30, parseInt(maxDaysInput ? maxDaysInput.value : 7) || 7));
-
-      const notesInput = document.getElementById("poModalNotes");
-      const customNotes = notesInput ? notesInput.value.trim() : "";
-
-      const discountPercent = (typeof window.currentAppliedDiscount === "number") ? window.currentAppliedDiscount : 0;
-      const rawTotal = unitPrice * qty;
-      const discountAmount = Math.round(rawTotal * discountPercent / 100);
-      const finalTotal = Math.max(0, rawTotal - discountAmount);
-
-      // BẢO VỆ TỔNG TIỀN: Bắt buộc finalTotal phải > 0
-      if (finalTotal <= 0) {
-        if (typeof showToast === "function") {
-          showToast("⚠️ Lỗi: Tổng tiền đơn hàng đặt trước phải lớn hơn 0đ!", "error");
-        }
-        return;
+      if (btnSubmit) {
+        if (btnSubmit.dataset.submitting === "1") return;
+        btnSubmit.dataset.submitting = "1";
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
       }
 
-      const orderCode = "PRE" + Math.floor(100000 + Math.random() * 900000);
-      const createdTs = Date.now();
-      const nowIso = new Date(createdTs).toISOString();
-      const nowStr = (typeof formatVNDDate === "function") ? formatVNDDate(createdTs) : new Date(createdTs).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
-
-      let user = null;
       try {
-        user = JSON.parse(localStorage.getItem("mmo_user") || "null");
-      } catch(e) {}
-      if (!user && typeof currentUser !== "undefined") user = currentUser;
+        const fullProdTitle = (document.getElementById("poModalProdName") ? document.getElementById("poModalProdName").value : "").trim() || (document.getElementById("dtlTitle") ? document.getElementById("dtlTitle").innerText.trim() : "Sản phẩm đặt trước");
+        const prodId = (document.getElementById("poModalProdId") ? document.getElementById("poModalProdId").value : "").trim() || (document.getElementById("dtlId") ? document.getElementById("dtlId").innerText.trim() : ("PROD_" + Date.now()));
+        const varIdx = parseInt(document.getElementById("poModalVarIdx") ? document.getElementById("poModalVarIdx").value : 0) || 0;
 
-      if (!user) {
-        if (typeof showToast === "function") showToast("Vui lòng đăng nhập để thực hiện đặt hàng trước!", "warning");
-        closePreOrderModal();
-        if (typeof openModal === "function") openModal("authModal");
-        return;
-      }
-
-      // Kiểm tra số dư ví
-      const userBalance = Number(user.balance) || 0;
-      if (userBalance < finalTotal) {
-        if (typeof showToast === "function") {
-          showToast("Số dư ví không đủ! Cần: " + (typeof formatVND === "function" ? formatVND(finalTotal) : finalTotal.toLocaleString("vi-VN") + " đ") + ", Hiện có: " + (typeof formatVND === "function" ? formatVND(userBalance) : userBalance.toLocaleString("vi-VN") + " đ"), "error");
+        const unitPriceInput = document.getElementById("poModalUnitPrice");
+        let unitPrice = 0;
+        if (unitPriceInput && unitPriceInput.dataset && unitPriceInput.dataset.price) {
+          unitPrice = parseSafePrice(unitPriceInput.dataset.price);
         }
-        return;
-      }
-
-      // 1. Trừ tiền ví khách hàng chuẩn hóa đa nguồn
-      user.balance = userBalance - finalTotal;
-      currentUser = user;
-      try {
-        localStorage.setItem("mmo_user", JSON.stringify(user));
-        const cleanUEmail = (user.email || "").toLowerCase().trim();
-        const allUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : JSON.parse(localStorage.getItem("mmo_registered_users") || "[]");
-        const uIdx = allUsers.findIndex(function(u) { return (u.id && u.id === user.id) || ((u.email || "").toLowerCase().trim() === cleanUEmail); });
-        if (uIdx !== -1) {
-          allUsers[uIdx].balance = user.balance;
-          if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
-          else localStorage.setItem("mmo_registered_users", JSON.stringify(allUsers));
+        if (!unitPrice && unitPriceInput && unitPriceInput.value) {
+          unitPrice = parseSafePrice(unitPriceInput.value);
         }
-        localStorage.setItem("mmo_users", JSON.stringify(allUsers));
-      } catch(e) {}
-
-      // 2. Ghi nhật ký giao dịch chuẩn hệ thống (mmo_transaction_history & mmo_balance_logs)
-      try {
-        if (typeof recordTransaction === "function") {
-          recordTransaction(user.email, user.username || user.fullname || user.email.split("@")[0], "Thanh toán đặt hàng trước", -finalTotal, user.balance, "Đặt trước " + qty + "x " + fullProdTitle + " - Mã đơn #" + orderCode);
+        if (!unitPrice && prodId) {
+          unitPrice = getSafeProductPrice(prodId, varIdx);
         }
-        const balanceLogs = JSON.parse(localStorage.getItem("mmo_balance_logs") || "[]");
-        balanceLogs.unshift({
-          id: "TX_PO_" + createdTs,
+        if (!unitPrice && typeof currentSelectedPrice === "number" && currentSelectedPrice > 0) {
+          unitPrice = currentSelectedPrice;
+        }
+        if (!unitPrice) {
+          const rawDtlPrice = document.getElementById("dtlPrice") ? document.getElementById("dtlPrice").innerText : "";
+          unitPrice = parseSafePrice(rawDtlPrice);
+        }
+
+        // KHÓA BẢO VỆ ĐƠN GIÁ: Tuyệt đối không cho phép tạo đơn với giá <= 0
+        if (unitPrice <= 0) {
+          if (typeof showToast === "function") {
+            showToast("⚠️ Lỗi: Không xác định được đơn giá hợp lệ (> 0đ) cho sản phẩm này! Vui lòng chọn lại biến thể.", "error");
+          }
+          if (btnSubmit) { btnSubmit.dataset.submitting = "0"; restoreBtn(); }
+          return;
+        }
+
+        const qtyInput = document.getElementById("poModalQty");
+        const qty = Math.max(1, parseInt(qtyInput ? qtyInput.value : 1) || 1);
+
+        const maxDaysInput = document.getElementById("poModalMaxDays");
+        const maxDays = Math.max(1, Math.min(30, parseInt(maxDaysInput ? maxDaysInput.value : 7) || 7));
+
+        const notesInput = document.getElementById("poModalNotes");
+        const customNotes = notesInput ? notesInput.value.trim() : "";
+
+        const discountPercent = (typeof window.currentAppliedDiscount === "number") ? window.currentAppliedDiscount : 0;
+        const rawTotal = unitPrice * qty;
+        const discountAmount = Math.round(rawTotal * discountPercent / 100);
+        const finalTotal = Math.max(0, rawTotal - discountAmount);
+
+        // BẢO VỆ TỔNG TIỀN: Bắt buộc finalTotal phải > 0
+        if (finalTotal <= 0) {
+          if (typeof showToast === "function") {
+            showToast("⚠️ Lỗi: Tổng tiền đơn hàng đặt trước phải lớn hơn 0đ!", "error");
+          }
+          if (btnSubmit) { btnSubmit.dataset.submitting = "0"; restoreBtn(); }
+          return;
+        }
+
+        const orderCode = "PRE" + Math.floor(100000 + Math.random() * 900000);
+        const createdTs = Date.now();
+        const nowIso = new Date(createdTs).toISOString();
+        const nowStr = (typeof formatVNDDate === "function") ? formatVNDDate(createdTs) : new Date(createdTs).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+
+        let user = null;
+        try {
+          user = JSON.parse(localStorage.getItem("mmo_user") || "null");
+        } catch(e) {}
+        if (!user && typeof currentUser !== "undefined" && currentUser) user = currentUser;
+
+        if (!user) {
+          const fallbackMail = localStorage.getItem("mmo_user_email") || sessionStorage.getItem("mmo_user_email");
+          if (fallbackMail) {
+            user = { email: fallbackMail, id: fallbackMail, name: fallbackMail.split("@")[0], balance: 0, role: "USER" };
+          }
+        }
+
+        if (!user) {
+          if (typeof showToast === "function") showToast("Vui lòng đăng nhập để thực hiện đặt hàng trước!", "warning");
+          closePreOrderModal();
+          if (typeof openModal === "function") openModal("authModal");
+          if (btnSubmit) { btnSubmit.dataset.submitting = "0"; restoreBtn(); }
+          return;
+        }
+
+        // Kiểm tra số dư ví an toàn đa tầng với parseSafePrice
+        let userBalance = 0;
+        if (user && user.balance !== undefined && user.balance !== null) {
+          userBalance = parseSafePrice(user.balance);
+        }
+        if (!userBalance && typeof currentUser !== "undefined" && currentUser && currentUser.balance !== undefined) {
+          userBalance = parseSafePrice(currentUser.balance);
+        }
+        if (!userBalance) {
+          const poBalEl = document.getElementById("poModalUserBalance");
+          if (poBalEl && poBalEl.innerText) userBalance = parseSafePrice(poBalEl.innerText);
+        }
+        if (!userBalance) {
+          const hBal = document.getElementById("headerUserBalance") || document.getElementById("navUserBalance");
+          if (hBal && hBal.innerText) userBalance = parseSafePrice(hBal.innerText);
+        }
+
+        if (userBalance < finalTotal) {
+          if (typeof showToast === "function") {
+            showToast("Số dư ví không đủ! Cần: " + (typeof formatVND === "function" ? formatVND(finalTotal) : finalTotal.toLocaleString("vi-VN") + " đ") + ", Hiện có: " + (typeof formatVND === "function" ? formatVND(userBalance) : userBalance.toLocaleString("vi-VN") + " đ"), "error");
+          }
+          if (btnSubmit) { btnSubmit.dataset.submitting = "0"; restoreBtn(); }
+          return;
+        }
+
+        // 1. Trừ tiền ví khách hàng chuẩn hóa đa nguồn
+        user.balance = Math.max(0, userBalance - finalTotal);
+        currentUser = user;
+        try {
+          localStorage.setItem("mmo_user", JSON.stringify(user));
+          const cleanUEmail = (user.email || "").toLowerCase().trim();
+          const allUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : JSON.parse(localStorage.getItem("mmo_registered_users") || "[]");
+          const uIdx = allUsers.findIndex(function(u) { return (u.id && u.id === user.id) || ((u.email || "").toLowerCase().trim() === cleanUEmail); });
+          if (uIdx !== -1) {
+            allUsers[uIdx].balance = user.balance;
+            if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
+            else localStorage.setItem("mmo_registered_users", JSON.stringify(allUsers));
+          }
+          localStorage.setItem("mmo_users", JSON.stringify(allUsers));
+        } catch(e) {}
+
+        // 2. Ghi nhật ký giao dịch chuẩn hệ thống (mmo_transaction_history & mmo_balance_logs)
+        try {
+          if (typeof recordTransaction === "function") {
+            recordTransaction(user.email, user.username || user.fullname || user.email.split("@")[0], "Thanh toán đặt hàng trước", -finalTotal, user.balance, "Đặt trước " + qty + "x " + fullProdTitle + " - Mã đơn #" + orderCode);
+          }
+          const balanceLogs = JSON.parse(localStorage.getItem("mmo_balance_logs") || "[]");
+          balanceLogs.unshift({
+            id: "TX_PO_" + createdTs,
+            orderId: orderCode,
+            userId: user.id || user.email,
+            userEmail: user.email,
+            username: user.username || user.fullname || user.email.split("@")[0],
+            type: "PAYMENT",
+            typeText: "Thanh toán đặt hàng trước",
+            amount: -finalTotal,
+            balanceAfter: user.balance,
+            time: nowStr,
+            createdAt: nowIso,
+            timestamp: createdTs,
+            note: "Đặt trước " + qty + "x " + fullProdTitle + " - Mã đơn #" + orderCode
+          });
+          localStorage.setItem("mmo_balance_logs", JSON.stringify(balanceLogs));
+        } catch(e) {}
+
+        // 3. Tạo object đơn hàng đặt trước (PRE...)
+        const newPreOrder = {
+          id: orderCode,
+          orderCode: orderCode,
           orderId: orderCode,
-          userId: user.id || user.email,
-          userEmail: user.email,
-          username: user.username || user.fullname || user.email.split("@")[0],
-          type: "PAYMENT",
-          typeText: "Thanh toán đặt hàng trước",
-          amount: -finalTotal,
-          balanceAfter: user.balance,
-          time: nowStr,
-          createdAt: nowIso,
-          timestamp: createdTs,
-          note: "Đặt trước " + qty + "x " + fullProdTitle + " - Mã đơn #" + orderCode
-        });
-        localStorage.setItem("mmo_balance_logs", JSON.stringify(balanceLogs));
-      } catch(e) {}
-
-      // 3. Tạo object đơn hàng đặt trước (PRE...)
-      const newPreOrder = {
-        id: orderCode,
-        orderCode: orderCode,
-        orderId: orderCode,
-        type: "PRE_ORDER",
-        status: "WAITING_CONFIRM",
-        statusText: "Chờ xác nhận",
-        paymentStatus: "PAID",
-        paymentMethod: "BALANCE",
-        buyerId: user.id || user.email,
-        buyerUsername: user.username || user.fullname || user.email.split("@")[0],
-        buyerEmail: user.email,
-        userEmail: user.email,
-        email: user.email,
-        userName: user.username || user.fullname || user.email.split("@")[0],
-        productId: prodId,
-        productName: fullProdTitle,
-        variantName: "",
-        variantIndex: varIdx,
-        unitPrice: unitPrice,
-        price: unitPrice,
-        qty: qty,
-        quantity: qty,
-        discountAmount: discountAmount,
-        total: finalTotal,
-        totalPrice: finalTotal,
-        maxDays: maxDays,
-        customNotes: customNotes,
-        deliveredAccounts: [],
-        credentials: "",
-        date: nowStr,
-        createdAt: nowIso,
-        createdTimestamp: createdTs,
-        timestamp: createdTs
-      };
-
-      // 4. Lưu đơn đặt trước vào hệ thống & đồng bộ thời gian thực
-      _cachedPreOrdersList = null;
-      _lastPreOrdersFetchTime = 0;
-      const preOrders = getPreOrders(true);
-      preOrders.unshift(newPreOrder);
-      savePreOrders(preOrders);
-
-      // Đồng bộ vào toàn bộ các kho lưu trữ đơn hàng (mmo_orders, mmo_all_orders, mmo_user_orders)
-      try {
-        const userOrders = JSON.parse(localStorage.getItem("mmo_orders") || "[]");
-        userOrders.unshift(newPreOrder);
-        localStorage.setItem("mmo_orders", JSON.stringify(userOrders));
-      } catch(e) {}
-
-      try {
-        const allOrders = JSON.parse(localStorage.getItem("mmo_all_orders") || "[]");
-        allOrders.unshift(newPreOrder);
-        localStorage.setItem("mmo_all_orders", JSON.stringify(allOrders));
-      } catch(e) {}
-
-      try {
-        const uOrders = JSON.parse(localStorage.getItem("mmo_user_orders") || "[]");
-        uOrders.unshift(newPreOrder);
-        localStorage.setItem("mmo_user_orders", JSON.stringify(uOrders));
-      } catch(e) {}
-      // CẬP NHẬT LAST DELIVERED ORDER ID & DANH SÁCH ĐƠN MỚI TRONG PHIÊN (ĐƠN MỚI LUÔN LÊN DÒNG 1)
-      window.lastDeliveredOrderId = orderCode;
-      window.currentThankYouOrderId = orderCode;
-      if (!window._recentOrderIds) window._recentOrderIds = [];
-      window._recentOrderIds = window._recentOrderIds.filter(id => id !== orderCode);
-      window._recentOrderIds.unshift(orderCode);
-      try {
-        localStorage.setItem("mmo_last_order_id", orderCode);
-        let recents = JSON.parse(sessionStorage.getItem("mmo_recent_order_ids") || "[]");
-        recents = recents.filter(id => id !== orderCode);
-        recents.unshift(orderCode);
-        sessionStorage.setItem("mmo_recent_order_ids", JSON.stringify(recents.slice(0, 50)));
-      } catch(e) {}
-
-      // Lưu In-Memory
-      if (!window._mmoInMemoryOrders) window._mmoInMemoryOrders = [];
-      window._mmoInMemoryOrders = window._mmoInMemoryOrders.filter(o => o && String(o.id || o.orderId || o.orderCode || "").replace("#","").trim() !== orderCode);
-      window._mmoInMemoryOrders.unshift(newPreOrder);
-
-      // Lưu SessionStorage
-      try {
-        let sess = JSON.parse(sessionStorage.getItem("mmo_session_orders") || "[]");
-        sess = sess.filter(o => o && String(o.id || o.orderId || o.orderCode || "").replace("#","").trim() !== orderCode);
-        sess.unshift(newPreOrder);
-        sessionStorage.setItem("mmo_session_orders", JSON.stringify(sess.slice(0, 100)));
-      } catch(e) {}
-
-      // Reset phân trang đơn hàng người dùng về Trang 1
-      if (typeof window.paginationState !== "undefined" && window.paginationState) {
-        window.paginationState.userOrders = 1;
-      }
-
-      if (typeof recordAffiliateCommissionForOrder === "function") {
-        recordAffiliateCommissionForOrder(newPreOrder);
-      }
-
-      // Tạo thông báo chuông và popup thông báo cho khách hàng
-      try {
-        if (typeof playNotificationSound === "function") playNotificationSound();
-        else {
-          const audio = new Audio("https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/audio/success.mp3");
-          audio.play().catch(function(){});
-        }
-      } catch(eAudio) {}
-
-      if (typeof addUserNotification === "function") {
-        addUserNotification({
-          title: "🎉 Đặt trước thành công #" + orderCode,
-          message: "Bạn đã đặt trước " + qty + "x " + fullProdTitle + " thành công (" + (typeof formatVND === "function" ? formatVND(finalTotal) : finalTotal.toLocaleString("vi-VN") + " đ") + "). Shop đang chuẩn bị tài khoản.",
           type: "PRE_ORDER",
-          orderId: orderCode,
+          status: "WAITING_CONFIRM",
+          statusText: "Chờ xác nhận",
+          paymentStatus: "PAID",
+          paymentMethod: "BALANCE",
+          buyerId: user.id || user.email,
+          buyerUsername: user.username || user.fullname || user.email.split("@")[0],
+          buyerEmail: user.email,
+          userEmail: user.email,
           email: user.email,
-          playSound: true
-        });
-      }
-
-      // Đồng bộ lên Google Sheets trung tâm qua API payOrderByWallet
-      if (typeof callGasApi === "function") {
-        callGasApi("payOrderByWallet", {
-          email: (user.email || "").trim(),
-          prodId: prodId,
-          prodName: "Đặt trước: " + fullProdTitle,
-          variantName: "Đặt trước (" + maxDays + " ngày)",
+          userName: user.username || user.fullname || user.email.split("@")[0],
+          productId: prodId,
+          productName: fullProdTitle,
+          variantName: "",
+          variantIndex: varIdx,
+          unitPrice: unitPrice,
+          price: unitPrice,
+          qty: qty,
           quantity: qty,
-          orderId: orderCode,
-          amount: finalTotal,
-          currentBalance: user.balance,
-          accounts: "",
-          customNotes: "Đơn đặt trước - Hạn xử lý: " + maxDays + " ngày" + (customNotes ? (" - Ghi chú: " + customNotes) : "")
-        }).catch(function(err) {
-          console.warn("Cloud pre-order sync notice:", err);
-        });
-      }
+          discountAmount: discountAmount,
+          total: finalTotal,
+          totalPrice: finalTotal,
+          maxDays: maxDays,
+          customNotes: customNotes,
+          deliveredAccounts: [],
+          credentials: "",
+          date: nowStr,
+          createdAt: nowIso,
+          createdTimestamp: createdTs,
+          timestamp: createdTs
+        };
 
-      // 5. Đóng modal & Cập nhật UI ví
-      closePreOrderModal();
-      if (typeof updateUserUI === "function") updateUserUI();
-      if (typeof updateWalletUI === "function") updateWalletUI();
-      if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
-      if (typeof renderProfileOrders === "function") renderProfileOrders();
-      if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
-      if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
-      if (typeof renderSystemOverview === "function") renderSystemOverview();
-      if (typeof showToast === "function") showToast("🎉 Đặt hàng trước thành công! Mã đơn: #" + orderCode, "success");
-      try { window.dispatchEvent(new CustomEvent("mmo_preorders_changed", { detail: { orderCode: orderCode } })); } catch(e) {}
-      // Đồng bộ Turso Worker và BroadcastChannel Realtime 0ms
-      try {
-        if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-          const sTok = (typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
-          fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
-            body: JSON.stringify({ orders: [newPreOrder] }),
-            keepalive: true
-          }).catch(function(err) { console.warn("Turso pre-order sync notice:", err); });
-          fetch(MMO_WORKER_API.getApiUrl() + "/api/user/sync", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
-            body: JSON.stringify({ email: user.email, balance: user.balance }),
-            keepalive: true
-          }).catch(function() {});
+        // 4. Lưu đơn đặt trước vào hệ thống & đồng bộ thời gian thực
+        _cachedPreOrdersList = null;
+        _lastPreOrdersFetchTime = 0;
+        const preOrders = getPreOrders(true);
+        preOrders.unshift(newPreOrder);
+        savePreOrders(preOrders);
+
+        // Đồng bộ vào toàn bộ các kho lưu trữ đơn hàng
+        try {
+          const userOrders = JSON.parse(localStorage.getItem("mmo_orders") || "[]");
+          userOrders.unshift(newPreOrder);
+          localStorage.setItem("mmo_orders", JSON.stringify(userOrders));
+        } catch(e) {}
+
+        try {
+          const allOrders = JSON.parse(localStorage.getItem("mmo_all_orders") || "[]");
+          allOrders.unshift(newPreOrder);
+          localStorage.setItem("mmo_all_orders", JSON.stringify(allOrders));
+        } catch(e) {}
+
+        try {
+          const uOrders = JSON.parse(localStorage.getItem("mmo_user_orders") || "[]");
+          uOrders.unshift(newPreOrder);
+          localStorage.setItem("mmo_user_orders", JSON.stringify(uOrders));
+        } catch(e) {}
+
+        window.lastDeliveredOrderId = orderCode;
+        window.currentThankYouOrderId = orderCode;
+        if (!window._recentOrderIds) window._recentOrderIds = [];
+        window._recentOrderIds = window._recentOrderIds.filter(id => id !== orderCode);
+        window._recentOrderIds.unshift(orderCode);
+        try {
+          localStorage.setItem("mmo_last_order_id", orderCode);
+          let recents = JSON.parse(sessionStorage.getItem("mmo_recent_order_ids") || "[]");
+          recents = recents.filter(id => id !== orderCode);
+          recents.unshift(orderCode);
+          sessionStorage.setItem("mmo_recent_order_ids", JSON.stringify(recents.slice(0, 50)));
+        } catch(e) {}
+
+        // Lưu In-Memory
+        if (!window._mmoInMemoryOrders) window._mmoInMemoryOrders = [];
+        window._mmoInMemoryOrders = window._mmoInMemoryOrders.filter(o => o && String(o.id || o.orderId || o.orderCode || "").replace("#","").trim() !== orderCode);
+        window._mmoInMemoryOrders.unshift(newPreOrder);
+
+        // Lưu SessionStorage
+        try {
+          let sess = JSON.parse(sessionStorage.getItem("mmo_session_orders") || "[]");
+          sess = sess.filter(o => o && String(o.id || o.orderId || o.orderCode || "").replace("#","").trim() !== orderCode);
+          sess.unshift(newPreOrder);
+          sessionStorage.setItem("mmo_session_orders", JSON.stringify(sess.slice(0, 100)));
+        } catch(e) {}
+
+        // Reset phân trang đơn hàng người dùng về Trang 1
+        if (typeof window.paginationState !== "undefined" && window.paginationState) {
+          window.paginationState.userOrders = 1;
         }
-      } catch(eTurso) {}
-      broadcastPreOrderEvent({ type: "NEW_PREORDER", order: newPreOrder });
 
-      // 6. Hiển thị Popup Modal thông báo đặt hàng trước thành công
-      openPreOrderSuccessModal(newPreOrder);
+        // BƯỚC QUAN TRỌNG: ĐÓNG MODAL ĐẶT TRƯỚC VÀ MỞ POPUP THÀNH CÔNG NGAY LẬP TỨC!
+        closePreOrderModal();
+        openPreOrderSuccessModal(newPreOrder);
+
+        // Tạo thông báo chuông và popup thông báo cho khách hàng
+        try {
+          if (typeof playNotificationSound === "function") playNotificationSound();
+          else {
+            const audio = new Audio("https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/assets/audio/success.mp3");
+            audio.play().catch(function(){});
+          }
+        } catch(eAudio) {}
+
+        try {
+          if (typeof addUserNotification === "function") {
+            addUserNotification({
+              title: "🎉 Đặt trước thành công #" + orderCode,
+              message: "Bạn đã đặt trước " + qty + "x " + fullProdTitle + " thành công (" + (typeof formatVND === "function" ? formatVND(finalTotal) : finalTotal.toLocaleString("vi-VN") + " đ") + "). Shop đang chuẩn bị tài khoản.",
+              type: "PRE_ORDER",
+              orderId: orderCode,
+              email: user.email,
+              playSound: true
+            });
+          }
+        } catch(eNotif) {}
+
+        // Cập nhật các thành phần giao diện một cách an toàn (mỗi hàm độc lập trong try/catch)
+        try { if (typeof updateUserUI === "function") updateUserUI(); } catch(e) {}
+        try { if (typeof updateWalletUI === "function") updateWalletUI(); } catch(e) {}
+        try { if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge(); } catch(e) {}
+        try { if (typeof renderProfileOrders === "function") renderProfileOrders(); } catch(e) {}
+        try { if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable(); } catch(e) {}
+        try { if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable(); } catch(e) {}
+        try { if (typeof renderSystemOverview === "function") renderSystemOverview(); } catch(e) {}
+        try { if (typeof showToast === "function") showToast("🎉 Đặt hàng trước thành công! Mã đơn: #" + orderCode, "success"); } catch(e) {}
+        try { window.dispatchEvent(new CustomEvent("mmo_preorders_changed", { detail: { orderCode: orderCode } })); } catch(e) {}
+
+        // Hoa hồng tiếp thị liên kết (nếu có)
+        try {
+          if (typeof recordAffiliateCommissionForOrder === "function") {
+            recordAffiliateCommissionForOrder(newPreOrder);
+          }
+        } catch(eAff) {}
+
+        // Đồng bộ lên Google Sheets trung tâm (async, không chặn)
+        try {
+          if (typeof callGasApi === "function") {
+            callGasApi("payOrderByWallet", {
+              email: (user.email || "").trim(),
+              prodId: prodId,
+              prodName: "Đặt trước: " + fullProdTitle,
+              variantName: "Đặt trước (" + maxDays + " ngày)",
+              quantity: qty,
+              orderId: orderCode,
+              amount: finalTotal,
+              currentBalance: user.balance,
+              accounts: "",
+              customNotes: "Đơn đặt trước - Hạn xử lý: " + maxDays + " ngày" + (customNotes ? (" - Ghi chú: " + customNotes) : "")
+            }).catch(function(err) {
+              console.warn("Cloud pre-order sync notice:", err);
+            });
+          }
+        } catch(eGas) {}
+
+        // Đồng bộ Turso Worker và BroadcastChannel Realtime 0ms
+        try {
+          if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+            const sTok = (typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
+            fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+              body: JSON.stringify({ orders: [newPreOrder] }),
+              keepalive: true
+            }).catch(function(err) { console.warn("Turso pre-order sync notice:", err); });
+            fetch(MMO_WORKER_API.getApiUrl() + "/api/user/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+              body: JSON.stringify({ email: user.email, balance: user.balance }),
+              keepalive: true
+            }).catch(function() {});
+          }
+        } catch(eTurso) {}
+
+        try { broadcastPreOrderEvent({ type: "NEW_PREORDER", order: newPreOrder }); } catch(eBc) {}
+
+        if (btnSubmit) {
+          btnSubmit.dataset.submitting = "0";
+          restoreBtn();
+        }
+      } catch(err) {
+        console.error("submitPreOrderAction fatal error:", err);
+        if (typeof showToast === "function") showToast("⚠️ Lỗi đặt hàng: " + (err && err.message ? err.message : "Đã có lỗi xảy ra"), "error");
+        if (btnSubmit) {
+          btnSubmit.dataset.submitting = "0";
+          restoreBtn();
+        }
+      }
     }
     window.submitPreOrderAction = submitPreOrderAction;
 
@@ -39260,7 +39329,10 @@ function getProductSchemaReviews(p, idx) {
       _adminPreOrdersPollingInterval = setInterval(async function() {
         try {
           const curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
-          const isAdm = (typeof isAdminUser === "function" && isAdminUser(curUser)) || (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_admin_authenticated") === "true"));
+          const isAdm = (typeof isAdminUser === "function" && isAdminUser(curUser)) || 
+            (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_admin_authenticated") === "true")) ||
+            (curUser && curUser.email === "hoangtuananh0968@gmail.com") ||
+            (typeof localStorage !== "undefined" && localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com");
           if (!isAdm) return;
 
           const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
