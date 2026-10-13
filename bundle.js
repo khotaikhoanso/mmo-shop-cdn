@@ -41008,7 +41008,8 @@ function executeAdminFulfillPreOrder() {
       const editPanel = document.getElementById("admOrdEditProductPanel");
       if (editPanel) editPanel.style.display = "none";
 
-      const modal = document.getElementById("admOrderDetailModal");
+      ensureRejectWarrantyButtonInDom();
+        const modal = document.getElementById("admOrderDetailModal");
       if (modal) {
         modal.style.display = "flex";
         if (mode === "exchange") {
@@ -41516,6 +41517,33 @@ function executeAdminFulfillPreOrder() {
       }
     }
     window.rejectWarrantyOrder = rejectWarrantyOrder;
+
+    // Tự động đảm bảo nút Từ Chối Bảo Hành luôn hiện diện trong DOM
+    function ensureRejectWarrantyButtonInDom() {
+      const modal = document.getElementById("admOrderDetailModal");
+      if (!modal) return;
+      if (document.getElementById("btnAdmRejectWarranty")) return;
+
+      const exchangeBtn = modal.querySelector("button[onclick*='confirmExchangeOrder']");
+      if (exchangeBtn && exchangeBtn.parentNode) {
+        const rejectBtn = document.createElement("button");
+        rejectBtn.type = "button";
+        rejectBtn.id = "btnAdmRejectWarranty";
+        rejectBtn.className = "btn-tool-danger";
+        rejectBtn.setAttribute("onclick", "rejectWarrantyOrder()");
+        rejectBtn.style.cssText = "font-size:0.82rem; height:36px; padding:6px 14px; background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.5); color:#f87171; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; margin-left:6px;";
+        rejectBtn.title = "Từ chối bảo hành, chuyển đơn sang Hoàn Thành và gửi lý do cho khách";
+        rejectBtn.innerHTML = '<i class="fa-solid fa-ban"></i> Từ Chối Bảo Hành';
+        exchangeBtn.parentNode.appendChild(rejectBtn);
+
+        const inp = document.getElementById("admOrdNewCredsInput");
+        if (inp) {
+          inp.placeholder = "Nhập tài khoản mới (để đổi 1-1) HOẶC nhập lý do từ chối bảo hành tại đây...";
+        }
+      }
+    }
+    window.ensureRejectWarrantyButtonInDom = ensureRejectWarrantyButtonInDom;
+
 
     // Quản lý số tiền hoàn lại tùy chỉnh (cho đơn nhiều sản phẩm lỗi 1 phần)
     function handleAdmOrdRefundAmountChange(val) {
