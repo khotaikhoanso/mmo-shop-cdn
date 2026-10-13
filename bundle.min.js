@@ -24352,8 +24352,8 @@ function syncAllOpenViewsStock(changedProdId) {
             if (!rawId) return;
             const cleanId = rawId.startsWith("#") ? rawId.replace("#", "").trim() : rawId;
 
-            // Bỏ qua bản ghi TX_PO_ rác và đơn hàng cũ của web cũ MM
-            if ((rawId.startsWith("TX_PO_") && (!o.credentials && !o.deliveredAccounts) && (!o.total || o.total <= 0)) || rawId.startsWith("MM")) {
+            // Bỏ qua bản ghi TX_PO_ (nhật ký biến động số dư ví) và đơn hàng cũ của web cũ MM
+            if (rawId.startsWith("TX_PO_") || rawId.startsWith("TX_") || rawId.startsWith("MM")) {
               return;
             }
 
@@ -24424,7 +24424,7 @@ function syncAllOpenViewsStock(changedProdId) {
         const preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
         preOrders.forEach(function(po) {
           const pId = String(po.orderCode || po.id || po.orderId || "");
-          if (!pId) return;
+          if (!pId || pId.startsWith("TX_PO_") || pId.startsWith("TX_")) return;
 
           const cleanId = pId.startsWith("#") ? pId.replace("#", "").trim() : pId;
           const poEmail = String(po.buyerEmail || po.userEmail || po.email || "").toLowerCase().trim();
@@ -25116,16 +25116,15 @@ function syncAllOpenViewsStock(changedProdId) {
       const pageOrders = orders.slice(startIndex, startIndex + itemsPerPage);
 
       container.innerHTML = `
-        <div class="prof-orders-table-wrapper" style="overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%;">
-          <table class="prof-orders-table" style="width:100%; border-collapse:collapse; min-width:880px; font-size:0.85rem; white-space:nowrap;">
+        <div class="prof-orders-table-wrapper" style="overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%; border-radius:8px; border:1px solid #1e293b;">
+          <table class="prof-orders-table" style="width:100%; border-collapse:collapse; font-size:0.82rem;">
             <thead>
-              <tr style="background:#070d18; border-bottom:1px solid #1e293b; color:#94a3b8; text-align:left; font-size:0.75rem; text-transform:uppercase; white-space:nowrap;">
-                <th style="padding:12px 14px; white-space:nowrap; min-width:140px;">Mã ĐH / Ngày</th>
-                <th style="padding:12px 14px; white-space:nowrap; min-width:250px;">Sản phẩm &amp; Loại</th>
-                <th style="padding:12px 14px; white-space:nowrap; min-width:110px;">Tổng tiền</th>
-                <th style="padding:12px 14px; white-space:nowrap; min-width:180px;">Thông tin</th>
-                <th style="padding:12px 14px; white-space:nowrap; min-width:160px;">Trạng thái / Tiến độ</th>
-                <th style="padding:12px 14px; text-align:center; white-space:nowrap; min-width:200px;">Hành động</th>
+              <tr style="background:#070d18; border-bottom:1px solid #1e293b; color:#94a3b8; text-align:left; font-size:0.72rem; text-transform:uppercase;">
+                <th style="padding:10px 12px; white-space:nowrap; width:125px;">Mã ĐH / Ngày</th>
+                <th style="padding:10px 12px; text-align:left;">Sản phẩm &amp; Loại</th>
+                <th style="padding:10px 12px; white-space:nowrap; width:95px;">Tổng tiền</th>
+                <th style="padding:10px 12px; white-space:nowrap; width:140px;">Trạng thái</th>
+                <th style="padding:10px 12px; text-align:center; white-space:nowrap; width:155px;">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -25134,8 +25133,11 @@ function syncAllOpenViewsStock(changedProdId) {
                 const cleanOId = String(oId).replace(/^#/, '').trim();
                 const rawStatus = String(order.status || '').toUpperCase().trim();
                 const rawCreds = String(order.credentials || order.accounts || '').trim();
-                const pName = escapeHtml(order.productName || 'Sản phẩm');
-                const vName = escapeHtml(order.variant || order.variantName || 'Mặc định');
+                const rawPOProd = (typeof formatCleanPreOrderProduct === "function") 
+                  ? formatCleanPreOrderProduct(order.productName, order.variant || order.variantName)
+                  : { cleanTitle: order.productName, cleanVariant: order.variant || order.variantName };
+                const pName = escapeHtml(rawPOProd.cleanTitle || order.productName || 'Sản phẩm');
+                const vName = escapeHtml(rawPOProd.cleanVariant || (order.variant !== 'Mặc định' ? order.variant : '') || '');
                 const tot = (typeof formatVND === "function") ? formatVND(order.total || order.totalPrice || 0) : ((order.total || 0).toLocaleString("vi-VN") + " đ");
                 const q = order.quantity || order.qty || 1;
                 const d = escapeHtml(order.date || order.createdAt || '');
@@ -25169,8 +25171,8 @@ function syncAllOpenViewsStock(changedProdId) {
                   `;
 
                   prodTitleHtml = `
-                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; text-decoration:none; white-space:nowrap;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem; opacity:0.8; color:#f59e0b;"></i></div>
-                    <div style="color:#38bdf8; font-size:0.76rem; margin-top:2px; white-space:nowrap;">Loại: ${vName}</div>
+                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.83rem; cursor:pointer; line-height:1.35; white-space:normal; word-break:break-word; max-width:280px; text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.68rem; opacity:0.8; color:#f59e0b;"></i></div>
+                    ${vName ? `<div style="color:#38bdf8; font-size:0.72rem; margin-top:2px; white-space:nowrap;">Loại: ${vName}</div>` : ''}
                   `;
 
                   if (effectiveStatus === "COMPLETED" || (effectiveDelivered && effectiveDelivered.length > 0)) {
@@ -25235,8 +25237,8 @@ function syncAllOpenViewsStock(changedProdId) {
                   `;
 
                   prodTitleHtml = `
-                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.88rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; text-decoration:none; white-space:nowrap;" onmouseover="this.style.color='#38bdf8'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem; opacity:0.8; color:#38bdf8;"></i></div>
-                    <div style="color:#38bdf8; font-size:0.76rem; margin-top:2px; white-space:nowrap;">Loại: ${vName}</div>
+                    <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.83rem; cursor:pointer; line-height:1.35; white-space:normal; word-break:break-word; max-width:280px; text-decoration:none;" onmouseover="this.style.color='#38bdf8'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.68rem; opacity:0.8; color:#38bdf8;"></i></div>
+                    ${vName ? `<div style="color:#38bdf8; font-size:0.72rem; margin-top:2px; white-space:nowrap;">Loại: ${vName}</div>` : ''}
                   `;
 
                   if (isRefunded) {
@@ -25286,38 +25288,24 @@ function syncAllOpenViewsStock(changedProdId) {
 
                 return `
                   <tr style="border-bottom:1px solid #1e293b; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
-                    <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
+                    <td style="padding:10px 12px; vertical-align:middle; white-space:nowrap;">
                       <div style="display:flex; flex-direction:column; gap:2px; white-space:nowrap;">
                         <div>${orderCodeHtml}</div>
-                        <span style="color:#64748b; font-size:0.75rem; white-space:nowrap;">${d}</span>
+                        <span style="color:#64748b; font-size:0.72rem; white-space:nowrap;">${d}</span>
                       </div>
                     </td>
-                    <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
-                      <div style="white-space:nowrap;">
-                        ${prodTitleHtml}
-                      </div>
+                    <td style="padding:10px 12px; vertical-align:middle;">
+                      ${prodTitleHtml}
                     </td>
-                    <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
-                      <div style="white-space:nowrap;">
-                        <div style="color:#10b981; font-weight:800; font-size:0.92rem; white-space:nowrap;">${tot}</div>
-                        <div style="color:#94a3b8; font-size:0.75rem; white-space:nowrap;">SL: ${q}</div>
-                      </div>
+                    <td style="padding:10px 12px; vertical-align:middle; white-space:nowrap;">
+                      <div style="color:#10b981; font-weight:800; font-size:0.88rem; white-space:nowrap;">${tot}</div>
+                      <div style="color:#94a3b8; font-size:0.72rem; white-space:nowrap;">SL: ${q}</div>
                     </td>
-                    <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
-                      <div style="white-space:nowrap;">
-                        <div style="color:#cbd5e1; font-size:0.78rem; white-space:nowrap;"><i class="fa-solid fa-user" style="color:#64748b; width:14px; margin-right:4px;"></i> ${bUser}</div>
-                        <div style="color:#64748b; font-size:0.72rem; margin-top:2px; white-space:nowrap;"><i class="fa-solid fa-envelope" style="color:#64748b; width:14px; margin-right:4px;"></i> ${bEmail}</div>
-                      </div>
+                    <td style="padding:10px 12px; vertical-align:middle; white-space:nowrap;">
+                      ${statusBadgeHtml}
                     </td>
-                    <td style="padding:12px 14px; vertical-align:middle; white-space:nowrap;">
-                      <div style="white-space:nowrap;">
-                        ${statusBadgeHtml}
-                      </div>
-                    </td>
-                    <td style="padding:12px 14px; vertical-align:middle; text-align:center; white-space:nowrap;">
-                      <div style="white-space:nowrap;">
-                        ${actionBtnsHtml}
-                      </div>
+                    <td style="padding:10px 12px; vertical-align:middle; text-align:center; white-space:nowrap;">
+                      ${actionBtnsHtml}
                     </td>
                   </tr>
                 `;
@@ -39322,6 +39310,9 @@ function getProductSchemaReviews(p, idx) {
     // REALTIME LIVE MONITORING CHO ĐƠN ĐẶT HÀNG TRƯỚC (ADMIN LIVE UPDATES)
     // =========================================================================
     var _adminPreOrdersPollingInterval = null;
+    var _notifiedAdminPreOrderIds = new Set();
+    var _isFirstAdminPreOrderPoll = true;
+
     function startAdminPreOrdersRealtimePolling() {
       if (_adminPreOrdersPollingInterval) return;
       _adminPreOrdersPollingInterval = setInterval(async function() {
@@ -39352,13 +39343,31 @@ function getProductSchemaReviews(p, idx) {
           let preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
           let hasNewOrChanged = false;
 
+          // Lần đầu tải trang: Nạp toàn bộ đơn cũ vào tập đã biết, KHÔNG rung chuông hay bắn thông báo spam!
+          if (_isFirstAdminPreOrderPoll) {
+            _isFirstAdminPreOrderPoll = false;
+            preOrders.forEach(p => {
+              const pCode = String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase();
+              if (pCode) _notifiedAdminPreOrderIds.add(pCode);
+            });
+            cloudPreList.forEach(cp => {
+              const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim().toLowerCase();
+              if (cId) _notifiedAdminPreOrderIds.add(cId);
+            });
+            return;
+          }
+
           cloudPreList.forEach(function(cp) {
             if (!cp || isForbiddenLegacyOrder(cp)) return;
             const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim();
             if (!cId) return;
 
+            // LOẠI BỎ TRIỆT ĐỂ BẢN GHI TX_PO_ VÀ TX_ (ĐÂY LÀ NHẬT KÝ BIẾN ĐỘNG SỐ DƯ, KHÔNG PHẢI ĐƠN HÀNG)
+            if (cId.startsWith("TX_PO_") || cId.startsWith("TX_") || cId.startsWith("SAMPLE") || cId.startsWith("DEMO")) return;
+
+            const cIdLower = cId.toLowerCase();
             const existingIdx = preOrders.findIndex(function(p) {
-              return String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase() === cId.toLowerCase();
+              return String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase() === cIdLower;
             });
 
             if (existingIdx === -1) {
@@ -39395,22 +39404,30 @@ function getProductSchemaReviews(p, idx) {
               };
               preOrders.unshift(newPre);
 
-              try {
-                if (typeof playNotificationSound === "function") playNotificationSound();
-                if (typeof showToast === "function") {
-                  showToast("🔔 Đơn đặt hàng trước mới #" + cId + " (" + (newPre.productName || "Sản phẩm") + ")!", "info");
+              // CHỈ THÔNG BÁO 1 LẦN DUY NHẤT CHO ĐƠN ĐẶT HÀNG THỰC SỰ MỚI
+              if (!_notifiedAdminPreOrderIds.has(cIdLower)) {
+                _notifiedAdminPreOrderIds.add(cIdLower);
+                const orderTs = Number(cp.createdTimestamp) || (typeof getOrderTimestamp === "function" ? getOrderTimestamp(cp) : 0);
+                const isVeryRecent = (Date.now() - orderTs < 10 * 60 * 1000); // Trong vòng 10 phút
+                if (isVeryRecent || !orderTs) {
+                  try {
+                    if (typeof playNotificationSound === "function") playNotificationSound();
+                    if (typeof showToast === "function") {
+                      showToast("🔔 Đơn đặt hàng trước mới #" + cId + " (" + (newPre.productName || "Sản phẩm") + ")!", "info");
+                    }
+                    if (typeof addUserNotification === "function") {
+                      addUserNotification({
+                        title: "⏳ Đơn đặt trước mới #" + cId,
+                        message: "Khách [" + (newPre.buyerEmail || "Khách") + "] vừa đặt trước " + newPre.quantity + "x " + newPre.productName + ".",
+                        type: "PRE_ORDER",
+                        orderId: cId,
+                        forAdmin: true,
+                        playSound: false
+                      });
+                    }
+                  } catch(eAlert) {}
                 }
-                if (typeof addUserNotification === "function") {
-                  addUserNotification({
-                    title: "⏳ Đơn đặt trước mới #" + cId,
-                    message: "Khách [" + (newPre.buyerEmail || "Khách") + "] vừa đặt trước " + newPre.quantity + "x " + newPre.productName + ".",
-                    type: "PRE_ORDER",
-                    orderId: cId,
-                    forAdmin: true,
-                    playSound: false
-                  });
-                }
-              } catch(eAlert) {}
+              }
             } else {
               if (preOrders[existingIdx].status !== cp.status) {
                 preOrders[existingIdx].status = cp.status;
@@ -39429,7 +39446,7 @@ function getProductSchemaReviews(p, idx) {
             if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
           }
         } catch(ePoll) {}
-      }, 5000);
+      }, 10000);
     }
     window.startAdminPreOrdersRealtimePolling = startAdminPreOrdersRealtimePolling;
     try { setTimeout(startAdminPreOrdersRealtimePolling, 3000); } catch(eStartPoll) {}
