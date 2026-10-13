@@ -25216,22 +25216,11 @@ function syncAllOpenViewsStock(changedProdId) {
                   const effectiveStatus = (freshPO ? freshPO.status : order.status) || rawStatus || "WAITING_CONFIRM";
                   const effectiveDelivered = (freshPO && freshPO.deliveredAccounts && freshPO.deliveredAccounts.length > 0) ? freshPO.deliveredAccounts : (order.deliveredAccounts || (rawCreds ? [rawCreds] : []));
 
-                  const isAdmOrderAction = (typeof isAdminUser === "function" && isAdminUser()) ||
-                    (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
-                    (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
-
-                  // Mã ĐH: Chỉ Admin mới có link mở viewPreOrderDetail (Hình 1). Khách thường chỉ hiện text mã đơn #PRE... kèm badge
-                  if (isAdmOrderAction) {
-                    orderCodeHtml = `
-                      <a href="javascript:void(0)" onclick="openPreOrderDetailView('${cleanOId}')" style="color:#f59e0b; font-weight:800; font-family:monospace; text-decoration:none; font-size:0.9rem; display:inline-flex; align-items:center; gap:5px; margin-bottom:4px; cursor:pointer; white-space:nowrap;" title="👉 Bấm để mở xem chi tiết đơn hàng đặt trước #${cleanOId}">${cleanOId} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.72rem;"></i></a>
-                      <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:3px; display:inline-block; white-space:nowrap;">ĐẶT TRƯỚC</span>
-                    `;
-                  } else {
-                    orderCodeHtml = `
-                      <div style="color:#f59e0b; font-weight:800; font-family:monospace; font-size:0.9rem; margin-bottom:4px; white-space:nowrap;">#${cleanOId}</div>
-                      <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:3px; display:inline-block; white-space:nowrap;">ĐẶT TRƯỚC</span>
-                    `;
-                  }
+                  // TRANG CÁ NHÂN: Mã ĐH chỉ là text hiển thị gọn gàng, TUYỆT ĐỐI không có link nhảy sang Hình 1
+                  orderCodeHtml = `
+                    <div style="color:#f59e0b; font-weight:800; font-family:monospace; font-size:0.9rem; margin-bottom:4px; white-space:nowrap;">#${cleanOId}</div>
+                    <span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:3px; display:inline-block; white-space:nowrap;">ĐẶT TRƯỚC</span>
+                  `;
 
                   prodTitleHtml = `
                     <div onclick="openProductDetailFromOrder('${order.productId || ''}', '${escapeHtml(pName)}')" style="font-weight:700; color:#f8fafc; font-size:0.83rem; cursor:pointer; line-height:1.35; white-space:normal; word-break:break-word; max-width:280px; text-decoration:none;" onmouseover="this.style.color='#f59e0b'" onmouseout="this.style.color='#f8fafc'" title="👉 Bấm để mở xem trang sản phẩm trên cửa hàng">${pName} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.68rem; opacity:0.8; color:#f59e0b;"></i></div>
@@ -25243,6 +25232,7 @@ function syncAllOpenViewsStock(changedProdId) {
                   }));
                   const isDonePreOrder = effectiveStatus === "COMPLETED" || effectiveStatus === "DELIVERED" || hasValidDelivered;
 
+                  // TRANG CÁ NHÂN: 100% GIAO DIỆN NGƯỜI DÙNG - CẤM TUYỆT ĐỐI NÚT GIAO & CHI TIẾT
                   if (isDonePreOrder) {
                     statusBadgeHtml = `
                       <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid #10b981; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
@@ -25260,7 +25250,6 @@ function syncAllOpenViewsStock(changedProdId) {
                         <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
                           <i class="fa-solid fa-shield-halved" style="color:#f87171;"></i> Khiếu Nại
                         </button>
-                        ${isAdmOrderAction ? `<button onclick="openPreOrderDetailView('${cleanOId}')" title="Xem chi tiết quản trị" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; border-radius:6px; padding:6px 9px; cursor:pointer; font-size:0.74rem;"><i class="fa-solid fa-gear"></i></button>` : ''}
                       </div>
                     `;
                   } else if (effectiveStatus === "PROCESSING") {
@@ -25270,20 +25259,11 @@ function syncAllOpenViewsStock(changedProdId) {
                       </span>
                       <span style="color:#38bdf8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Shop đang chuẩn bị acc</span>
                     `;
-                    if (isAdmOrderAction) {
-                      actionBtnsHtml = `
-                        <div style="display:inline-flex; gap:4px; align-items:center;">
-                          <button onclick="openAdminFulfillModal('${cleanOId}')" title="Admin bàn giao tài khoản cho đơn này" style="background:#10b981; color:#0b111e; border:none; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><i class="fa-solid fa-key"></i> Giao</button>
-                          <button onclick="openPreOrderDetailView('${cleanOId}')" title="Quản trị đơn đặt trước" style="background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:700;"><i class="fa-solid fa-sliders"></i> Chi Tiết</button>
-                        </div>
-                      `;
-                    } else {
-                      actionBtnsHtml = `
-                        <span style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); border-radius:5px; padding:5px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                          <i class="fa-solid fa-boxes-packing"></i> Đang gom hàng
-                        </span>
-                      `;
-                    }
+                    actionBtnsHtml = `
+                      <span style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); border-radius:5px; padding:5px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                        <i class="fa-solid fa-boxes-packing"></i> Đang gom hàng
+                      </span>
+                    `;
                   } else if (effectiveStatus === "CANCELLED") {
                     statusBadgeHtml = `
                       <span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
@@ -25300,20 +25280,11 @@ function syncAllOpenViewsStock(changedProdId) {
                       </span>
                       <span style="color:#94a3b8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Hạn gom: ${order.maxDays || 7} ngày</span>
                     `;
-                    if (isAdmOrderAction) {
-                      actionBtnsHtml = `
-                        <div style="display:inline-flex; gap:4px; align-items:center;">
-                          <button onclick="openAdminFulfillModal('${cleanOId}')" title="Admin bàn giao tài khoản cho đơn này" style="background:#10b981; color:#0b111e; border:none; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:800; display:inline-flex; align-items:center; gap:3px; white-space:nowrap;"><i class="fa-solid fa-key"></i> Giao</button>
-                          <button onclick="openPreOrderDetailView('${cleanOId}')" title="Quản trị đơn đặt trước" style="background:#1e293b; color:#f59e0b; border:1px solid #f59e0b; border-radius:5px; padding:5px 8px; cursor:pointer; font-size:0.72rem; font-weight:700;"><i class="fa-solid fa-sliders"></i> Chi Tiết</button>
-                        </div>
-                      `;
-                    } else {
-                      actionBtnsHtml = `
-                        <span style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); border-radius:5px; padding:5px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                          <i class="fa-solid fa-clock"></i> Đang chuẩn bị acc
-                        </span>
-                      `;
-                    }
+                    actionBtnsHtml = `
+                      <span style="background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); border-radius:5px; padding:5px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                        <i class="fa-solid fa-clock"></i> Đang chuẩn bị acc
+                      </span>
+                    `;
                   }
                 } else {
                   // Đơn hàng mua thông thường
@@ -37626,11 +37597,11 @@ function getProductSchemaReviews(p, idx) {
                   p.deliveredAccounts = pAccs;
                   p.credentials = pAccs.join("\n");
                   
-                  // Phục hồi trạng thái thực nếu bị ghi nhầm thành COMPLETED do dính text ghi chú
+                  // Giữ nguyên trạng thái thực tế của đơn hàng, không tự ý ép ngược về WAITING_CONFIRM
                   const pSt = String(p.status || "").toUpperCase();
-                  if ((pSt === "COMPLETED" || pSt === "DELIVERED") && pAccs.length === 0) {
-                    p.status = "WAITING_CONFIRM";
-                    p.statusText = "Chờ xác nhận";
+                  if (pAccs.length > 0) {
+                    p.status = "COMPLETED";
+                    p.statusText = "Đã giao hàng";
                   }
                   
                   autoFixPreOrderZeroTotal(p);
@@ -39322,8 +39293,8 @@ function getProductSchemaReviews(p, idx) {
 
       const cleanId = String(orderId).replace(/#/g, "").trim();
       const lines = rawText.split("\n").map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
-      const preOrders = getPreOrders(true);
-      const order = findPreOrderById(preOrders, cleanId);
+      let preOrders = getPreOrders(true);
+      let order = findPreOrderById(preOrders, cleanId);
       if (!order) {
         if (typeof showToast === "function") showToast("Không tìm thấy đơn hàng #" + cleanId, "warning");
         return;
@@ -39331,9 +39302,20 @@ function getProductSchemaReviews(p, idx) {
 
       order.deliveredAccounts = lines;
       order.credentials = lines.join("\n");
+      order.accounts = lines;
       order.status = "COMPLETED";
       order.statusText = "Đã giao hàng";
       order.completedAt = new Date().toLocaleString("vi-VN");
+
+      // Đảm bảo đơn hàng nằm chắc chắn trong mảng preOrders
+      let poIdx = preOrders.findIndex(function(p) {
+        return String(p.id || p.orderCode || p.orderId).replace(/#/g, "").trim().toLowerCase() === cleanId.toLowerCase();
+      });
+      if (poIdx !== -1) {
+        preOrders[poIdx] = order;
+      } else {
+        preOrders.unshift(order);
+      }
       savePreOrders(preOrders);
 
       // Phát sóng đa tab Realtime 0ms & Turso Sync
