@@ -12818,6 +12818,21 @@ if (typeof productOrId === "object") {
       }
 
       localStorage.setItem("mmo_current_view", viewId);
+      try {
+        if (typeof window !== "undefined" && window.location && window.history) {
+          const curUrl = new URL(window.location.href);
+          if (viewId !== "viewProductDetail") {
+            curUrl.searchParams.delete("prod");
+            curUrl.searchParams.delete("product");
+            if (viewId === "viewStore") {
+              curUrl.searchParams.delete("view");
+            } else {
+              curUrl.searchParams.set("view", viewId);
+            }
+            window.history.replaceState({ view: viewId }, "", curUrl.pathname + (curUrl.searchParams.toString() ? '?' + curUrl.searchParams.toString() : '') + window.location.hash);
+          }
+        }
+      } catch(eHist) {}
       if (viewId === "viewDeposit" && typeof prepareDeposit === "function") {
         const initAmt = window._targetDepositAmount || 20000;
         prepareDeposit(initAmt, true);
@@ -14710,7 +14725,7 @@ if (typeof productOrId === "object") {
         this._workerDeadUntil = Date.now() + 3000;
         console.warn("[CIRCUIT BREAKER] Worker offline/rate-limited for 10m:", reason);
       },
-      _fastSignal: function(ms = 3500) {
+      _fastSignal: function(ms = 7500) {
         if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
           return AbortSignal.timeout(ms);
         }
@@ -25511,25 +25526,65 @@ function syncAllOpenViewsStock(changedProdId) {
     function renderDetailRelatedProducts(currentProd) {
       const container = document.getElementById("dtlRelatedProductsGrid");
       const clusterTagsContainer = document.getElementById("dtlTopicClusterTags");
+      if (!currentProd) {
+        currentProd = window.currentSelectedProduct || window._currentActiveDetailProduct;
+      }
+      if (!currentProd) {
+        try {
+          const sp = new URLSearchParams(window.location.search);
+          const pid = sp.get('prod') || sp.get('product') || sp.get('id');
+          if (pid && typeof findShopProduct === "function") currentProd = findShopProduct(pid);
+        } catch(e) {}
+      }
+      if (!currentProd && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products) && MOCK_DATA.products.length > 0) {
+        currentProd = MOCK_DATA.products[0];
+      }
       if (!currentProd) return;
 
-      const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) ? MOCK_DATA.products : []);
+      let allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : [];
+      if (!allProds || allProds.length === 0) {
+        allProds = (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) ? MOCK_DATA.products.slice() : [];
+      }
       
-      // Lọc sản phẩm cùng danh mục, loại trừ sản phẩm hiện tại
-      let related = allProds.filter(function(p) {
-        return p.id !== currentProd.id && p.category === currentProd.category;
+      const curId = String(currentProd.id || '').trim().toLowerCase();
+      const curSlug = String(currentProd.slug || '').trim().toLowerCase();
+      const curName = String(currentProd.name || '').trim().toLowerCase();
+      const curCat = String(currentProd.category || 'MMO').trim().toLowerCase();
+
+      const candidates = allProds.filter(function(p) {
+        if (!p || !p.id) return false;
+        const pId = String(p.id).trim().toLowerCase();
+        const pSlug = String(p.slug || '').trim().toLowerCase();
+        const pName = String(p.name || '').trim().toLowerCase();
+        if (curId && pId === curId) return false;
+        if (curSlug && (pSlug === curSlug || pId === curSlug)) return false;
+        if (curName && pName === curName) return false;
+        return true;
       });
 
-      // Nếu không đủ sản phẩm cùng danh mục, lấy thêm từ các danh mục khác
-      if (related.length < 5) {
-        const others = allProds.filter(function(p) {
-          return p.id !== currentProd.id && p.category !== currentProd.category;
-        });
-        related = related.concat(others);
-      }
+      const sameCat = candidates.filter(function(p) {
+        const pCat = String(p.category || '').trim().toLowerCase();
+        return pCat && pCat === curCat;
+      });
+      const diffCat = candidates.filter(function(p) {
+        const pCat = String(p.category || '').trim().toLowerCase();
+        return !pCat || pCat !== curCat;
+      });
 
-      // Hiển thị chuẩn 5 sản phẩm đề xuất
-      const selected = related.slice(0, 5);
+      let selected = sameCat.slice(0, 5);
+      if (selected.length < 5) {
+        for (let i = 0; i < diffCat.length && selected.length < 5; i++) {
+          selected.push(diffCat[i]);
+        }
+      }
+      if (selected.length < 5 && candidates.length > selected.length) {
+        for (let k = 0; k < candidates.length && selected.length < 5; k++) {
+          if (!selected.includes(candidates[k])) selected.push(candidates[k]);
+        }
+      }
+      if (selected.length === 0 && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+        selected = MOCK_DATA.products.filter(x => x && x.id !== currentProd.id).slice(0, 5);
+      }
 
       if (container) {
         container.innerHTML = selected.map(function(p) {
@@ -25877,6 +25932,10 @@ function syncAllOpenViewsStock(changedProdId) {
         if (typeof switchView === "function") {
           switchView("viewProductDetail");
         }
+        try {
+          if (typeof refreshActiveProductDetailUI === "function") refreshActiveProductDetailUI(p);
+          if (typeof renderDetailRelatedProducts === "function") renderDetailRelatedProducts(p);
+        } catch(eRenderDetail) {}
         try { window.scrollTo(0, 0); } catch(e) {}
       } else {
         // Nếu tiêu đề trang đã hiển thị sản phẩm hợp lệ, không giật màn hình hoặc tải lại
@@ -26782,7 +26841,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
         // NẾU CHƯA ĐĂNG NHẬP: HIỆN THÔNG BÁO VÀ MỞ MODAL ĐĂNG NHẬP (Z-INDEX CAO NHẤT)
         if (!currentUser || !currentUser.email) {
-          restoreBtn(450);
+          restoreBtn(0);
           showToast("🔒 Vui lòng đăng nhập tài khoản để mua hàng!", "warning");
           if (typeof openAuthModal === "function") openAuthModal("login");
           return;
