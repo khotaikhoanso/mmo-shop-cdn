@@ -2544,16 +2544,7 @@ if (typeof productOrId === "object") {
 
               // 3. Tồn kho thực tế web nguồn
               let srcStock = null;
-              const provLoaded = (typeof isFastSourceProviderLoaded === "function") ? isFastSourceProviderLoaded(prov) : false;
-              if (apiMap && apiMap.isSourceDeleted) {
-                srcStock = 0;
-              } else if (cleanSrcId && provLoaded && !inSrc) {
-                srcStock = 0;
-                if (apiMap) {
-                  apiMap.sourceStock = 0;
-                  apiMap.isSourceDeleted = true;
-                }
-              } else if (inSrc && typeof inSrc.amount === "number") {
+              if (inSrc && typeof inSrc.amount === "number") {
                 srcStock = inSrc.amount;
                 if (apiMap) {
                   apiMap.sourceStock = inSrc.amount;
@@ -2561,8 +2552,13 @@ if (typeof productOrId === "object") {
                 }
               } else if (apiMap && apiMap.sourceStock !== undefined && apiMap.sourceStock !== null) {
                 srcStock = Number(apiMap.sourceStock);
+                if (srcStock > 0 && apiMap) apiMap.isSourceDeleted = false;
               } else if (p.apiMapping && p.apiMapping.sourceStock !== undefined && p.apiMapping.sourceStock !== null) {
                 srcStock = Number(p.apiMapping.sourceStock);
+              } else if (typeof p.stock === "number" && p.stock > 0) {
+                srcStock = p.stock;
+              } else if (apiMap && apiMap.isSourceDeleted) {
+                srcStock = 0;
               }
 
               if (isApi && srcStock !== null) {
@@ -8097,10 +8093,17 @@ if (typeof productOrId === "object") {
             }
 
             // 7. Biến thể
+            var isApiProd = (p.deliveryType === "api" || p.delivery_type === "api" || (typeof isProductApi === "function" && isProductApi(p)));
             var pillsContainer = document.getElementById("dtlVariantPills");
             if (pillsContainer && Array.isArray(p.variants) && p.variants.length > 0) {
               pillsContainer.innerHTML = p.variants.map(function(v, idx) {
-                var vStock = (typeof v.stock === "number") ? v.stock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (p.stock || 0));
+                var vStock = isApiProd
+                  ? ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (Number(p.stock) || Number(v.stock) || 0))
+                  : ((typeof v.stock === "number") ? v.stock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (p.stock || 0)));
+                if (isApiProd && vStock <= 0 && Number(p.stock) > 0) {
+                  vStock = Number(p.stock);
+                }
+                v.stock = vStock;
                 var stockBadge = vStock > 0
                   ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
                   : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
@@ -12771,6 +12774,12 @@ if (typeof productOrId === "object") {
           apiMap = prod.apiMapping;
         }
 
+        if (!apiMap || !apiMap.sourceProdId) {
+          if (prod && Array.isArray(prod.variants) && prod.variants[varIdxNum] && prod.variants[varIdxNum].apiMapping) {
+            apiMap = prod.variants[varIdxNum].apiMapping;
+          }
+        }
+
         if ((apiMap && apiMap.enabled && apiMap.sourceProdId) || isApiDelivery) {
           let st = 0;
           let hasLiveSource = false;
@@ -12781,48 +12790,39 @@ if (typeof productOrId === "object") {
               inSrc = cachedSourceProducts.find(s => String(s.id).trim().replace(/^#/, "") === cleanSrcId && (!apiMap.provider || s.provider === apiMap.provider))
                    || cachedSourceProducts.find(s => String(s.id).trim().replace(/^#/, "") === cleanSrcId);
             }
-            const provHasProds = (typeof isFastSourceProviderLoaded === "function") ? isFastSourceProviderLoaded(apiMap.provider) : false;
             if (inSrc && typeof inSrc.amount === "number") {
               st = Math.max(0, Number(inSrc.amount));
               apiMap.sourceStock = st;
               apiMap.isSourceDeleted = false;
               hasLiveSource = true;
-            } else if (provHasProds && !inSrc) {
-              // Sản phẩm không còn trên web nguồn hoặc nguồn đã xoá/gỡ SP (CHỈ KHI PROVIDER ĐÃ NẠP LIVE)
-              st = 0;
-              apiMap.sourceStock = 0;
-              apiMap.isSourceDeleted = true;
-              hasLiveSource = true;
-              if (prod) {
-                prod.stock = 0;
-                if (Array.isArray(prod.variants)) prod.variants.forEach(v => { if (v) v.stock = 0; });
-              }
-              return 0;
             }
           }
 
-          // Nếu mapping đã được xác nhận nguồn đã xóa/gỡ SP -> Ép trả về 0 acc ngay lập tức!
-          if (apiMap && apiMap.isSourceDeleted) {
-            apiMap.sourceStock = 0;
-            if (prod) {
-              prod.stock = 0;
-              if (Array.isArray(prod.variants)) prod.variants.forEach(v => { if (v) v.stock = 0; });
-            }
-            return 0;
-          }
           if (!hasLiveSource && apiMap && apiMap.sourceStock !== undefined && apiMap.sourceStock !== null) {
             st = Number(apiMap.sourceStock);
-            if (apiMap.isSourceDeleted) {
-              st = 0;
-              apiMap.sourceStock = 0;
-            }
-            if (!isNaN(st)) {
+            if (!isNaN(st) && st > 0) {
               st = Math.max(0, st);
+              apiMap.isSourceDeleted = false;
               hasLiveSource = true;
             }
           }
+
+          if (!hasLiveSource) {
+            const vIdxNumFallback = (varIdxNum !== undefined && varIdxNum !== null) ? varIdxNum : ((vIdx === null || vIdx === undefined || vIdx === "ALL" || vIdx === "") ? 0 : Number(vIdx));
+            if (prod && Array.isArray(prod.variants) && prod.variants[vIdxNumFallback]) {
+              const vS = Number(prod.variants[vIdxNumFallback].stock);
+              if (!isNaN(vS) && vS > 0) {
+                st = vS;
+                hasLiveSource = true;
+              }
+            }
+            if (!hasLiveSource && prod && typeof prod.stock === "number" && prod.stock > 0) {
+              st = prod.stock;
+              hasLiveSource = true;
+            }
+          }
+
           if (hasLiveSource) {
-            // Nguồn API đã xác định số lượng tồn kho (kể cả khi st === 0 -> Hết hàng)
             const finalSt = Math.max(0, st);
             if (prod) {
               prod.stock = finalSt;
@@ -12837,14 +12837,8 @@ if (typeof productOrId === "object") {
             return finalSt;
           }
 
-          // Khi API nguồn chưa có dữ liệu live: Ưu tiên lấy tồn kho thực tế từ Turso SQLite SSOT
-          const vIdxNumFallback = (varIdxNum !== undefined && varIdxNum !== null) ? varIdxNum : ((vIdx === null || vIdx === undefined || vIdx === "ALL" || vIdx === "") ? 0 : Number(vIdx));
-          if (prod && Array.isArray(prod.variants) && prod.variants[vIdxNumFallback]) {
-            const vS = Number(prod.variants[vIdxNumFallback].stock);
-            if (!isNaN(vS) && vS > 0) return vS;
-          }
-          if (prod && typeof prod.stock === "number" && prod.stock > 0) {
-            return prod.stock;
+          if (apiMap && apiMap.isSourceDeleted) {
+            return 0;
           }
           return 0;
         }
@@ -14349,16 +14343,12 @@ if (typeof productOrId === "object") {
             apiMap.isSourceDeleted = false;
             apiMap.sourceStock = stock;
             hasLiveSource = true;
-          } else if (provHasProds && !inSrc) {
-            stock = 0;
-            apiMap.isSourceDeleted = true;
-            apiMap.sourceStock = 0;
+          } else if (apiMap.sourceStock !== undefined && apiMap.sourceStock !== null) {
+            stock = Math.max(0, Number(apiMap.sourceStock));
+            if (stock > 0) apiMap.isSourceDeleted = false;
             hasLiveSource = true;
           } else if (apiMap.isSourceDeleted) {
             stock = 0;
-            hasLiveSource = true;
-          } else if (apiMap.sourceStock !== undefined && apiMap.sourceStock !== null) {
-            stock = Math.max(0, Number(apiMap.sourceStock));
             hasLiveSource = true;
           }
 
@@ -14492,23 +14482,23 @@ if (typeof productOrId === "object") {
               effectiveStock = Math.max(0, Number(inSrc.amount));
               m.sourceStock = effectiveStock;
               m.isSourceDeleted = false;
-            } else if (m.isSourceDeleted || (provLoaded && !inSrc)) {
-              effectiveStock = 0;
-              m.sourceStock = 0;
-              m.isSourceDeleted = true;
-            } else if (typeof m.sourceStock === "number" && m.sourceStock >= 0) {
+            } else if (typeof m.sourceStock === "number" && m.sourceStock > 0) {
               effectiveStock = Math.max(0, Number(m.sourceStock));
+              m.isSourceDeleted = false;
             } else if (typeof getShopVariantStock === "function") {
               effectiveStock = getShopVariantStock(curP, curVIdx);
             } else if (curV && typeof curV.stock === "number" && curV.stock > 0) {
               effectiveStock = curV.stock;
             } else if (curP && typeof curP.stock === "number" && curP.stock > 0) {
               effectiveStock = curP.stock;
+            } else if (m.isSourceDeleted) {
+              effectiveStock = 0;
+              m.sourceStock = 0;
             }
             if (curP) {
               curP.stock = effectiveStock;
-              if (Array.isArray(curP.variants) && curP.variants[curVIdx]) {
-                curP.variants[curVIdx].stock = effectiveStock;
+              if (Array.isArray(curP.variants)) {
+                curP.variants.forEach(v => { if (v) v.stock = effectiveStock; });
               }
             }
           }
@@ -14582,8 +14572,12 @@ if (typeof productOrId === "object") {
       // CẬP NHẬT BIẾN THỂ (PILLS): Đồng bộ 100% với tồn kho thực tế, triệt tiêu hoàn toàn mâu thuẫn trên dưới
       const pillsContainer = document.getElementById("dtlVariantPills");
       if (pillsContainer && curP && Array.isArray(curP.variants) && curP.variants.length > 0) {
+        const isCurApiProd = (curP.deliveryType === "api" || curP.delivery_type === "api" || (typeof isProductApi === "function" && isProductApi(curP)));
         pillsContainer.innerHTML = curP.variants.map((v, idx) => {
-          let vStock = (typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (v.stock || 0);
+          let vStock = isCurApiProd
+            ? (effectiveStock > 0 ? effectiveStock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (Number(curP.stock) || Number(v.stock) || 0)))
+            : ((typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (v.stock || 0));
+          if (isCurApiProd && vStock <= 0 && effectiveStock > 0) vStock = effectiveStock;
           v.stock = vStock;
           const stockBadge = vStock > 0
             ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
@@ -16121,17 +16115,11 @@ function syncAllOpenViewsStock(changedProdId) {
                     updatedMappings[p.id].sourceStock = inSrc.amount;
                     updatedMappings[p.id].isSourceDeleted = false;
                   }
-                } else if (window._liveLoadedProviders && window._liveLoadedProviders.has(map.provider)) {
-                  // SẢN PHẨM KHÔNG CÒN TRÊN NGUỒN HOẶC WEB NGUỒN ĐÃ GỠ/XOÁ SẢN PHẨM (CHỈ KHI PROVIDER ĐÃ NẠP LIVE)
-                  map.sourceStock = 0;
-                  map.isSourceDeleted = true;
-                  p.stock = 0;
+                } else if (map && typeof map.sourceStock === "number" && map.sourceStock > 0) {
+                  map.isSourceDeleted = false;
+                  p.stock = map.sourceStock;
                   if (Array.isArray(p.variants)) {
-                    p.variants.forEach(v => { if (v) v.stock = 0; });
-                  }
-                  if (updatedMappings[p.id]) {
-                    updatedMappings[p.id].sourceStock = 0;
-                    updatedMappings[p.id].isSourceDeleted = true;
+                    p.variants.forEach(v => { if (v && (v.stock === undefined || v.stock === 0)) v.stock = map.sourceStock; });
                   }
                 }
               }
@@ -16152,6 +16140,9 @@ function syncAllOpenViewsStock(changedProdId) {
                   || (Array.isArray(freshProducts) ? (freshProducts.find(s => (String(s.id).replace(/^#/, "").trim() === cleanCurMapSrcId || String(s.id) === String(curMap.sourceProdId)) && (!curMap.provider || s.provider === curMap.provider))
                   || freshProducts.find(s => String(s.id).replace(/^#/, "").trim() === cleanCurMapSrcId || String(s.id) === String(curMap.sourceProdId))) : null);
                 const isLoadedProv = (typeof isFastSourceProviderLoaded === "function" ? isFastSourceProviderLoaded(curMap.provider) : false) || (window._liveLoadedProviders && window._liveLoadedProviders.has(curMap.provider));
+                let liveStockVal = (inSrc && typeof inSrc.amount === "number")
+                  ? inSrc.amount
+                  : ((curMap && typeof curMap.sourceStock === "number" && curMap.sourceStock > 0) ? curMap.sourceStock : (currentSelectedProduct.stock || 0));
                 if (inSrc && typeof inSrc.amount === "number") {
                   curMap.sourceStock = inSrc.amount;
                   curMap.isSourceDeleted = false;
@@ -16159,23 +16150,23 @@ function syncAllOpenViewsStock(changedProdId) {
                   if (Array.isArray(currentSelectedProduct.variants)) {
                     currentSelectedProduct.variants.forEach(v => { if (v) v.stock = inSrc.amount; });
                   }
-                } else if (isLoadedProv && !inSrc) {
-                  curMap.sourceStock = 0;
-                  curMap.isSourceDeleted = true;
-                  currentSelectedProduct.stock = 0;
+                } else if (curMap && typeof curMap.sourceStock === "number" && curMap.sourceStock > 0) {
+                  curMap.isSourceDeleted = false;
+                  currentSelectedProduct.stock = curMap.sourceStock;
                   if (Array.isArray(currentSelectedProduct.variants)) {
-                    currentSelectedProduct.variants.forEach(v => { if (v) v.stock = 0; });
+                    currentSelectedProduct.variants.forEach(v => { if (v && (v.stock === undefined || v.stock === 0)) v.stock = curMap.sourceStock; });
                   }
                 }
                 if (typeof syncDetailStockUI === "function") {
-                  syncDetailStockUI(targetStock);
+                  syncDetailStockUI(liveStockVal);
                 }
                 const pillsContainer = document.getElementById("dtlVariantPills");
                 if (pillsContainer && Array.isArray(currentSelectedProduct.variants) && currentSelectedProduct.variants.length > 0) {
                   const cIdx = (typeof currentSelectedVariantIndex === "number") ? currentSelectedVariantIndex : 0;
                   pillsContainer.innerHTML = currentSelectedProduct.variants.map((v, idx) => {
-                    const stockBadge = targetStock > 0
-                      ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(targetStock).toLocaleString("vi-VN") + ' acc)</small>'
+                    const pillStock = (typeof v.stock === "number" && v.stock > 0) ? v.stock : liveStockVal;
+                    const stockBadge = pillStock > 0
+                      ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(pillStock).toLocaleString("vi-VN") + ' acc)</small>'
                       : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
                     return '<div class="variant-pill-option ' + (idx === cIdx ? 'active' : '') + '" onclick="selectVariant(' + idx + ', ' + (v.price || 0) + ')">' +
                       '<span>' + (typeof escapeHtml === 'function' ? escapeHtml(v.name || ("Gói " + (idx + 1))) : (v.name || ("Gói " + (idx + 1)))) + stockBadge + '</span>' +
@@ -16285,12 +16276,12 @@ function syncAllOpenViewsStock(changedProdId) {
             item.isSourceDeleted = false;
             if (inSrc.price) item.sourcePrice = inSrc.price;
             if (inSrc.name) item.sourceProdName = inSrc.name;
-          } else if (provLoaded) {
-            item.isSourceDeleted = true;
-            item.sourceStock = 0;
+          } else if (item.sourceStock !== undefined && item.sourceStock !== null) {
+            item.sourceStock = Math.max(0, Number(item.sourceStock));
+            if (item.sourceStock > 0) item.isSourceDeleted = false;
           }
         }
-        if (item.isSourceDeleted) {
+        if (item.isSourceDeleted && (!item.sourceStock || item.sourceStock <= 0)) {
           item.sourceStock = 0;
         }
       });
@@ -16385,16 +16376,13 @@ function syncAllOpenViewsStock(changedProdId) {
           if (inSrc.price) res.sourcePrice = inSrc.price;
           if (inSrc.name) res.sourceProdName = inSrc.name;
         } else {
-          const provLoaded = (typeof isFastSourceProviderLoaded === "function") ? isFastSourceProviderLoaded(res.provider) : false;
-          if (provLoaded) {
+          if (res.sourceStock !== undefined && res.sourceStock !== null) {
+            stock = Number(res.sourceStock);
+            if (stock > 0) res.isSourceDeleted = false;
+          }
+          if (res.isSourceDeleted && (!stock || stock <= 0)) {
             stock = 0;
             res.sourceStock = 0;
-            res.isSourceDeleted = true;
-          } else {
-            if (res.isSourceDeleted) {
-              stock = 0;
-              res.sourceStock = 0;
-            }
           }
         }
         res.sourceStock = Math.max(0, stock);
