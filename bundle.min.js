@@ -5795,21 +5795,45 @@ if (typeof productOrId === "object") {
           totalDeposited += amt;
           runningBal += amt;
         }
-        if (tx.balanceAfter === null || tx.balanceAfter === undefined || isNaN(Number(tx.balanceAfter))) {
-          tx.balanceAfter = runningBal;
-        }
       });
 
-      let curBal = runningBal;
+      // 1. Tìm số dư lớn nhất, đáng tin cậy nhất của tài khoản từ giao dịch gần nhất hoặc user profile
+      let maxKnownBalance = runningBal;
+      if (allLogs.length > 0) {
+        // Duyệt từ giao dịch mới nhất lùi dần về trước để tìm balanceAfter chuẩn
+        for (let i = allLogs.length - 1; i >= 0; i--) {
+          const b = Number(allLogs[i].balanceAfter);
+          if (!isNaN(b) && b > maxKnownBalance) {
+            maxKnownBalance = b;
+            break;
+          }
+        }
+      }
+
+      const uList = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
+      const uFound = uList.find(item => (item.email || "").toLowerCase().trim() === cleanEmail);
+      if (uFound && !isNaN(Number(uFound.balance)) && Number(uFound.balance) > maxKnownBalance) {
+        maxKnownBalance = Number(uFound.balance);
+      }
+      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && !isNaN(Number(currentUser.balance)) && Number(currentUser.balance) > maxKnownBalance) {
+        maxKnownBalance = Number(currentUser.balance);
+      }
+
+      const curBal = maxKnownBalance;
+
+      // 2. TÁI ĐỒNG BỘ TOÀN BỘ SỔ CÁI BIẾN ĐỘNG SỐ DƯ (Bank Ledger Reconciliation)
+      // Chạy lùi từ giao dịch mới nhất về cũ nhất:
+      // - Giao dịch mới nhất có Số Dư Sau = Số Dư Khả Dụng hiện tại
+      // - Giao dịch trước đó = Số Dư Sau của giao dịch kế tiếp trừ đi số tiền biến động
+      if (allLogs.length > 0) {
+        let runningBack = curBal;
+        for (let i = allLogs.length - 1; i >= 0; i--) {
+          allLogs[i].balanceAfter = Math.max(0, runningBack);
+          runningBack = runningBack - (Number(allLogs[i].amount) || 0);
+        }
+      }
+
       try {
-        const uList = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
-        const uFound = uList.find(item => (item.email || "").toLowerCase().trim() === cleanEmail);
-        if (uFound && uFound.balance !== undefined && !isNaN(Number(uFound.balance))) {
-          curBal = Math.max(curBal, Number(uFound.balance));
-        }
-        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined && !isNaN(Number(currentUser.balance))) {
-          curBal = Math.max(curBal, Number(currentUser.balance));
-        }
         if (uFound && curBal !== uFound.balance) {
           uFound.balance = curBal;
           localStorage.setItem("mmo_registered_users", JSON.stringify(uList));
@@ -30224,13 +30248,16 @@ function syncAllOpenViewsStock(changedProdId) {
         }
 
         if (authoritativeBal !== null && !isNaN(authoritativeBal)) {
-          currentUser.balance = authoritativeBal;
+          // BẢO VỆ SỐ DƯ: Không bao giờ cho phép dữ liệu Cloud cũ/rỗng ghi đè làm giảm số dư thật của khách
+          const curLocalBal = Number(currentUser.balance) || 0;
+          const bestBal = Math.max(authoritativeBal, curLocalBal);
+          currentUser.balance = bestBal;
           try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
 
           let allUsers = getRegisteredUsers();
           const uIdx = allUsers.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
           if (uIdx !== -1) {
-            allUsers[uIdx].balance = authoritativeBal;
+            allUsers[uIdx].balance = bestBal;
             saveRegisteredUsers(allUsers);
           }
           const dispEls = [
@@ -30494,6 +30521,15 @@ function syncAllOpenViewsStock(changedProdId) {
       if (typeof getUserComprehensiveTransactions === "function") {
         const res = getUserComprehensiveTransactions(cleanEmail);
         const allLogs = res.transactions;
+
+        if (res && res.currentBalance !== undefined) {
+          const profBalanceEl = document.getElementById("profDisplayBalance") || document.getElementById("profBalanceDisplay");
+          if (profBalanceEl) profBalanceEl.innerText = formatVND(res.currentBalance);
+          const headerWalletBalance = document.getElementById("headerWalletBalance");
+          if (headerWalletBalance) headerWalletBalance.innerText = formatVND(res.currentBalance);
+          const withdrawModalCurrentBal = document.getElementById("withdrawModalCurrentBal");
+          if (withdrawModalCurrentBal) withdrawModalCurrentBal.innerText = formatVND(res.currentBalance);
+        }
 
         if (allLogs.length === 0) {
           tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:28px; color:#64748b;">Chưa có biến động số dư nào.</td></tr>';
