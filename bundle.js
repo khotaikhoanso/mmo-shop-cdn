@@ -3462,37 +3462,50 @@ if (typeof productOrId === "object") {
         });
 
         // [XÓA SẠCH TRANG CHI TIẾT SẢN PHẨM NẾU ĐANG XEM SẢN PHẨM ĐÃ BỊ XÓA]
-        var curP = window.currentSelectedProduct || window._currentActiveDetailProduct;
-        var dtlIdEl = document.getElementById("dtlId");
-        var dtlTitleEl = document.getElementById("dtlTitle");
-        var curDtlId = curP ? String(curP.id || "").toLowerCase() : (dtlIdEl ? dtlIdEl.innerText.trim().toLowerCase() : "");
-        var curDtlName = curP ? String(curP.name || "").toLowerCase() : (dtlTitleEl ? dtlTitleEl.innerText.trim().toLowerCase() : "");
-        var curDtlSlug = curP ? String(curP.slug || "").toLowerCase() : "";
+        var currentActiveView = localStorage.getItem("mmo_current_view") || "viewStore";
+        var dtlViewEl = document.getElementById("viewProductDetail");
+        var isDetailActive = (currentActiveView === "viewProductDetail") || (dtlViewEl && dtlViewEl.style.display !== "none" && dtlViewEl.style.display !== "");
+        
+        // CHỈ KIỂM TRA NẾU NGƯỜI DÙNG THỰC SỰ ĐANG MỞ XEM CHI TIẾT SẢN PHẨM
+        if (isDetailActive) {
+          var curP = window.currentSelectedProduct || window._currentActiveDetailProduct;
+          var dtlIdEl = document.getElementById("dtlId");
+          var rawDtlId = dtlIdEl ? dtlIdEl.innerText.trim() : "";
+          if (rawDtlId === "PROD_CODE" || rawDtlId === "PROD_TEST") rawDtlId = "";
+          
+          var curDtlId = curP ? String(curP.id || "").toLowerCase() : rawDtlId.toLowerCase();
+          var dtlTitleEl = document.getElementById("dtlTitle");
+          var rawTitle = dtlTitleEl ? dtlTitleEl.innerText.trim() : "";
+          var curDtlName = curP ? String(curP.name || "").toLowerCase() : rawTitle.toLowerCase();
+          var curDtlSlug = curP ? String(curP.slug || "").toLowerCase() : "";
 
-        var isViewingDeleted = false;
-        if (curP && typeof isProductDeleted === "function" && isProductDeleted(curP)) {
-          isViewingDeleted = true;
-        } else if (curDtlId && (allDeleted.includes(curDtlId) || (typeof isProductDeleted === "function" && isProductDeleted(curDtlId)))) {
-          isViewingDeleted = true;
-        } else if (curDtlSlug && (allDeleted.includes(curDtlSlug) || (typeof isProductDeleted === "function" && isProductDeleted(curDtlSlug)))) {
-          isViewingDeleted = true;
-        } else if (curDtlName && allDeleted.some(function(d) { return d.length > 5 && (curDtlName === d || curDtlName.includes(d)); })) {
-          isViewingDeleted = true;
-        }
+          // Chỉ kiểm tra và chuyển view nếu thực sự có sản phẩm hợp lệ đang mở
+          if (curP || (curDtlId && curDtlId.length > 2)) {
+            var isViewingDeleted = false;
+            if (curP && typeof isProductDeleted === "function" && isProductDeleted(curP)) {
+              isViewingDeleted = true;
+            } else if (curDtlId && (allDeleted.includes(curDtlId) || (typeof isProductDeleted === "function" && isProductDeleted(curDtlId)))) {
+              isViewingDeleted = true;
+            } else if (curDtlSlug && (allDeleted.includes(curDtlSlug) || (typeof isProductDeleted === "function" && isProductDeleted(curDtlSlug)))) {
+              isViewingDeleted = true;
+            } else if (curDtlName && allDeleted.some(function(d) { return d.length > 5 && (curDtlName === d || curDtlName.includes(d)); })) {
+              isViewingDeleted = true;
+            }
 
-        if (isViewingDeleted) {
-          window.currentSelectedProduct = null;
-          window._currentActiveDetailProduct = null;
-          try {
-            var curU = new URL(window.location.href);
-            curU.searchParams.delete("prod");
-            curU.searchParams.delete("product");
-            curU.searchParams.delete("view");
-            window.history.replaceState(null, "", curU.pathname + (curU.searchParams.toString() ? '?' + curU.searchParams.toString() : ''));
-          } catch(eU) {}
-          var dtlEl = document.getElementById("viewProductDetail");
-          if (dtlEl) dtlEl.style.display = "none";
-          if (typeof switchView === "function") switchView("viewStore");
+            if (isViewingDeleted) {
+              window.currentSelectedProduct = null;
+              window._currentActiveDetailProduct = null;
+              try {
+                var curU = new URL(window.location.href);
+                curU.searchParams.delete("prod");
+                curU.searchParams.delete("product");
+                curU.searchParams.delete("view");
+                window.history.replaceState(null, "", curU.pathname + (curU.searchParams.toString() ? '?' + curU.searchParams.toString() : ''));
+              } catch(eU) {}
+              if (dtlViewEl) dtlViewEl.style.display = "none";
+              if (typeof switchView === "function") switchView("viewStore");
+            }
+          }
         }
       } catch(e) {}
     }
@@ -11122,18 +11135,21 @@ if (typeof productOrId === "object") {
     // ULTRA-FAST ZERO-LAG RENDER CACHING STATE
     var _viewRendered = {};
     var _viewDirty = {};
+    var _previousView = "viewStore";
+    var allProdCurrentCat = "Tất cả";
 
     // VIEW SWITCHER WITH ADMIN SECURITY GUARD & ZERO-LAG CACHING
     function switchView(viewId) {
-      const currentActiveView = localStorage.getItem("mmo_current_view") || "viewStore";
-      if (currentActiveView !== viewId && currentActiveView !== "viewPreOrderDetail") {
-        _previousView = currentActiveView;
-      }
-
-      // Cuộn về đầu trang tức thì 0ms
       try {
-        window.scrollTo(0, 0);
-      } catch(e) {}
+        const currentActiveView = localStorage.getItem("mmo_current_view") || "viewStore";
+        if (currentActiveView !== viewId && currentActiveView !== "viewPreOrderDetail") {
+          _previousView = currentActiveView;
+        }
+
+        // Cuộn về đầu trang tức thì 0ms
+        try {
+          window.scrollTo(0, 0);
+        } catch(e) {}
 
       if (viewId === "viewAdmin") {
         setTimeout(function() {
@@ -11410,6 +11426,9 @@ if (typeof productOrId === "object") {
       } catch(e) {}
 
       try { window.scrollTo(0, 0); } catch(e) {}
+      } catch(errSwitchView) {
+        console.error("switchView fatal error recovered:", errSwitchView);
+      }
     }
     if (typeof window !== "undefined") {
       window.switchView = switchView;
@@ -11425,9 +11444,9 @@ if (typeof productOrId === "object") {
           const id = link.id;
           if (id === "navStore") v = "viewStore";
           else if (id === "navProducts") {
-          v = "viewAllProducts";
-          if (typeof setAllProdCategory === "function") setAllProdCategory("Tất cả");
-        }
+            v = "viewAllProducts";
+            if (typeof setAllProdCategory === "function") setAllProdCategory("Tất cả");
+          }
           else if (id === "navBlog") v = "viewBlog";
           else if (id === "navTools") v = "viewTools";
           else if (id === "navProfile") v = "viewProfile";
@@ -11446,7 +11465,11 @@ if (typeof productOrId === "object") {
           e.preventDefault();
           e.stopPropagation();
           if (typeof toggleMobileDrawer === "function") toggleMobileDrawer(false);
-          switchView(v);
+          try {
+            switchView(v);
+          } catch(errCall) {
+            console.error("switchView click delegate error:", errCall);
+          }
         }
       }, { capture: true });
     }
@@ -33920,7 +33943,7 @@ function getProductSchemaReviews(p, idx) {
 
 
     // ==================== ALL PRODUCTS PAGE LOGIC ====================
-    let allProdCurrentCat = "Tất cả";
+    allProdCurrentCat = "Tất cả";
     let allProdCurrentSort = "featured";
     let allProdViewMode = "grid";
     let allProdCurrentPage = 1;
