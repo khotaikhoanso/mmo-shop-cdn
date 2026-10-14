@@ -6745,6 +6745,13 @@ if (typeof productOrId === "object") {
               const tType = String(d.type || "").toLowerCase();
               if (pId.startsWith("PROD_") || tType.includes("mua hàng") || tType.includes("thanh toán")) return false;
               const dNote = String(d.note || d.content || "");
+              const dMail = String(d.userEmail || d.email || "").toLowerCase().trim();
+              const dStatus = String(d.status || "").toLowerCase();
+              const isPending = dStatus.includes("chờ") || dStatus.includes("pending") || dStatus.includes("khởi tạo");
+              if (isPending) return false;
+              if (dMail === "khotaikhoanso.net@gmail.com") {
+                if (cleanId.includes("192656") || n.includes("192656") || pName.includes("nạp tiền") || pId === "NAP_VI" || oId.startsWith("DH") || n.includes("thủ công")) return false;
+              }
               if (oId.startsWith("DH") && pId !== "NAP_VI" && !pName.includes("nạp tiền ví")) return false;
               if (d.accounts || d.credentials || dNote.includes("|") || dNote.includes("@hotmail") || dNote.includes("@gmail")) return false;
               return true;
@@ -6761,7 +6768,13 @@ if (typeof productOrId === "object") {
             const cleaned = txs.filter(t => {
               if (!t) return false;
               const n = String(t.note || t.reason || t.type || "").toLowerCase();
-              return !n.includes("đồng bộ") && !n.includes("dong bo") && !n.includes("hiệu chỉnh") && !n.includes("hieu chinh") && !n.includes("chuẩn hóa");
+              if (n.includes("đồng bộ") || n.includes("dong bo") || n.includes("hiệu chỉnh") || n.includes("hieu chinh") || n.includes("chuẩn hóa")) return false;
+              const tMail = String(t.userEmail || t.email || "").toLowerCase().trim();
+              const tId = String(t.id || t.orderId || "");
+              if (tMail === "khotaikhoanso.net@gmail.com") {
+                if (tId.includes("192656") || n.includes("192656") || n.includes("nạp tiền vào ví") || tId.startsWith("DH") || n.includes("thủ công")) return false;
+              }
+              return true;
             });
             localStorage.setItem("mmo_transaction_history", JSON.stringify(cleaned));
           }
@@ -6774,7 +6787,13 @@ if (typeof productOrId === "object") {
             const cleaned = logs.filter(l => {
               if (!l) return false;
               const n = String(l.note || l.reason || l.description || l.type || "").toLowerCase();
-              return !n.includes("đồng bộ") && !n.includes("dong bo") && !n.includes("hiệu chỉnh") && !n.includes("hieu chinh") && !n.includes("chuẩn hóa");
+              if (n.includes("đồng bộ") || n.includes("dong bo") || n.includes("hiệu chỉnh") || n.includes("hieu chinh") || n.includes("chuẩn hóa")) return false;
+              const lMail = String(l.userEmail || l.email || "").toLowerCase().trim();
+              const lId = String(l.id || l.orderId || "");
+              if (lMail === "khotaikhoanso.net@gmail.com") {
+                if (lId.includes("192656") || n.includes("192656") || n.includes("nạp tiền vào ví") || lId.startsWith("DH") || n.includes("thủ công")) return false;
+              }
+              return true;
             });
             localStorage.setItem("mmo_balance_logs", JSON.stringify(cleaned));
           }
@@ -6789,7 +6808,13 @@ if (typeof productOrId === "object") {
                 const cl = list.filter(item => {
                   if (!item) return false;
                   const n = String(item.note || item.content || item.reason || item.type || "").toLowerCase();
-                  return !n.includes("đồng bộ") && !n.includes("dong bo") && !n.includes("hiệu chỉnh") && !n.includes("hieu chinh") && !n.includes("chuẩn hóa");
+                  if (n.includes("đồng bộ") || n.includes("dong bo") || n.includes("hiệu chỉnh") || n.includes("hieu chinh") || n.includes("chuẩn hóa")) return false;
+                  const iMail = String(item.userEmail || item.email || "").toLowerCase().trim();
+                  const iId = String(item.id || item.orderId || "");
+                  if (iMail === "khotaikhoanso.net@gmail.com") {
+                    if (iId.includes("192656") || n.includes("192656") || n.includes("nạp tiền vào ví") || iId.startsWith("DH") || n.includes("thủ công")) return false;
+                  }
+                  return true;
                 });
                 localStorage.setItem(k, JSON.stringify(cl));
               }
@@ -6797,16 +6822,60 @@ if (typeof productOrId === "object") {
           }
         });
 
-        // Đảm bảo số dư currentUser chuẩn xác
+        // Đảm bảo số dư admin chuẩn xác tuyệt đối (Admin không bao giờ nạp tiền thật -> số dư chuẩn = 0đ)
         const curUserRaw = localStorage.getItem("mmo_user");
         if (curUserRaw) {
           try {
             const u = JSON.parse(curUserRaw);
             if (u && (u.email || "").toLowerCase().trim() === "khotaikhoanso.net@gmail.com") {
-              // balance check bypassed
+              if (u.balance !== 0) {
+                u.balance = 0;
+                localStorage.setItem("mmo_user", JSON.stringify(u));
+                if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === "khotaikhoanso.net@gmail.com") {
+                  currentUser.balance = 0;
+                }
+              }
             }
           } catch(e) {}
         }
+        try {
+          const regUsersRaw = localStorage.getItem("mmo_registered_users");
+          if (regUsersRaw) {
+            const rUsers = JSON.parse(regUsersRaw);
+            if (Array.isArray(rUsers)) {
+              let changed = false;
+              rUsers.forEach(ru => {
+                if ((ru.email || "").toLowerCase().trim() === "khotaikhoanso.net@gmail.com") {
+                  if (ru.balance !== 0) {
+                    ru.balance = 0;
+                    changed = true;
+                  }
+                }
+              });
+              if (changed) localStorage.setItem("mmo_registered_users", JSON.stringify(rUsers));
+            }
+          }
+        } catch(eReg) {}
+
+        // Loại bỏ đơn bảo hành của khách nếu vô tình lưu vào mmo_user_orders của admin
+        try {
+          const uOrdsRaw = localStorage.getItem("mmo_user_orders");
+          if (uOrdsRaw) {
+            const uOrds = JSON.parse(uOrdsRaw);
+            if (Array.isArray(uOrds)) {
+              const curMail = (typeof currentUser !== "undefined" && currentUser && currentUser.email) ? currentUser.email.toLowerCase().trim() : "";
+              if (curMail === "khotaikhoanso.net@gmail.com") {
+                const cleanedOrds = uOrds.filter(uo => {
+                  const uoId = String(uo.orderId || uo.id || "");
+                  return !uoId.includes("192656");
+                });
+                if (cleanedOrds.length !== uOrds.length) {
+                  localStorage.setItem("mmo_user_orders", JSON.stringify(cleanedOrds));
+                }
+              }
+            }
+          }
+        } catch(eUo) {}
       } catch(err) {
         console.warn("purgeFakeSyncLogsAndDeposits err:", err);
       }
@@ -7293,22 +7362,27 @@ if (typeof productOrId === "object") {
 
             // PHÂN BIỆT ĐƠN NẠP TIỀN VÀ ĐƠN MUA HÀNG
             const hasAccounts = Boolean(o.accounts || o.credentials || String(o.note || "").includes("|"));
-            const isDepositOrder = !hasAccounts && (o.prodId === "NAP_VI" || oId.startsWith("NAP") || String(pName).toLowerCase().includes("nạp tiền ví") || String(pName).toLowerCase().includes("nạp tiền vào ví")) && !oId.startsWith("DH");
+            const isDepositOrder = !hasAccounts && (
+              o.prodId === "NAP_VI" || 
+              oId.startsWith("NAP") || 
+              oId.startsWith("DEP") ||
+              String(pName).toLowerCase().includes("nạp tiền ví") || 
+              String(pName).toLowerCase().includes("nạp tiền vào ví")
+            );
 
             if (isDepositOrder) {
               const st = String(o.status || "").toLowerCase();
-              if (st.includes("thành công") || st.includes("success") || st.includes("completed") || st.includes("paid") || !st) {
-                if (ordAmt > 0) {
-                  rawLogs.push({
-                    id: "DEP_" + oId,
-                    orderId: oId,
-                    time: ordTime,
-                    type: "Nạp tiền VietQR / SePay",
-                    amount: +Math.abs(ordAmt),
-                    balanceAfter: o.balanceAfter !== undefined ? Number(o.balanceAfter) : null,
-                    note: o.note || pName || ("Nạp tiền ví #" + oId)
-                  });
-                }
+              const isPaid = st.includes("thành công") || st.includes("success") || st.includes("completed") || st.includes("paid");
+              if (isPaid && ordAmt > 0) {
+                rawLogs.push({
+                  id: "DEP_" + oId,
+                  orderId: oId,
+                  time: ordTime,
+                  type: "Nạp tiền VietQR / SePay",
+                  amount: +Math.abs(ordAmt),
+                  balanceAfter: o.balanceAfter !== undefined ? Number(o.balanceAfter) : null,
+                  note: o.note || pName || ("Nạp tiền ví #" + oId)
+                });
               }
             } else {
               // 1. Đơn mua hàng (trừ tiền)
@@ -7406,26 +7480,22 @@ if (typeof productOrId === "object") {
         const tLow = String(item.type || "").toLowerCase();
         const nLow = String(item.note || "").toLowerCase();
         const isRef = amt > 0 && (tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền"));
-        const isDep = !isRef && (
+        const isExplicitPurchase = String(item.id || '').startsWith("ORD_") || oIdUp.startsWith("ORD") || tLow.includes("mua hàng") || nLow.includes("mua sp") || amt < 0;
+        const isDep = !isRef && !isExplicitPurchase && (
           oIdUp.startsWith("NAP") || 
           oIdUp.startsWith("DEP") || 
           tLow.includes("nạp tiền") || 
           tLow.includes("nạp ví") || 
           tLow.includes("sepay") || 
           tLow.includes("vietqr") || 
-          nLow.includes("nạp tiền") || 
-          nLow.includes("đã cộng") || 
-          nLow.includes("nap tien")
+          ((nLow.includes("nạp tiền") || nLow.includes("đã cộng") || nLow.includes("nap tien")) && !nLow.includes("mua sp") && !nLow.includes("thanh toán"))
         );
         const hasAccounts = Boolean(nLow.includes("|") || nLow.includes("@hotmail") || nLow.includes("@gmail") || nLow.includes("@outlook") || nLow.includes("yetskoamoako28") || nLow.includes("charleslagankieran") || nLow.includes("nguyenhuongliendindenn"));
-        const isPurchase = !isRef && !isDep && (
-          amt < 0 || 
+        const isPurchase = isExplicitPurchase || (!isRef && !isDep && (
           hasAccounts || 
           oIdUp.startsWith("DH") || 
-          oIdUp.startsWith("ORD") || 
-          tLow.includes("mua hàng") || 
           nLow.includes("mua sp")
-        );
+        ));
 
         let key = "";
         if (isPurchase) {
@@ -7438,7 +7508,7 @@ if (typeof productOrId === "object") {
           key = oId ? ("REFUND_" + oId) : ("REFUND_" + (item.id || item.time || Math.abs(item.amount)));
         } else if (isDep) {
           item.amount = +Math.abs(item.amount);
-          item.type = item.type || "Nạp tiền ví";
+          item.type = (item.type && !item.type.includes("mua")) ? item.type : "Nạp tiền ví";
           key = oId ? ("DEP_" + oId) : ("DEP_" + (item.id || item.time || Math.abs(item.amount)));
         } else if (item.id) {
           key = "ID_" + item.id;
@@ -24440,11 +24510,10 @@ function syncAllOpenViewsStock(changedProdId) {
             const oEmail = String(o.userEmail || o.email || o.buyerEmail || "").toLowerCase().trim();
 
             // Bộ lọc quyền sở hữu đơn hàng thông minh:
-            // - Nếu là Admin: xem toàn bộ
             // - Đơn hàng vừa mua trong phiên duyệt web này (cleanId khớp lastDeliveredId / storedLastId) -> LUÔN GIỮ
             // - Đơn nằm trong mmo_user_orders hoặc session/memory -> LUÔN GIỮ
-            // - Đơn khớp email hoặc là khách vãng lai / đơn cũ -> GIỮ
-            if (cleanUserMail && !isAdm) {
+            // - Đơn khớp email của tài khoản đang đăng nhập -> GIỮ
+            if (cleanUserMail) {
               const isMineByEmail = (oEmail && oEmail === cleanUserMail);
               const isRecentSession = (cleanId && (cleanId === lastDeliveredId || cleanId === storedLastId));
 
@@ -31755,6 +31824,13 @@ function syncAllOpenViewsStock(changedProdId) {
               let curHist = JSON.parse(localStorage.getItem("mmo_transaction_history") || "[]");
               walletRes.wallet.history.forEach(ch => {
                 const chId = String(ch.id || ch.orderId || "");
+                const chNote = String(ch.note || ch.content || "");
+                // BỎ QUA ĐƠN CỦA KHÁCH HOẶC TEST CỦA ADMIN
+                if (cleanEmail === "khotaikhoanso.net@gmail.com") {
+                  if (chId.includes("192656") || chNote.includes("192656") || chNote.includes("REALTIME TEST") || chNote.includes("thủ công") || chNote.includes("nạp tiền vào ví")) {
+                    return;
+                  }
+                }
                 if (!curHist.some(h => String(h.id || h.orderId || "") === chId)) {
                   curHist.unshift(Object.assign({}, ch, { userEmail: cleanEmail }));
                 }
@@ -31806,7 +31882,9 @@ function syncAllOpenViewsStock(changedProdId) {
           const t = String(tx.type || "").toLowerCase();
           const n = String(tx.note || "").toLowerCase();
           const id = String(tx.orderId || tx.id || "").toLowerCase();
-          const isDeposit = id.startsWith("nap") || id.startsWith("dep") || t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || n.includes("nạp") || n.includes("đã cộng");
+          // TUYỆT ĐỐI KHÔNG HIỂN THỊ ĐƠN MUA HÀNG TRONG LỊCH SỬ NẠP / RÚT TIỀN
+          if (t.includes("mua hàng") || id.startsWith("ord") || Number(tx.amount) < 0) return false;
+          const isDeposit = id.startsWith("nap") || id.startsWith("dep") || t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || ((n.includes("nạp") || n.includes("đã cộng")) && !n.includes("mua sp") && !n.includes("thanh toán"));
           const isRefund = t.includes("hoàn tiền") || n.includes("hoàn tiền");
           const isWithdraw = t.includes("rút") || id.startsWith("wd");
           return isDeposit || isRefund || isWithdraw;
@@ -31816,7 +31894,8 @@ function syncAllOpenViewsStock(changedProdId) {
         allHistory = localHistory.filter(tx => {
           if ((tx.userEmail || "").toLowerCase().trim() !== cleanEmail) return false;
           const t = (tx.type || "").toLowerCase();
-          return t.includes("nạp") || t.includes("rút") || t.includes("cộng/trừ") || t.includes("hoàn tiền") || Number(tx.amount) > 0;
+          if (t.includes("mua hàng") || Number(tx.amount) < 0) return false;
+          return t.includes("nạp") || t.includes("rút") || t.includes("hoàn tiền");
         });
       }
 
@@ -31951,8 +32030,9 @@ function syncAllOpenViewsStock(changedProdId) {
           const oIdStr = String(tx.orderId || tx.id || "");
           const oIdStrUp = oIdStr.toUpperCase();
           const isRefund = tx.isRefund || tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
-          const isDeposit = !isRefund && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || nLow.includes("nạp tiền") || nLow.includes("đã cộng"));
-          const isPurchase = !isRefund && !isDeposit && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || oIdStrUp.startsWith("DH") || oIdStrUp.startsWith("ORD") || nLow.includes("|"));
+          const isExplicitPurchase = oIdStrUp.startsWith("ORD") || String(tx.id || '').startsWith("ORD_") || tLow.includes("mua hàng") || nLow.includes("mua sp") || amt < 0;
+          const isDeposit = !isRefund && !isExplicitPurchase && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || ((nLow.includes("nạp tiền") || nLow.includes("đã cộng")) && !nLow.includes("mua sp") && !nLow.includes("thanh toán")));
+          const isPurchase = isExplicitPurchase || (!isRefund && !isDeposit && (tx.isPurchase || oIdStrUp.startsWith("DH") || nLow.includes("|")));
 
           if (isPurchase) {
             amt = -Math.abs(amt);
@@ -41714,14 +41794,18 @@ async function confirmRefundOrder() {
         saveAllOrders(all);
       }
 
-      let uOrders = typeof getUserOrders === "function" ? getUserOrders() : [];
-      const uOrderIdx = uOrders.findIndex(o => (o.orderId === orderId || o.id === orderId));
-      if (uOrderIdx !== -1) {
-        uOrders[uOrderIdx] = Object.assign({}, uOrders[uOrderIdx], currentAdminOrderDetail);
-      } else {
-        uOrders.unshift(Object.assign({}, currentAdminOrderDetail));
+      // CHỈ cập nhật mmo_user_orders nếu currentUser chính là người mua đơn hàng đó!
+      // TUYỆT ĐỐI KHÔNG lưu đơn hoàn tiền của khách vào tài khoản Admin!
+      if (currentUser && currentUser.email && currentUser.email.toLowerCase().trim() === finalEmail) {
+        let uOrders = typeof getUserOrders === "function" ? getUserOrders() : [];
+        const uOrderIdx = uOrders.findIndex(o => (o.orderId === orderId || o.id === orderId));
+        if (uOrderIdx !== -1) {
+          uOrders[uOrderIdx] = Object.assign({}, uOrders[uOrderIdx], currentAdminOrderDetail);
+        } else {
+          uOrders.unshift(Object.assign({}, currentAdminOrderDetail));
+        }
+        if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
       }
-      if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
 
       // 4. Tự động gửi tin nhắn thông báo vào khung chat cho khách
       const messageToCustomer = "💰 ĐÃ HOÀN TIỀN CHO ĐƠN HÀNG BẢO HÀNH #" + orderId + "!\n" +
