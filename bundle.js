@@ -4557,8 +4557,10 @@ if (typeof productOrId === "object") {
         }
       }
       populateCategorySelects(p.category);
+      const savedCustomPrice = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_price_" + p.id) || localStorage.getItem("mmo_custom_price_" + String(p.id).toUpperCase())) : null;
+      const initialPrice = (savedCustomPrice !== null && !isNaN(Number(savedCustomPrice)) && Number(savedCustomPrice) > 0) ? Number(savedCustomPrice) : (Number(p.price) || 0);
       if (document.getElementById("admProdPrice")) {
-        document.getElementById("admProdPrice").value = p.price;
+        document.getElementById("admProdPrice").value = initialPrice;
         document.getElementById("admProdPrice").oninput = function() {
           const varRows = document.querySelectorAll(".adm-variant-row");
           if (varRows.length === 1) {
@@ -4609,13 +4611,16 @@ if (typeof productOrId === "object") {
       if (typeof cleanVariants === "string") {
         try { cleanVariants = JSON.parse(cleanVariants); } catch(eV) {}
       }
-      if (!Array.isArray(cleanVariants) || cleanVariants.length === 0) {
-        try {
-          const savedVars = localStorage.getItem("mmo_custom_variants_" + p.id);
-          if (savedVars) cleanVariants = JSON.parse(savedVars);
-        } catch(eLSV) {}
-      }
-      const variants = (Array.isArray(cleanVariants) && cleanVariants.length > 0) ? cleanVariants : [{ name: p.name, price: p.price }];
+      try {
+        const savedVars = localStorage.getItem("mmo_custom_variants_" + p.id) || localStorage.getItem("mmo_custom_variants_" + String(p.id).toUpperCase());
+        if (savedVars) {
+          const parsedSaved = JSON.parse(savedVars);
+          if (Array.isArray(parsedSaved) && parsedSaved.length > 0) {
+            cleanVariants = parsedSaved;
+          }
+        }
+      } catch(eLSV) {}
+      const variants = (Array.isArray(cleanVariants) && cleanVariants.length > 0) ? cleanVariants : [{ name: p.name, price: initialPrice || p.price }];
       renderVariantInputs(variants);
 
       updateCommissionEstimate();
@@ -8801,6 +8806,9 @@ if (typeof productOrId === "object") {
         if (typeof recordProductVariants === "function") recordProductVariants(actualTargetId, variants, name);
         if (typeof saveProductsToStorage === "function") saveProductsToStorage();
 
+        // Cập nhật timestamp phiên bản cục bộ ngay lập tức để tránh polling đè ngược dữ liệu
+        _LAST_LOCAL_PRODUCTS_VERSION = Date.now();
+
         // 3. ĐỒNG BỘ THỜI GIAN THỰC TỨC THÌ (REALTIME 0MS) CHO GIAO DIỆN HIỆN TẠI VÀ TẤT CẢ CÁC TAB
         if (typeof broadcastProductUpdateRealtime === "function") {
           broadcastProductUpdateRealtime(prodData);
@@ -8826,9 +8834,14 @@ if (typeof productOrId === "object") {
             body: JSON.stringify({ product: prodData })
           }).then(r => r.json()).then(res => {
             console.log("Turso Cloud saveProduct success:", res);
+            if (res && res.timestamp) {
+              _LAST_LOCAL_PRODUCTS_VERSION = res.timestamp;
+            }
             if (res && res.product) {
               var syncedProd = res.product;
               syncedProd._lastEditedAt = Date.now();
+              syncedProd.price = effectiveFinalPrice;
+              syncedProd.variants = variants;
               if (typeof syncedProd.variants === "string") {
                 try { syncedProd.variants = JSON.parse(syncedProd.variants); } catch(e) {}
               }
@@ -13753,15 +13766,18 @@ if (typeof productOrId === "object") {
       let res = null;
       if (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.isConfigured()) {
         try {
-          // Khong dung nocache: true tren storefront cong khai de tan dung Cloudflare Edge Caching phan hoi sieu toc ~50ms
-          res = await MMO_WORKER_API.fetchProducts();
+          // Luon dung nocache: true de dam bao lay du lieu moi nhat tu Turso Database SSOT
+          res = await MMO_WORKER_API.fetchProducts({ nocache: true });
         } catch(workerFetchErr) {
           console.warn("MMO_WORKER_API.fetchProducts error, fallback to direct fetch:", workerFetchErr);
         }
       }
       if (!res || !Array.isArray(res.products)) {
         try {
-          const directFetch = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products");
+          const directFetch = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products?_t=" + Date.now(), {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-cache" }
+          });
           if (directFetch.ok) {
             res = await directFetch.json();
           }
@@ -13802,7 +13818,6 @@ if (typeof productOrId === "object") {
           const pNameLower = String(p.name || '').trim().toLowerCase();
           const inServer = serverIds.has(pIdLower) || (pSlugLower && serverSlugs.has(pSlugLower)) || (pNameLower && serverNames.has(pNameLower));
 
-          // Khóa 15 giây nếu vừa mới bấm lưu trên tab này
           // Khóa 120 giây bảo vệ tuyệt đối nếu vừa mới bấm lưu/sửa trên tab này
           const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + p.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(p.id).toUpperCase())) || (p._lastEditedAt || 0);
           const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 120000));
@@ -13847,6 +13862,8 @@ if (typeof productOrId === "object") {
           // Khóa 120 giây bảo vệ dữ liệu đang sửa
           const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + tp.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(tp.id).toUpperCase())) || (cur && cur._lastEditedAt) || 0;
           const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 120000));
+          const localCustomPrice = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_price_" + tp.id) || localStorage.getItem("mmo_custom_price_" + String(tp.id).toUpperCase())) : null;
+          const localCustomVars = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_variants_" + tp.id) || localStorage.getItem("mmo_custom_variants_" + String(tp.id).toUpperCase())) : null;
 
           // Ưu tiên tuyệt đối ảnh mới sửa của Admin trong localStorage, không bao giờ bị đè bởi ảnh cũ từ server
           const localCustomImg = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_img_" + tp.id) || localStorage.getItem("mmo_custom_img_" + String(tp.id).toUpperCase())) : "";
@@ -13922,6 +13939,26 @@ if (typeof productOrId === "object") {
                   }
                 }
               } catch(eSyncLs) {}
+            } else {
+              // Bảo toàn giá và biến thể vừa sửa khi isLocallyInFlight
+              if (localCustomPrice !== null && !isNaN(Number(localCustomPrice))) {
+                cur.price = Number(localCustomPrice);
+              }
+              if (localCustomVars) {
+                try {
+                  const parsedCustomVars = JSON.parse(localCustomVars);
+                  if (Array.isArray(parsedCustomVars) && parsedCustomVars.length > 0) {
+                    cur.variants = parsedCustomVars;
+                  }
+                } catch(eParsCv) {}
+              }
+              cur.stock = (tp.stock !== undefined) ? Number(tp.stock) : cur.stock;
+              if (targetImage) {
+                cur.image = targetImage;
+                cur.image_url = targetImage;
+                cur.imageUrl = targetImage;
+              }
+            }
 
               // Cập nhật ngay lập tức các thẻ img hiển thị trong DOM
               if (targetImage) {
@@ -13935,7 +13972,6 @@ if (typeof productOrId === "object") {
                   }
                 } catch(eDomImg) {}
               }
-            }
           } else {
             // Sản phẩm mới
             const newProd = Object.assign({}, tp, {
@@ -24770,6 +24806,21 @@ function syncAllOpenViewsStock(changedProdId) {
             MMO_WORKER_API.fetchProduct(cleanId, { nocache: true }).then(function(res) {
               if (res && res.success && res.product && !(typeof isProductDeleted === "function" && isProductDeleted(res.product))) {
                 const freshP = res.product;
+                const pEditTs = Number(localStorage.getItem("mmo_last_edited_" + freshP.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(freshP.id).toUpperCase())) || 0;
+                const isProdInFlight = (pEditTs > 0 && (Date.now() - pEditTs < 120000));
+                if (isProdInFlight) {
+                  const custP = localStorage.getItem("mmo_custom_price_" + freshP.id) || localStorage.getItem("mmo_custom_price_" + String(freshP.id).toUpperCase());
+                  if (custP && !isNaN(Number(custP))) freshP.price = Number(custP);
+                  const custV = localStorage.getItem("mmo_custom_variants_" + freshP.id) || localStorage.getItem("mmo_custom_variants_" + String(freshP.id).toUpperCase());
+                  if (custV) {
+                    try {
+                      const parsedV = JSON.parse(custV);
+                      if (Array.isArray(parsedV) && parsedV.length > 0) {
+                        freshP.variants = parsedV;
+                      }
+                    } catch(e) {}
+                  }
+                }
                 if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
                   const exIdx = MOCK_DATA.products.findIndex(x => x && (String(x.id).toLowerCase() === String(freshP.id).toLowerCase() || (freshP.slug && String(x.slug).toLowerCase() === String(freshP.slug).toLowerCase())));
                   if (exIdx !== -1) {
