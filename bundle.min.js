@@ -559,33 +559,7 @@ const API_URL = "";
     }
     window.cleanCompareText = cleanCompareText;
 
-    const REAL_PRODUCT_IDS = [
-  "PROD_MU6R34FZ4Z",
-  "PROD_MU5T3T47AE",
-  "PROD_MU5SPLMSEC",
-  "PROD_MU5PWT7PP7",
-  "PROD_MU2YQ1J3PY",
-  "PROD_MU2PA8VNDP",
-  "PROD_MU2OXBZC6K",
-  "PROD_MU2CZL38PH",
-  "PROD_MU2BIFBBNE",
-  "PROD_MU2ASBNSJT",
-  "PROD_MU2A2S732Y",
-  "PROD_MU29RGEBH0",
-  "PROD_MU29IZBLAK",
-  "PROD_MU1LSSJ7AZ",
-  "PROD_MTQZT2Y1",
-  "PROD_MTRB6000",
-  "PROD_MTTPLODQ",
-  "PROD_MTVI44UK",
-  "PROD_MTQQXO2E",
-  "PROD_MTQWMPL5",
-  "PROD_MTQWQFZD",
-  "PROD_MTQX1C7X",
-  "PROD_MTQX465U",
-  "PROD_MTQX7SIK",
-  "PROD_MTYN7UJG"
-];
+    const REAL_PRODUCT_IDS = [];
     window.REAL_PRODUCT_IDS = REAL_PRODUCT_IDS;
 
     const PHONE_FARM_DELETED_IDS = [
@@ -7081,11 +7055,10 @@ if (typeof productOrId === "object") {
                 const pImg = p.image || p.imageUrl || p.image_url;
                 if (pImg && typeof pImg === "string" && pImg.trim()) {
                   const trimmedImg = pImg.trim();
-                  const existingCustom = localStorage.getItem("mmo_custom_img_" + p.id);
-                  const isGenericDefault = trimmedImg.includes("img_1791493664629_nemg6u.png") || trimmedImg.includes("gemini_pro_veo3.png") || trimmedImg.includes("data:image/svg");
-                  if (!existingCustom || !isGenericDefault) {
-                    try { localStorage.setItem("mmo_custom_img_" + p.id, trimmedImg); } catch(eI) {}
-                  }
+                  try {
+                    localStorage.setItem("mmo_custom_img_" + p.id, trimmedImg);
+                    if (p.slug) localStorage.setItem("mmo_custom_img_" + p.slug, trimmedImg);
+                  } catch(eI) {}
                 }
               }
             });
@@ -11373,133 +11346,9 @@ if (typeof productOrId === "object") {
         // SMART SYNCHRONIZED SOLD QUANTITY CALCULATOR (KHÔNG BỊ 100 ĐỒNG LOẠT)
     
     // RESOLVE PRODUCT IMAGE: Hoạt động ĐỘC LẬP 100%, độc lập 100%
-    const KTS_IMG = {
-      "blog_gmail.png": "https://iili.io/nGQfb5B.png",
-      "blog_gmail_register.png": "https://iili.io/nGQfDJV.png",
-      "blog_tiktok.png": "https://iili.io/nGQfZUQ.png",
-      "canva_edu.jpg": "https://iili.io/nGQfpb1.jpg",
-      "canva_edu.png": "https://iili.io/nGQfmOP.jpg",
-      "capcut_20k.png": "https://iili.io/nGQq9zF.png",
-      "capcut_canhan_20k.jpg": "https://iili.io/nGQq2qJ.jpg",
-      "capcut_canhan_rieng.jpg": "https://iili.io/nGQqHWg.jpg",
-      "capcut_team_1m.jpg": "https://iili.io/nGQqJsa.jpg",
-      "chatgpt_new_trial.png": "https://iili.io/nGQqFgR.jpg",
-      "chatgpt_plus.png": "https://iili.io/nGQqBeI.png",
-      "default-avatar.png": "https://iili.io/nGQq30v.png",
-      "facebook_via.png": "https://iili.io/nGQqCbt.png",
-      "gemini_pro_veo3.png": "https://iili.io/nGQfXDX.png",
-      "gmail_10m.png": "https://iili.io/nGQqozX.png",
-      "gmail_14day.png": "https://iili.io/nGQqTqG.png",
-      "gmail_1h.png": "https://iili.io/nGQqzss.png",
-      "gmail_24h.png": "https://iili.io/nGQqxXn.png",
-      "gmail_30day.png": "https://iili.io/nGQq5dl.png",
-      "gmail_7day.png": "https://iili.io/nGQqAg4.png",
-      "gmail_co.png": "https://iili.io/nGQq772.png",
-      "google_gemini_veo3.webp": "https://iili.io/nGQqGqb.webp",
-      "hma_vpn.png": "https://iili.io/nGQq1Lu.png",
-      "hotmail_oauth2.png": "https://iili.io/nGQq0Xe.jpg",
-      "hotmail_outlook.png": "https://iili.io/nGQqVrx.png",
-      "instagram.png": "https://iili.io/nGQqM1j.png",
-      "kling_ai.png": "https://iili.io/nGQqjkB.png",
-      "outlook_trusted.jpg": "https://iili.io/nGQqh7V.jpg",
-      "paypal_usdt.png": "https://iili.io/nGQqwmP.png",
-      "proxy_4g.png": "https://iili.io/nGQqkLg.png",
-      "rom_j7_plus.png": "https://iili.io/nGQqehF.png",
-      "rom_j7_prime.png": "https://iili.io/nGQqSEJ.png",
-      "rom_j7_pro.png": "https://iili.io/nGQq6kN.png",
-      "rom_not10_android12.png": "https://iili.io/nGQq47p.png",
-      "rom_not8_android10.jpg": "https://iili.io/nGQqr2R.png",
-      "rom_not8_android10.png": "https://iili.io/nGQqr2R.png",
-      "rom_not9_android10.jpg": "https://iili.io/nGQqtBs.jpg",
-      "rom_not9_android10.png": "https://iili.io/nGQqDEG.png",
-      "rom_s10_android12.png": "https://iili.io/nGQBdT7.png",
-      "rom_s22_android12.png": "https://iili.io/nGQBHpS.png",
-      "rom_s7_android10.png": "https://iili.io/nGQB9v2.png",
-      "rom_s8_android10.png": "https://iili.io/nGQBKCu.png",
-      "rom_s9_android10.png": "https://iili.io/nGQBq4j.png",
-      "spotify_premium.png": "https://iili.io/nGQBfEb.png",
-      "tiktok_affiliate_gio.jpg": "https://iili.io/nGQBC3x.jpg",
-      "tiktok_beta.png": "https://iili.io/nGQBnYQ.png",
-      "tiktok_brazil.png": "https://iili.io/nGQBovV.png",
-      "tiktok_france.png": "https://iili.io/nGQBuZF.png",
-      "tiktok_japan.png": "https://iili.io/nGQBRCg.png",
-      "tiktok_ngam_lau.jpg": "https://iili.io/nGQBTj1.jpg",
-      "tiktok_vietnam.png": "https://iili.io/nGQBa3v.png",
-      "tool_oauth2.png": "https://iili.io/nGQB76J.png",
-      "youtube_channel.png": "https://iili.io/nGQBcaR.png",
-      "youtube_premium.png": "https://iili.io/nGQB0yN.png",
-      "zalo_group.png": "https://iili.io/nGQBlvp.png"
-};
+    const KTS_IMG = {};
 
-    var KTS_KNOWN_CDN_MAP = window.KTS_KNOWN_CDN_MAP = {
-      "PROD_MUQIMRJYG0": "https://iili.io/nGQfXDX.png",
-      "PROD_MU6R34FZ4Z": "https://iili.io/nGQfXDX.png",
-      "PROD_MU5T3T47AE": "https://iili.io/nGQfXDX.png",
-      "PROD_MU2AB1XEGI": "https://iili.io/nGQfXDX.png",
-      "PROD_MUP5LB7VAB": "https://iili.io/nGQq772.png",
-      "PROD_MUOSDN0FCU": "https://iili.io/nGQqAg4.png",
-      "PROD_MUJGUY19DD": "https://iili.io/nGQqAg4.png",
-      "PROD_MTTPLODQ": "https://iili.io/nGQq772.png",
-      "PROD_MTQQXO2E": "https://iili.io/nGQqxXn.png",
-      "PROD_MTQWMPL5": "https://iili.io/nGQqAg4.png",
-      "PROD_MTQWQFZD": "https://iili.io/nGQq5dl.png",
-      "PROD_MTQX1C7X": "https://iili.io/nGQqzss.png",
-      "PROD_MTQX465U": "https://iili.io/nGQqozX.png",
-      "PROD_MTQX7SIK": "https://iili.io/nGQqzss.png",
-      "PROD_MTQZT2Y1": "https://iili.io/nGQqVrx.png",
-      "PROD_MTRB6000": "https://iili.io/nGQqh7V.jpg",
-      "PROD_MU2YQ1J3PY": "https://iili.io/nGQq0Xe.jpg",
-      "PROD_MUORGNEQOE": "https://iili.io/nGQB0yN.png",
-      "PROD_MUK7P74YNT": "https://iili.io/nGQB0yN.png",
-      "PROD_MTYN7UJG": "https://iili.io/nGQBcaR.png",
-      "PROD_MUOQS3DOIU": "https://iili.io/nGQBa3v.png",
-      "PROD_MUOQDRL4F0": "https://iili.io/nGQBa3v.png",
-      "PROD_MU2JIBBRH8": "https://iili.io/nGQBa3v.png",
-      "PROD_MU2IXVFLMW": "https://iili.io/nGQBC3x.jpg",
-      "PROD_MU2CZL38PH": "https://iili.io/nGQBuZF.png",
-      "PROD_MU29IZBLAK": "https://iili.io/nGQBnYQ.png",
-      "PROD_MU1LSSJ7AZ": "https://iili.io/nGQBRCg.png",
-      "PROD_MTVI44UK": "https://iili.io/nGQBTj1.jpg",
-      "PROD_MTPIJ9XV": "https://iili.io/nGQBovV.png",
-      "PROD_MUR4SPH1IU": "https://iili.io/nGQBa3v.png",
-      "PROD_MUR52EZ6H1": "https://iili.io/nGQBRCg.png",
-      "PROD_MUNUEKI3NM": "https://iili.io/nGQqBeI.png",
-      "PROD_MUY55LKTML": "https://iili.io/nGQqBeI.png",
-      "PROD_MUKAMO9XPD": "https://iili.io/nGQqBeI.png",
-      "PROD_MU5SPLMSEC": "https://iili.io/nGQqFgR.jpg",
-      "PROD_MU2OXBZC6K": "https://iili.io/nGQqFgR.jpg",
-      "PROD_MUH57035HQ": "https://iili.io/nGQqjkB.png",
-      "PROD_MU5PWT7PP7": "https://iili.io/nGQqjkB.png",
-      "PROD_MUY4U8LCE3": "https://iili.io/nGQfmOP.jpg",
-      "PROD_MUY503CDF4": "https://iili.io/nGQfmOP.jpg",
-      "PROD_MUJUGVQXET": "https://iili.io/nGQqJsa.jpg",
-      "PROD_MU2B32VLQY": "https://iili.io/nGQqHWg.jpg",
-      "PROD_MU1G6LJX": "https://iili.io/nGQq9zF.png",
-      "PROD_MU2ASBNSJT": "https://iili.io/nGQqCbt.png",
-      "PROD_MU29RGEBH0": "https://iili.io/nGQqCbt.png",
-      "PROD_MUY45KM8QI": "https://iili.io/nGQqCbt.png",
-      "PROD_MUK7DQMKAM": "https://iili.io/nGQqM1j.png",
-      "PROD_MUK6EFVE8X": "https://iili.io/nGQqM1j.png",
-      "PROD_MUJZGSUPDI": "https://iili.io/nGQqM1j.png",
-      "PROD_MU2PA8VNDP": "https://iili.io/nGQqM1j.png",
-      "PROD_MUK5VQH55X": "https://iili.io/nGQq30v.png",
-      "PROD_MUK6Y4QUIL": "https://iili.io/nGQB76J.png",
-      "PROD_MUOIH8CW59": "https://iili.io/nGQq1Lu.png",
-      "PROD_MUM6JQTW8C": "https://iili.io/nGQqkLg.png",
-      "PROD_MUKAXC4Q9T": "https://iili.io/nGQq1Lu.png",
-      "PROD_MUK6N4RBEX": "https://iili.io/nGQqkLg.png",
-      "PROD_MUK5IKCQLN": "https://iili.io/nGQqkLg.png",
-      "PROD_MUK50WMCNR": "https://iili.io/nGQqkLg.png",
-      "PROD_MUJVJCV286": "https://iili.io/nGQqkLg.png",
-      "PROD_MUJVFEFFNP": "https://iili.io/nGQqkLg.png",
-      "PROD_MUJU6XY3HK": "https://iili.io/nGQqkLg.png",
-      "PROD_MUJTYWFTQ7": "https://iili.io/nGQqkLg.png",
-      "PROD_MUJQDTNIH9": "https://iili.io/nGQqkLg.png",
-      "PROD_MU2BIFBBNE": "https://iili.io/nGQq1Lu.png",
-      "PROD_MU2A2S732Y": "https://iili.io/nGQq1Lu.png",
-      "PROD_MUK75H3HAR": "https://iili.io/nGQBfEb.png",
-      "PROD_MTU9F5HN": "https://iili.io/nGQqwmP.png"
-};
+    var KTS_KNOWN_CDN_MAP = window.KTS_KNOWN_CDN_MAP = {};
 
     var KTS_CLEAN_FALLBACK_SVG = window.KTS_CLEAN_FALLBACK_SVG = "https://iili.io/nGs8RDv.jpg";
     window.KTS_CLEAN_FALLBACK_SVG = KTS_CLEAN_FALLBACK_SVG;
@@ -11520,7 +11369,7 @@ if (typeof productOrId === "object") {
       const pSlug = String((typeof p === "object" && p.slug) || "").trim();
       let prodObj = (typeof p === "object") ? p : ((typeof findShopProduct === "function") ? findShopProduct(pId) : null);
 
-      // B. [ƯU TIÊN TUYỆT ĐỐI #1]: Ảnh trực tiếp trong đối tượng sản phẩm
+      // B. [ƯU TIÊN TUYỆT ĐỐI #1]: Cập nhật thời gian thực từ ảnh trực tiếp của sản phẩm
       let directImg = prodObj ? (prodObj.image || prodObj.image_url || prodObj.imageUrl || "") : "";
       if (directImg && typeof directImg === "string" && directImg.trim() !== "") {
         let trimmed = directImg.trim();
@@ -11546,33 +11395,7 @@ if (typeof productOrId === "object") {
         } catch(e) {}
       }
 
-      // D. [ƯU TIÊN #3]: Tra cứu trực tiếp theo Product ID trong bảng CDN chuẩn của Shop
-      if (pId && typeof KTS_KNOWN_CDN_MAP !== "undefined") {
-        if (KTS_KNOWN_CDN_MAP[pId]) return KTS_KNOWN_CDN_MAP[pId];
-        if (KTS_KNOWN_CDN_MAP[pId.toUpperCase()]) return KTS_KNOWN_CDN_MAP[pId.toUpperCase()];
-      }
-
-      // E. [ƯU TIÊN #4]: Tra cứu theo tên trong KTS_IMG
-      const pName = String((prodObj && prodObj.name) || (typeof p === "object" && p.name) || "").toLowerCase();
-      if (typeof KTS_IMG !== "undefined") {
-        if (pName.includes("gemini") || pName.includes("veo")) return KTS_IMG["gemini_pro_veo3.png"] || "https://iili.io/nGQfXDX.png";
-        if (pName.includes("chatgpt") || pName.includes("gpt")) return KTS_IMG["chatgpt_plus.png"] || KTS_IMG["chatgpt_new_trial.png"];
-        if (pName.includes("canva")) return KTS_IMG["canva_edu.png"] || KTS_IMG["canva_edu.jpg"];
-        if (pName.includes("capcut")) return KTS_IMG["capcut_team_1m.jpg"] || KTS_IMG["capcut_20k.png"];
-        if (pName.includes("tiktok")) return KTS_IMG["tiktok_vietnam.png"] || KTS_IMG["tiktok_beta.png"];
-        if (pName.includes("gmail")) return KTS_IMG["gmail_co.png"] || KTS_IMG["gmail_7day.png"];
-        if (pName.includes("hotmail") || pName.includes("outlook")) return KTS_IMG["hotmail_outlook.png"] || KTS_IMG["outlook_trusted.jpg"];
-        if (pName.includes("youtube")) return KTS_IMG["youtube_premium.png"] || KTS_IMG["youtube_channel.png"];
-        if (pName.includes("facebook") || pName.includes("via")) return KTS_IMG["facebook_via.png"];
-        if (pName.includes("instagram") || pName.includes("threads")) return KTS_IMG["instagram.png"];
-        if (pName.includes("proxy") || pName.includes("vpn")) return KTS_IMG["proxy_4g.png"] || KTS_IMG["hma_vpn.png"];
-        if (pName.includes("zalo")) return KTS_IMG["zalo_group.png"];
-        if (pName.includes("kling")) return KTS_IMG["kling_ai.png"];
-        if (pName.includes("paypal")) return KTS_IMG["paypal_usdt.png"];
-        if (pName.includes("spotify")) return KTS_IMG["spotify_premium.png"];
-      }
-
-      return (typeof KTS_IMG !== "undefined" && KTS_IMG["gemini_pro_veo3.png"] && (pName.includes("gemini") || pName.includes("veo"))) ? KTS_IMG["gemini_pro_veo3.png"] : "https://iili.io/nGs8RDv.jpg";
+      return "https://iili.io/nGs8RDv.jpg";
     }
     window.resolveProductImage = resolveProductImage;
 
@@ -11585,11 +11408,8 @@ if (typeof productOrId === "object") {
       if (typeof resolveProductImage === 'function') {
         fallback = resolveProductImage({ id: pId, name: name });
       }
-      if (!fallback || fallback === KTS_CLEAN_FALLBACK_SVG || fallback.includes('nFV4Rln.png') || fallback.includes('nGQfXDX.png')) {
-        var isGemini = name.toLowerCase().includes('gemini') || name.toLowerCase().includes('veo');
-        fallback = (isGemini && typeof KTS_IMG !== 'undefined' && KTS_IMG['gemini_pro_veo3.png']) 
-          ? KTS_IMG['gemini_pro_veo3.png'] 
-          : 'https://iili.io/nGs8RDv.jpg';
+      if (!fallback || fallback.includes('nFV4Rln.png')) {
+        fallback = 'https://iili.io/nGs8RDv.jpg';
       }
       el.src = fallback;
     }
@@ -16129,40 +15949,7 @@ function syncAllOpenViewsStock(changedProdId) {
     // ============================================================================
     // LIÊN KẾT SẢN PHẨM ON-DEMAND API (MAPPING ENGINE v1.9.3)
     // ============================================================================
-    const DEFAULT_API_PRODUCT_MAPPINGS = {
-      "PROD_MU5PWT7PP7": {"enabled":true,"provider":"ultrammo","sourceProdId":"13629","sourcePrice":1200,"sourceProdName":"TÀI KHOẢN KLING AI 65 CREDIT","baseUrl":"https://ultrammo.com"},
-      "PROD_MTQZT2Y1": {"enabled":true,"provider":"nguyenlieummo","sourceProdId":"121063","sourcePrice":656,"sourceProdName":"Hotmail Trusted - OAuth2 [ Graph ] Live 12 - 36 Months"},
-      "PROD_MU5SPLMSEC": {"enabled":true,"provider":"selltainguyenmmo","sourceProdId":"31699","sourcePrice":16000,"sourceProdName":"🔥ChatGPT Free đã verify phone codex"},
-      "PROD_MU5T3T47AE": {"enabled":true,"provider":"selltainguyenmmo","sourceProdId":"32428","sourcePrice":33000,"sourceProdName":"NÂNG CẤP GEMINI PRO 18 THÁNG + GG 5TB , TẶNG KÈM NHIỀU AI CÓ CẢ VEO3 - DÙNG RIÊNG"},
-      "PROD_MU6R34FZ4Z": {"enabled":true,"provider":"selltainguyenmmo","sourceProdId":"23586","sourcePrice":1560000,"sourceProdName":"Google Gemini AI Veo3 - 18 Tháng"},
-      "PROD_MTPJ88O9": {"enabled":true,"provider":"selltainguyenmmo","sourceProdId":"25289","sourcePrice":60000,"sourceProdName":"NÂNG CẤP CANVA PRO 1 NĂM"},
-      "PROD_MUAULFFCDT": {"enabled":true,"provider":"selltainguyenmmo","sourceProdId":"31694","sourcePrice":300000,"sourceProdName":"CHATGPT PLUS 1 THÁNG ( DÙNG RIÊNG )"},
-      "PROD_MU4YOZEU2M": {"enabled":true,"provider":"selltainguyenmmo","sourceProdId":"25646","sourcePrice":198,"sourceProdName":"Outlook Hotmail Trusted - OAuth2 Live 6 - 12 tháng"},
-      "PROD_MUJVFEFFNP": {"enabled":true,"provider":"nguyenlieummo","sourceProdId":"122260","sourcePrice":2818,"sourceProdName":"Proxy IPv4 Datacenter Proxy US - Dùng Riêng ( 1 NGÀY ) ỔN ĐỊNH"},
-      "PROD_MUJQDTNIH9": {"enabled":true,"provider":"nguyenlieummo","sourceProdId":"122260","sourcePrice":2817.5,"sourceProdName":"Proxy Datacenter us - 1 ngày"},
-      "PROD_MUP5LB7VAB": {"enabled":true,"provider":"ultrammo","sourceProdId":"32822","sourcePrice":34000,"sourceProdName":"MAIL VIỆT CỔ KÈM KÊNH RANDOM 200x-2026 - GMAIL CỔ KÈM KÊNH CỔ RANDOM 200x-2018 – TRUST CAO, CHƯA QUA DỊCH VỤ | KHÔNG DÍNH SĐT ẨN","baseUrl":"https://ultrammo.com"},
-      "PROD_MUOSDN0FCU": {"enabled":true,"provider":"ultrammo","sourceProdId":"26784","sourcePrice":13000,"sourceProdName":"gmail new ngâm 1- 10 ngày(chỉ log phone)no 2fa","baseUrl":"https://ultrammo.com"},
-      "PROD_MUORGNEQOE": {"enabled":true,"provider":"ultrammo","sourceProdId":"26774","sourcePrice":80000,"sourceProdName":"Youtube Premium: 3 Tháng","baseUrl":"https://ultrammo.com"},
-      "PROD_MUOQS3DOIU": {"enabled":true,"provider":"ultrammo","sourceProdId":"33131","sourcePrice":2400,"sourceProdName":"TIKTOK VIỆT CỔ ĐÃ TẠO 1-3 NĂM HOTMAIL LIVE ( RANDOM ĐẶT ĐƠN ) HÀNG BẤT TỬ","baseUrl":"https://ultrammo.com"},
-      "PROD_MUOQDRL4F0": {"enabled":true,"provider":"ultrammo","sourceProdId":"33131","sourcePrice":2400,"sourceProdName":"TikTok VN Reg T1-2026 | Mail Live ( Có Oauth2 )","baseUrl":"https://ultrammo.com"},
-      "MUNUEKI3NM": {"enabled":true,"provider":"ultrammo","sourceProdId":"32088","sourcePrice":167000,"sourceProdName":"🔥Chat GPT Plus GGPay | 1 tháng - Bảo hành 24h - Chat gqt Plus Riêng tư - Dùng 1 tháng, Bảo hành full","baseUrl":"https://ultrammo.com"},
-      "PROD_MUNUEKI3NM": {"enabled":true,"provider":"ultrammo","sourceProdId":"32088","sourcePrice":167000,"sourceProdName":"🔥Chat GPT Plus GGPay | 1 tháng - Bảo hành 24h - Chat gqt Plus Riêng tư - Dùng 1 tháng, Bảo hành full","baseUrl":"https://ultrammo.com"},
-      "PROD_MUKAXC4Q9T": {"enabled":true,"provider":"ultrammo","sourceProdId":"25460","sourcePrice":6500,"sourceProdName":"Surfshark VPN (7 Days)","baseUrl":"https://ultrammo.com"},
-      "PROD_MUK7P74YNT": {"enabled":true,"provider":"ultrammo","sourceProdId":"26777","sourcePrice":30000,"sourceProdName":"Youtube Premium: 1 Tháng","baseUrl":"https://ultrammo.com"},
-      
-      "PROD_MUJZGSUPDI": {"enabled":true,"provider":"ultrammo","sourceProdId":"17406","sourcePrice":7500,"sourceProdName":"IG khỏe ngâm trên 6 tháng - IG strong over 6 months","baseUrl":"https://ultrammo.com"},
-      "PROD_MUJVJCV286": {"enabled":true,"provider":"ultrammo","sourceProdId":"34234","sourcePrice":13500,"sourceProdName":"Đổi IP Mobile 4G VinaPhone 5 Phút (1 Ngày)","baseUrl":"https://ultrammo.com"},
-      "PROD_MUJU6XY3HK": {"enabled":true,"provider":"ultrammo","sourceProdId":"34238","sourcePrice":220000,"sourceProdName":"Đổi IP Mobile 4G VinaPhone 5 Phút (30 Ngày)","baseUrl":"https://ultrammo.com"},
-      
-      "PROD_MUJGUY19DD": {"enabled":true,"provider":"ultrammo","sourceProdId":"26784","sourcePrice":13000,"sourceProdName":"gmail new ngâm 1- 10 ngày(chỉ log phone)no 2fa","baseUrl":"https://ultrammo.com"},
-      "PROD_MUH57035HQ": {"enabled":true,"provider":"ultrammo","sourceProdId":"13629","sourcePrice":1200,"sourceProdName":"TÀI KHOẢN KLING AI 65 CREDIT","baseUrl":"https://ultrammo.com"},
-      "PROD_MU2YQ1J3PY": {"enabled":true,"provider":"ultrammo","sourceProdId":"32561","sourcePrice":325,"sourceProdName":"Hotmail Trusted Còn skip 7 days (Đã bật Oauth2)","baseUrl":"https://ultrammo.com"},
-      "PROD_MU2BIFBBNE": {"enabled":true,"provider":"ultrammo","sourceProdId":"16159","sourcePrice":8500,"sourceProdName":"Key HMA Android/PC 20-30 Ngày ( Bảo Hành Full )","baseUrl":"https://ultrammo.com"},
-      
-      "PROD_MU2A2S732Y": {"enabled":true,"provider":"ultrammo","sourceProdId":"25265","sourcePrice":5500,"sourceProdName":"ExpressVPN (3 Days)","baseUrl":"https://ultrammo.com"},
-      
-      "PROD_MTQX7SIK": {"enabled":true,"provider":"ultrammo","sourceProdId":"34752","sourcePrice":225,"sourceProdName":"12h Tiếng Anh","baseUrl":"https://ultrammo.com"}
-    };
+    const DEFAULT_API_PRODUCT_MAPPINGS = {};
     const defaultMappings = DEFAULT_API_PRODUCT_MAPPINGS;
     window.defaultMappings = defaultMappings;
     window.DEFAULT_API_PRODUCT_MAPPINGS = DEFAULT_API_PRODUCT_MAPPINGS;
@@ -24888,18 +24675,24 @@ function syncAllOpenViewsStock(changedProdId) {
               const curLiveStock = (typeof getShopVariantStock === "function") ? getShopVariantStock(p, currentSelectedVariantIndex) : (p.stock || 0);
               if (typeof syncDetailStockUI === "function") syncDetailStockUI(curLiveStock);
 
-              // CẬP NHẬT ẢNH TỪ CLOUD WORKER (Bảo vệ tuyệt đối ảnh Admin đã sửa)
-              const savedAdminImg = localStorage.getItem("mmo_custom_img_" + p.id) || (p.slug ? localStorage.getItem("mmo_custom_img_" + p.slug) : "");
-              const finalImgToUse = (savedAdminImg && savedAdminImg.trim()) ? savedAdminImg.trim() : (wp.image || "");
+              // CẬP NHẬT ẢNH TỪ CLOUD WORKER (Ưu tiên tuyệt đối ảnh Live từ Turso Database SSOT)
+              const serverImg = (wp.image || wp.image_url || wp.imageUrl || "").trim();
+              const savedAdminImg = (localStorage.getItem("mmo_custom_img_" + p.id) || (p.slug ? localStorage.getItem("mmo_custom_img_" + p.slug) : "") || "").trim();
+              const finalImgToUse = serverImg || savedAdminImg || (p.image || "").trim();
               if (finalImgToUse && typeof finalImgToUse === "string" && finalImgToUse.trim() !== "") {
                 const low = finalImgToUse.toLowerCase();
-                if (!low.includes("selltainguyenmmo") && !low.includes("ultrammo") && !low.includes("placeholder")) {
-                  p.image = finalImgToUse.trim();
-                  p.image_url = finalImgToUse.trim();
-                  p.imageUrl = finalImgToUse.trim();
+                if (!low.includes("placeholder")) {
+                  const cleanFinal = finalImgToUse.trim();
+                  p.image = cleanFinal;
+                  p.image_url = cleanFinal;
+                  p.imageUrl = cleanFinal;
                   const dtlImgEl = document.getElementById("dtlImage");
-                  if (dtlImgEl) dtlImgEl.src = finalImgToUse.trim();
-                  if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, finalImgToUse.trim());
+                  if (dtlImgEl) dtlImgEl.src = cleanFinal;
+                  if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, cleanFinal);
+                  try {
+                    localStorage.setItem("mmo_custom_img_" + p.id, cleanFinal);
+                    if (p.slug) localStorage.setItem("mmo_custom_img_" + p.slug, cleanFinal);
+                  } catch(e) {}
                 }
               }
             }
