@@ -1009,54 +1009,6 @@ const API_URL = "";
     }
   },
   {
-    "id": "PROD_MUKAMO9XPD",
-    "name": "API CODEX - CLAUDE 50M TOKEN1 DAY",
-    "category": "AI & Video",
-    "price": 70000,
-    "stock": 10000,
-    "sold": 0,
-    "buffSold": 0,
-    "rating": 4.9,
-    "image": "https://iili.io/nGQqBeI.png",
-    "warranty": "Bảo Hành 1 Đổi 1",
-    "description": "Model dùng được: kimi-k3, qwen3.8-max, hy3, deepseek-v4-pro, deepseek-v4-flash, glm-5.3-flash\nBase URL: https://api.miraiapi.com/v1\nHướng Dẫn : https://miraiapi.com/usage\nBạn là Developer, Automation Engineer hay dân MMO đang tìm kiếm nguồn API Claude (Anthropic) hoặc API Codex (OpenAI) chất lượng cao để tích hợp vào ứng dụng, tool code, trợ lý ảo AI hoặc các hệ thống tự động hóa với chi phí tối ưu nhất?Shop chuyên cung cấp tài khoản và key API chuẩn, hoạt động mượt mà, sẵn sàng phục vụ mọi nhu cầu từ cá nhân đến doanh nghiệp!   🚀 Ưu điểm tuyệt đối của kho API tại shop:   🔑 Key chính hãng, hoạt động ổn định: Tốc độ phản hồi (Response time) cực nhanh, hạn chế tối đa tình trạng gián đoạn hay quá tải (Rate limit).🧠 Đa dạng các mô hình thông minh:Dòng Claude: Trợ thủ đắc lực về reasoning, phân tích code phức tạp, context window lớn.Dòng Codex / OpenAI: Tốc độ xử lý siêu việt, tối ưu tuyệt đối cho các tác vụ lập trình, sinh code và gọi hàm tự động.   💰 Tiết kiệm chi phí tối đa: Phù hợp cho cả anh em cần test dự án ngắn hạn lẫn các hệ thống chạy production dài lâu.   🔌 Dễ dàng tích hợp: Tương thích hoàn hảo với các IDE (VS Code, Cursor), Claude Code, các framework agent, tool bên thứ 3 hoặc code custom riêng.🛠️ Cam kết dịch vụ từ shop:🛡️ Bảo hành uy tín: Hỗ trợ 1 đổi 1 hoặc xử lý ngay lập tức nếu key gặp lỗi kích hoạt ban đầu.🚀 Cấp phát siêu tốc: Nhận ngay API Key định dạng chuẩn xác ngay sau khi thanh toán thành công.   💬 Hỗ trợ kỹ thuật tận tình: Hướng dẫn cấu hình kết nối chi tiết từ A-Z cho người mới bắt đầu.💡 Phù hợp cho: Lập trình viên, đội ngũ phát triển phần mềm, người làm tool automation, nghiên cứu AI hoặc các hệ thống cần gọi API số lượng lớn mỗi ngày!🛒 MUA API UY TÍN – KẾT NỐI MƯỢT MÀ NGAY HÔM NAY!💬 Inbox trực tiếp ngay cho shop hoặc để lại dấu chấm [ . ] bên dưới (kèm theo loại API bạn cần: Claude hay Codex) để được tư vấn gói phù hợp và chốt đơn nhanh chóng!📞 Hotline / Zalo / Telegram",
-    "variants": [
-      {
-        "name": "API - CLAUDE 50M tokens 1 NGÀY",
-        "price": 70000,
-        "stock": 10000,
-        "apiMapping": {
-          "enabled": true,
-          "provider": "nguyenlieummo",
-          "baseUrl": "https://nguyenlieummo.com.vn",
-          "apiKey": "",
-          "sourceProdId": "125564",
-          "sourceProdName": "API CODEX 10M Tokens - 1 DAYS",
-          "sourcePrice": 54337.5,
-          "sourceStock": 10000,
-          "targetProdId": "PROD_MUKAMO9XPD",
-          "targetProdName": "API CODEX - CLAUDE 50M TOKEN1 DAY"
-        },
-        "available": true,
-        "accounts": []
-      }
-    ],
-    "deliveryType": "api",
-    "delivery_type": "api",
-    "apiMapping": {
-      "enabled": true,
-      "provider": "nguyenlieummo",
-      "baseUrl": "https://nguyenlieummo.com.vn",
-      "apiKey": "",
-      "sourceProdId": "125564",
-      "sourceProdName": "API CODEX 10M Tokens - 1 DAYS",
-      "sourcePrice": 54337.5,
-      "sourceStock": 10000,
-      "targetProdId": "PROD_MUKAMO9XPD",
-      "targetProdName": "API CODEX - CLAUDE 50M TOKEN1 DAY"
-    }
-  },
-  {
     "id": "PROD_MUK7P74YNT",
     "name": "Nâng Cấp Youtube Premium Chính Chủ 1 Tháng",
     "category": "YOUTUBE",
@@ -2703,7 +2655,14 @@ const API_URL = "";
   "telegram +27 south africa 2fa veri phone tạo 3+ ngày",
   "twitter | email verified 2fa| enabled | tokens included",
   "nordvpn (7 days) - 1 năm",
-  "paypal 2025 - 2016 đã ngâm lâu cực kỳ trâu"
+  "paypal 2025 - 2016 đã ngâm lâu cực kỳ trâu",
+  "PROD_MUKAMO9XPD",
+  "api codex - claude 50m token1 day",
+  "api codex - claude 50m token 1 day",
+  "kts-api-codex-claude-50m-token1-day",
+  "kts-api-codex-claude-50m-token-1-day",
+  "api-codex-claude-50m-token1-day",
+  "api-codex-claude-50m-token-1-day"
 ];
     window.GLOBAL_PERMANENT_DELETED_IDS = GLOBAL_PERMANENT_DELETED_IDS;
 
@@ -5491,6 +5450,40 @@ if (typeof productOrId === "object") {
             el.remove();
           }
         });
+
+        // [XÓA SẠCH TRANG CHI TIẾT SẢN PHẨM NẾU ĐANG XEM SẢN PHẨM ĐÃ BỊ XÓA]
+        var curP = window.currentSelectedProduct || window._currentActiveDetailProduct;
+        var dtlIdEl = document.getElementById("dtlId");
+        var dtlTitleEl = document.getElementById("dtlTitle");
+        var curDtlId = curP ? String(curP.id || "").toLowerCase() : (dtlIdEl ? dtlIdEl.innerText.trim().toLowerCase() : "");
+        var curDtlName = curP ? String(curP.name || "").toLowerCase() : (dtlTitleEl ? dtlTitleEl.innerText.trim().toLowerCase() : "");
+        var curDtlSlug = curP ? String(curP.slug || "").toLowerCase() : "";
+
+        var isViewingDeleted = false;
+        if (curP && typeof isProductDeleted === "function" && isProductDeleted(curP)) {
+          isViewingDeleted = true;
+        } else if (curDtlId && (allDeleted.includes(curDtlId) || (typeof isProductDeleted === "function" && isProductDeleted(curDtlId)))) {
+          isViewingDeleted = true;
+        } else if (curDtlSlug && (allDeleted.includes(curDtlSlug) || (typeof isProductDeleted === "function" && isProductDeleted(curDtlSlug)))) {
+          isViewingDeleted = true;
+        } else if (curDtlName && allDeleted.some(function(d) { return d.length > 5 && (curDtlName === d || curDtlName.includes(d)); })) {
+          isViewingDeleted = true;
+        }
+
+        if (isViewingDeleted) {
+          window.currentSelectedProduct = null;
+          window._currentActiveDetailProduct = null;
+          try {
+            var curU = new URL(window.location.href);
+            curU.searchParams.delete("prod");
+            curU.searchParams.delete("product");
+            curU.searchParams.delete("view");
+            window.history.replaceState(null, "", curU.pathname + (curU.searchParams.toString() ? '?' + curU.searchParams.toString() : ''));
+          } catch(eU) {}
+          var dtlEl = document.getElementById("viewProductDetail");
+          if (dtlEl) dtlEl.style.display = "none";
+          if (typeof switchView === "function") switchView("viewStore");
+        }
       } catch(e) {}
     }
     window.purgeDeletedProductsFromDOM = purgeDeletedProductsFromDOM;
@@ -15705,12 +15698,33 @@ if (typeof productOrId === "object") {
         if (!MOCK_DATA.products) MOCK_DATA.products = [];
 
         // ĐỒNG BỘ TRIỆT ĐỂ VỚI TURSO CLOUD SQLITE (SSOT):
-        // BẢO TOÀN TUYỆT ĐỐI TOÀN BỘ SẢN PHẨM TRONG HỆ THỐNG:
+        const serverIds = new Set(res.products.map(p => String(p.id).toLowerCase()));
+        const serverSlugs = new Set(res.products.map(p => String(p.slug || '').toLowerCase()).filter(Boolean));
+        const serverNames = new Set(res.products.map(p => String(p.name || '').trim().toLowerCase()).filter(Boolean));
+
         MOCK_DATA.products = (MOCK_DATA.products || []).filter(p => {
           if (!p || !p.id) return false;
           if (deletedIds.includes(p.id) || (typeof isProductDeleted === "function" && isProductDeleted(p))) return false;
+
+          const pIdLower = String(p.id).toLowerCase();
+          const pSlugLower = String(p.slug || '').toLowerCase();
+          const pNameLower = String(p.name || '').trim().toLowerCase();
+          const inServer = serverIds.has(pIdLower) || (pSlugLower && serverSlugs.has(pSlugLower)) || (pNameLower && serverNames.has(pNameLower));
+
+          // Khóa 15 giây nếu vừa mới bấm lưu trên tab này
+          const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + p.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(p.id).toUpperCase())) || (p._lastEditedAt || 0);
+          const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 15000));
+
+          if (!inServer && !isLocallyInFlight) {
+            // Sản phẩm đã bị xóa khỏi Turso SSOT -> tự động thêm vào blacklist deletedIds
+            if (!deletedIds.includes(p.id)) deletedIds.push(p.id);
+            if (p.slug && !deletedIds.includes(p.slug)) deletedIds.push(p.slug);
+            if (p.name && !deletedIds.includes(p.name)) deletedIds.push(p.name);
+            return false;
+          }
           return true;
         });
+        try { localStorage.setItem("mmo_deleted_product_ids", JSON.stringify(deletedIds)); } catch(eDl) {}
 
         res.products.forEach(function(tp) {
           if (!tp || !tp.id || tp.id === 'zalo-new-2016' || tp.id === 'PROD_CODE') return;
@@ -26466,10 +26480,16 @@ function syncAllOpenViewsStock(changedProdId) {
         } catch(e) {}
       }
 
-      // TikTok Brazil legacy alias lookup ONLY
       if (!p && (cleanId === "PROD_MTPG0PUD" || cleanId === "PROD_MTPIJ9XV" || cleanId === "SP_TIKTOK_BRAZIL")) {
         const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
         p = allProds.find(item => item && !(typeof isProductDeleted === "function" && isProductDeleted(item)) && (item.id === "PROD_MTPIJ9XV" || item.id === "PROD_MTPG0PUD" || (item.name && item.name.toUpperCase().includes("TIKTOK") && item.name.toUpperCase().includes("BRAZIL"))));
+      }
+
+      // KIỂM TRA LẠI: NẾU SẢN PHẨM TÌM THẤY ĐÃ BỊ XÓA -> KHÔNG ĐƯỢC PHÉP HIỂN THỊ
+      if (p && typeof isProductDeleted === "function" && isProductDeleted(p)) {
+        console.warn("[KTS] Sản phẩm đã bị xóa:", p.id, p.name);
+        handleProductNotFoundUI(cleanId);
+        return;
       }
 
       // BƯỚC 3: XỬ LÝ KHI TÌM THẤY HOẶC CHƯA CÓ TRONG LOCAL
@@ -36168,6 +36188,13 @@ function getProductSchemaReviews(p, idx) {
         var toAdd = [targetId, pid, prodName];
         if (p && p.slug) toAdd.push(p.slug);
         if (p && p.name) toAdd.push(p.name);
+        if (typeof generateCleanKtsSlug === "function") {
+          toAdd.push(generateCleanKtsSlug(prodName, targetId));
+          toAdd.push(generateCleanKtsSlug(prodName));
+        }
+        if (typeof generateProductSlug === "function") {
+          toAdd.push(generateProductSlug(prodName));
+        }
         toAdd.forEach(function(val) {
           if (val && typeof val === "string") {
             var tr = val.trim();
@@ -36177,6 +36204,10 @@ function getProductSchemaReviews(p, idx) {
           }
         });
         localStorage.setItem("mmo_deleted_product_ids", JSON.stringify(deletedIds));
+        if (typeof GLOBAL_PERMANENT_DELETED_IDS !== "undefined" && Array.isArray(GLOBAL_PERMANENT_DELETED_IDS)) {
+          if (!GLOBAL_PERMANENT_DELETED_IDS.includes(targetId)) GLOBAL_PERMANENT_DELETED_IDS.push(targetId);
+          if (!GLOBAL_PERMANENT_DELETED_IDS.includes(pid)) GLOBAL_PERMANENT_DELETED_IDS.push(pid);
+        }
       } catch(eDelList) {}
 
       // 2. Lọc bỏ vĩnh viễn khỏi danh sách sản phẩm MOCK_DATA.products
@@ -36253,16 +36284,47 @@ function getProductSchemaReviews(p, idx) {
         _viewRendered["viewAllProducts"] = false;
       }
 
-      // 6. Xóa URL param nếu đang xem chi tiết sản phẩm này
+      // 6. Xóa URL param nếu đang xem chi tiết sản phẩm này HOẶC chuyển về Cửa Hàng nếu đang mở chi tiết
       try {
         var curUrl = new URL(window.location.href);
-        var curProdParam = curUrl.searchParams.get("prod") || curUrl.searchParams.get("product");
-        if (curProdParam === pid || curProdParam === targetId) {
+        var curProdParam = (curUrl.searchParams.get("prod") || curUrl.searchParams.get("product") || "").trim().toLowerCase();
+        var curViewParam = (curUrl.searchParams.get("view") || "").trim();
+        var isCurrentProductMatch = false;
+
+        var activeP = window.currentSelectedProduct || window._currentActiveDetailProduct;
+        if (activeP) {
+          var aId = String(activeP.id || "").trim().toLowerCase();
+          var aName = String(activeP.name || "").trim().toLowerCase();
+          var aSlug = String(activeP.slug || "").trim().toLowerCase();
+          if (aId === targetId.toLowerCase() || aId === pid.toLowerCase() || aName === prodName.toLowerCase() || (aSlug && (aSlug === targetId.toLowerCase() || aSlug === pid.toLowerCase()))) {
+            isCurrentProductMatch = true;
+          }
+        }
+
+        if (curProdParam) {
+          var checkMatches = [targetId.toLowerCase(), pid.toLowerCase(), prodName.toLowerCase()];
+          if (p && p.slug) checkMatches.push(String(p.slug).toLowerCase());
+          if (typeof generateCleanKtsSlug === "function") {
+            checkMatches.push(generateCleanKtsSlug(prodName, targetId).toLowerCase());
+            checkMatches.push(generateCleanKtsSlug(prodName).toLowerCase());
+          }
+          if (checkMatches.some(function(m) { return m && (curProdParam === m || curProdParam.replace(/^kts-/, '') === m.replace(/^kts-/, '')); })) {
+            isCurrentProductMatch = true;
+          }
+        }
+
+        var dtlViewEl = document.getElementById("viewProductDetail");
+        var isDtlViewOpen = (curViewParam === "viewProductDetail") || (dtlViewEl && dtlViewEl.style.display !== "none");
+
+        if (isCurrentProductMatch || isDtlViewOpen) {
           curUrl.searchParams.delete("prod");
           curUrl.searchParams.delete("product");
           curUrl.searchParams.delete("view");
           window.history.replaceState(null, "", curUrl.pathname + (curUrl.searchParams.toString() ? '?' + curUrl.searchParams.toString() : ''));
+          window.currentSelectedProduct = null;
+          window._currentActiveDetailProduct = null;
           if (typeof currentSelectedProduct !== "undefined") currentSelectedProduct = null;
+          if (dtlViewEl) dtlViewEl.style.display = "none";
           if (typeof switchView === "function") switchView("viewStore");
         }
       } catch(eUrl) {}
