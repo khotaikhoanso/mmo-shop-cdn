@@ -1777,7 +1777,7 @@ if (typeof productOrId === "object") {
         if (stored !== null) {
           let list = JSON.parse(stored);
           if (Array.isArray(list) && list.length > 0) {
-            const clean = list.map(e => (e || "").toLowerCase().trim()).filter(Boolean);
+            const clean = list.map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com");
             if (!clean.includes(rootEmail)) clean.unshift(rootEmail);
             return clean;
           }
@@ -1791,6 +1791,7 @@ if (typeof productOrId === "object") {
 
     function saveAdminEmails(list) {
       if (!Array.isArray(list)) list = [];
+      list = list.map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com");
       try {
         localStorage.setItem("mmo_admin_emails", JSON.stringify(list));
       } catch(e) {}
@@ -1871,7 +1872,7 @@ if (typeof productOrId === "object") {
 
           // 5. Admin Emails
           if (res.settings.adminEmails) {
-            let cloudEmails = res.settings.adminEmails.split(",").map(e => (e || "").trim().toLowerCase()).filter(Boolean);
+            let cloudEmails = res.settings.adminEmails.split(",").map(e => (e || "").trim().toLowerCase()).filter(e => e && e !== "hoangtuananh0968@gmail.com");
             if (cloudEmails.length > 0) {
               // Đảm bảo ROOT_ADMIN_EMAIL luôn có trong danh sách
               const rootEmail = (ROOT_ADMIN_EMAIL || "").toLowerCase().trim();
@@ -1886,10 +1887,18 @@ if (typeof productOrId === "object") {
                 if (!cloudEmails.includes(myEmail)) {
                   currentUser.role = "Thành Viên";
                   localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+                  try {
+                    localStorage.removeItem("mmo_admin_authenticated");
+                    localStorage.removeItem("mmo_is_admin");
+                    localStorage.removeItem("mmo_user_role");
+                    sessionStorage.removeItem("mmo_admin_authenticated");
+                    sessionStorage.removeItem("mmo_is_admin");
+                    sessionStorage.removeItem("mmo_user_role");
+                  } catch(e) {}
                   if (typeof updateUserUI === "function") updateUserUI();
                   const curView = localStorage.getItem("mmo_current_view");
                   if (curView === "viewAdmin" && typeof switchView === "function") {
-                    showToast("⚠️ Tài khoản của bạn đã bị rút quyền Quản Trị Viên!", "warning");
+                    showToast("⚠️ Tài khoản của bạn không có quyền Quản Trị Viên!", "warning");
                     switchView("viewStore");
                   }
                 }
@@ -1904,7 +1913,49 @@ if (typeof productOrId === "object") {
     window.syncAdminEmailsFromCloud = syncAdminEmailsFromCloud;
 
     function isAdminUser(user) {
-      // 0. Kiểm tra Session Flags & Local Flags tức thì 0ms
+      if (!user) {
+        user = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
+      }
+      if (!user) {
+        try {
+          const raw = localStorage.getItem("mmo_user");
+          if (raw) user = JSON.parse(raw);
+        } catch(e) {}
+      }
+
+      const userEmail = (user && (user.email || user.name || user.userId) ? String(user.email || user.name || user.userId).toLowerCase().trim() : "");
+
+      // 0. BẢO VỆ CHẶN TỐI CAO: Tuyệt đối cấm tài khoản khách hoangtuananh0968@gmail.com có quyền Admin
+      if (userEmail === "hoangtuananh0968@gmail.com") {
+        try {
+          if (typeof localStorage !== "undefined") {
+            localStorage.removeItem("mmo_admin_authenticated");
+            localStorage.removeItem("mmo_is_admin");
+            localStorage.removeItem("mmo_user_role");
+          }
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.removeItem("mmo_admin_authenticated");
+            sessionStorage.removeItem("mmo_is_admin");
+            sessionStorage.removeItem("mmo_user_role");
+          }
+        } catch(e) {}
+        return false;
+      }
+
+      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
+
+      // 1. Nếu có user đang đăng nhập: Bắt buộc email phải thuộc danh sách admin hợp lệ
+      if (userEmail) {
+        if (userEmail === rootEmail || userEmail === "khotaikhoanso.net@gmail.com" || userEmail === "admin@khotaikhoanso.net") return true;
+        if (userEmail.startsWith("khotaikhoanso")) return true;
+        const adminList = (typeof getAdminEmails === "function") 
+          ? getAdminEmails().map(e => (e || "").toLowerCase().trim()).filter(e => e && e !== "hoangtuananh0968@gmail.com") 
+          : [rootEmail];
+        if (adminList.includes(userEmail)) return true;
+        return false;
+      }
+
+      // 2. Không có user đăng nhập: Chỉ kiểm tra Session Flags & Local Flags của trình duyệt khi khách login Admin
       try {
         if (typeof sessionStorage !== "undefined" && (sessionStorage.getItem("mmo_admin_authenticated") === "true" || sessionStorage.getItem("mmo_is_admin") === "1" || sessionStorage.getItem("mmo_is_admin") === "true" || sessionStorage.getItem("mmo_user_role") === "ADMIN")) {
           return true;
@@ -1916,36 +1967,6 @@ if (typeof productOrId === "object") {
           return true;
         }
       } catch(e) {}
-
-      if (!user) {
-        user = (typeof getEffectiveUser === "function") ? getEffectiveUser() : (currentUser || (typeof window !== "undefined" ? window.currentUser : null));
-      }
-      if (!user) {
-        try {
-          const raw = localStorage.getItem("mmo_user");
-          if (raw) user = JSON.parse(raw);
-        } catch(e) {}
-      }
-      if (!user) return false;
-
-      // 1. Kiểm tra theo Role Quản Trị Viên
-      const uRole = String(user.role || "").toUpperCase().trim();
-      if (uRole === "ADMIN" || uRole.includes("QUẢN TRỊ") || uRole.includes("QUAN TRI") || user.isAdmin === true) return true;
-      
-      const userEmail = String(user.email || user.name || user.userId || "").toLowerCase().trim();
-      if (!userEmail) return false;
-
-      const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
-      
-      // 2. Kiểm tra theo Email hoặc Tên tài khoản Admin
-      if (userEmail === rootEmail || userEmail === "khotaikhoanso.net@gmail.com" || userEmail === "khotaikhoanso.net" || userEmail === "admin@yourshop.com" || userEmail === "admin@khotaikhoanso.net" || userEmail === "hoangtuananh0968@gmail.com") return true;
-      if (userEmail.startsWith("khotaikhoanso")) return true;
-      if (userEmail.includes("admin") && !userEmail.includes("@gmail.com")) return true;
-      
-      const adminList = (typeof getAdminEmails === "function") 
-        ? getAdminEmails().map(e => (e || "").toLowerCase().trim()).filter(Boolean) 
-        : [rootEmail];
-      if (adminList.includes(userEmail)) return true;
 
       return false;
     }
@@ -37205,9 +37226,7 @@ function getProductSchemaReviews(p, idx) {
       const cleanId = String(orderId).replace(/#/g, "").trim();
 
       // KIỂM TRA QUYỀN ADMIN: Trang chi tiết Stepper (Hình 1) chỉ dành riêng cho Admin Quản Trị
-      const isAdmUser = (typeof isAdminUser === "function" && isAdminUser()) ||
-        (typeof currentUser !== "undefined" && currentUser && currentUser.email === "hoangtuananh0968@gmail.com") ||
-        (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com"));
+      const isAdmUser = (typeof isAdminUser === "function" && isAdminUser());
 
       if (!isAdmUser) {
         // Khách hàng thông thường: BỎ HOÀN TOÀN HÌNH 1, không mở viewPreOrderDetail
@@ -38363,10 +38382,7 @@ function executeAdminFulfillPreOrder() {
       _adminPreOrdersPollingInterval = setInterval(async function() {
         try {
           const curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
-          const isAdm = (typeof isAdminUser === "function" && isAdminUser(curUser)) || 
-            (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_admin_authenticated") === "true")) ||
-            (curUser && curUser.email === "hoangtuananh0968@gmail.com") ||
-            (typeof localStorage !== "undefined" && localStorage.getItem("mmo_user_email") === "hoangtuananh0968@gmail.com");
+          const isAdm = (typeof isAdminUser === "function" && isAdminUser(curUser));
           if (!isAdm) return;
 
           const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
