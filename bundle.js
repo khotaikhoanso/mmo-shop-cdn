@@ -13567,8 +13567,9 @@ if (typeof productOrId === "object") {
           const inServer = serverIds.has(pIdLower) || (pSlugLower && serverSlugs.has(pSlugLower)) || (pNameLower && serverNames.has(pNameLower));
 
           // Khóa 15 giây nếu vừa mới bấm lưu trên tab này
+          // Khóa 120 giây bảo vệ tuyệt đối nếu vừa mới bấm lưu/sửa trên tab này
           const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + p.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(p.id).toUpperCase())) || (p._lastEditedAt || 0);
-          const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 15000));
+          const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 120000));
 
           if (!inServer && !isLocallyInFlight) {
             // Sản phẩm đã bị xóa khỏi Turso SSOT -> tự động thêm vào blacklist deletedIds
@@ -13607,11 +13608,13 @@ if (typeof productOrId === "object") {
           const existingIdx = MOCK_DATA.products.findIndex(p => p && (String(p.id).toLowerCase() === String(tp.id).toLowerCase() || (tp.slug && p.slug && String(p.slug).toLowerCase() === String(tp.slug).toLowerCase())));
           const cur = existingIdx !== -1 ? MOCK_DATA.products[existingIdx] : null;
           
-          // Khóa 15 giây nếu vừa mới bấm lưu trên tab này
+          // Khóa 120 giây bảo vệ dữ liệu đang sửa
           const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + tp.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(tp.id).toUpperCase())) || (cur && cur._lastEditedAt) || 0;
-          const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 15000));
+          const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 120000));
 
-          let targetImage = tpImg;
+          // Ưu tiên tuyệt đối ảnh mới sửa của Admin trong localStorage, không bao giờ bị đè bởi ảnh cũ từ server
+          const localCustomImg = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_img_" + tp.id) || localStorage.getItem("mmo_custom_img_" + String(tp.id).toUpperCase())) : "";
+          let targetImage = (localCustomImg && !localCustomImg.includes("img_17914936")) ? localCustomImg : tpImg;
           if (!targetImage || targetImage.includes("img_17914936")) {
             if (typeof resolveProductImage === "function") {
               targetImage = resolveProductImage(tp);
@@ -21564,6 +21567,48 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.handleProdImgInput = handleProdImgInput;
 
+    function clearProductImage(pId) {
+      if (!pId) return;
+      try {
+        localStorage.removeItem("mmo_custom_img_" + pId);
+        localStorage.removeItem("mmo_custom_img_" + String(pId).toUpperCase());
+        localStorage.removeItem("mmo_custom_img_" + String(pId).toLowerCase());
+        if (typeof KTS_PROD_TO_IILI !== "undefined") {
+          delete KTS_PROD_TO_IILI[pId];
+          delete KTS_PROD_TO_IILI[String(pId).toUpperCase()];
+        }
+        if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+          delete KTS_KNOWN_CDN_MAP[pId];
+          delete KTS_KNOWN_CDN_MAP[String(pId).toUpperCase()];
+        }
+        if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+          const pObj = MOCK_DATA.products.find(p => p && (String(p.id).toLowerCase() === String(pId).toLowerCase()));
+          if (pObj) {
+            if (pObj.slug) {
+              localStorage.removeItem("mmo_custom_img_" + pObj.slug);
+              if (typeof KTS_PROD_TO_IILI !== "undefined") delete KTS_PROD_TO_IILI[pObj.slug];
+              if (typeof KTS_KNOWN_CDN_MAP !== "undefined") delete KTS_KNOWN_CDN_MAP[pObj.slug];
+            }
+            pObj.image = "";
+            pObj.image_url = "";
+            pObj.imageUrl = "";
+          }
+        }
+      } catch(e) {}
+    }
+    window.clearProductImage = clearProductImage;
+
+    function clearModalProductImage() {
+      const pId = (document.getElementById("admProdId")?.value || "").trim();
+      if (pId) clearProductImage(pId);
+      const imgInput = document.getElementById("admProdImage");
+      if (imgInput) imgInput.value = "";
+      const preview = document.getElementById("admProdImgPreview");
+      if (preview) preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+      if (typeof showToast === "function") showToast("🗑️ Đã xóa bỏ ảnh cũ!", "info");
+    }
+    window.clearModalProductImage = clearModalProductImage;
+
     function handleUploadProductImage(e) {
       const file = e.target.files && e.target.files[0];
       if (!file) return;
@@ -21578,7 +21623,13 @@ function syncAllOpenViewsStock(changedProdId) {
         return;
       }
 
-      showToast("⏳ Đang xử lý & tối ưu hóa ảnh...", "info");
+      // 1. XÓA BỎ NGAY TOÀN BỘ DỮ LIỆU ẢNH CŨ CỦA SẢN PHẨM NÀY (THEO YÊU CẦU BẮT BUỘC)
+      const pId = (document.getElementById("admProdId")?.value || "").trim();
+      if (pId) {
+        clearProductImage(pId);
+      }
+
+      showToast("⏳ Đang xóa sạch ảnh cũ & tải ảnh mới lên...", "info");
       const reader = new FileReader();
       reader.onload = function(evt) {
         const rawData = evt.target.result;
@@ -21586,7 +21637,7 @@ function syncAllOpenViewsStock(changedProdId) {
         img.onload = async function() {
           try {
             const canvas = document.createElement("canvas");
-            const TARGET_SIZE = 420;
+            const TARGET_SIZE = 500;
             canvas.width = TARGET_SIZE;
             canvas.height = TARGET_SIZE;
             const ctx = canvas.getContext("2d");
@@ -21605,15 +21656,102 @@ function syncAllOpenViewsStock(changedProdId) {
             }
             ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, TARGET_SIZE, TARGET_SIZE);
 
-            // Nén JPEG 0.80 siêu nhẹ (~20KB), lưu trữ siêu tốc chống tràn quota
-            const compressed = canvas.toDataURL("image/jpeg", 0.80);
+            // Nén JPEG 0.82 chất lượng cao, gọn nhẹ
+            const compressed = canvas.toDataURL("image/jpeg", 0.82);
 
             const preview = document.getElementById("admProdImgPreview");
             if (preview) preview.src = compressed;
             const imgInput = document.getElementById("admProdImage");
             if (imgInput) imgInput.value = compressed;
 
-            showToast("🎉 Đã tối ưu hóa & lưu ảnh sản phẩm thành công!", "success");
+            // 2. TẢI NGAY LÊN MÁY CHỦ CLOUDFLARE WORKER / CDN VĨNH VIỄN
+            const workerUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") 
+              ? MMO_WORKER_API.getApiUrl() 
+              : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+            const adminSec = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
+              ? MMO_WORKER_API.getAdminSecret() 
+              : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+
+            try {
+              const upRes = await fetch(workerUrl + "/api/upload-image", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + adminSec,
+                  "x-admin-token": adminSec
+                },
+                body: JSON.stringify({ image: compressed, mimeType: "image/jpeg" })
+              });
+              if (upRes.ok) {
+                const upData = await upRes.json();
+                const newCdnUrl = upData.url || upData.turso_url;
+                if (newCdnUrl && (newCdnUrl.startsWith("http://") || newCdnUrl.startsWith("https://"))) {
+                  if (imgInput) imgInput.value = newCdnUrl;
+                  if (preview) preview.src = newCdnUrl;
+
+                  if (pId) {
+                    try {
+                      localStorage.setItem("mmo_custom_img_" + pId, newCdnUrl);
+                      localStorage.setItem("mmo_custom_img_" + pId.toUpperCase(), newCdnUrl);
+                      localStorage.setItem("mmo_last_edited_" + pId, String(Date.now()));
+                      localStorage.setItem("mmo_last_edited_" + pId.toUpperCase(), String(Date.now()));
+                      if (typeof KTS_PROD_TO_IILI !== "undefined") {
+                        KTS_PROD_TO_IILI[pId] = newCdnUrl;
+                        KTS_PROD_TO_IILI[pId.toUpperCase()] = newCdnUrl;
+                      }
+                      if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+                        KTS_KNOWN_CDN_MAP[pId] = newCdnUrl;
+                        KTS_KNOWN_CDN_MAP[pId.toUpperCase()] = newCdnUrl;
+                      }
+                      if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+                        const pObj = MOCK_DATA.products.find(p => p && (String(p.id).toLowerCase() === pId.toLowerCase()));
+                        if (pObj) {
+                          pObj.image = newCdnUrl;
+                          pObj.image_url = newCdnUrl;
+                          pObj.imageUrl = newCdnUrl;
+                          pObj._lastEditedAt = Date.now();
+                          if (pObj.slug) {
+                            localStorage.setItem("mmo_custom_img_" + pObj.slug, newCdnUrl);
+                            if (typeof KTS_PROD_TO_IILI !== "undefined") KTS_PROD_TO_IILI[pObj.slug] = newCdnUrl;
+                            if (typeof KTS_KNOWN_CDN_MAP !== "undefined") KTS_KNOWN_CDN_MAP[pObj.slug] = newCdnUrl;
+                          }
+                          if (typeof broadcastProductUpdateRealtime === "function") {
+                            broadcastProductUpdateRealtime(pObj);
+                          }
+                        }
+                      }
+                    } catch(eStore) {}
+
+                    // Đồng bộ lưu trực tiếp tức thì vào Turso Database
+                    try {
+                      fetch(workerUrl + "/api/admin/products/save", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": "Bearer " + adminSec,
+                          "x-admin-token": adminSec
+                        },
+                        body: JSON.stringify({ product: { id: pId, name: (document.getElementById("admProdName")?.value || pId), image: newCdnUrl, image_url: newCdnUrl, imageUrl: newCdnUrl } })
+                      }).catch(function() {});
+                    } catch(eFastTurso) {}
+                  }
+                  showToast("🎉 Đã tải ảnh mới lên máy chủ & xóa sạch ảnh cũ thành công!", "success");
+                  return;
+                }
+              }
+            } catch(eUpErr) {
+              console.warn("Upload to worker error:", eUpErr);
+            }
+
+            if (pId) {
+              try {
+                localStorage.setItem("mmo_custom_img_" + pId, compressed);
+                localStorage.setItem("mmo_custom_img_" + pId.toUpperCase(), compressed);
+                localStorage.setItem("mmo_last_edited_" + pId, String(Date.now()));
+                localStorage.setItem("mmo_last_edited_" + pId.toUpperCase(), String(Date.now()));
+              } catch(eLoc) {}
+            }
+            showToast("🎉 Đã tối ưu hóa ảnh mới & xóa sạch ảnh cũ!", "success");
           } catch(err) {
             console.error("Canvas error in bundle:", err);
             const pPrev = document.getElementById("admProdImgPreview");
