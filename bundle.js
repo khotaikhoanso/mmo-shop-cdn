@@ -24560,6 +24560,33 @@ function syncAllOpenViewsStock(changedProdId) {
           if (typeof refreshActiveProductDetailUI === "function") refreshActiveProductDetailUI(p);
           if (typeof renderDetailRelatedProducts === "function") renderDetailRelatedProducts(p);
         } catch(eRenderDetail) {}
+        // [REALTIME LIVE PRODUCT DATA SYNC]: Luon nap ngam du lieu moi nhat tu Cloudflare Worker / Turso SSOT
+        try {
+          if (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.isConfigured()) {
+            MMO_WORKER_API.fetchProduct(cleanId, { nocache: true }).then(function(res) {
+              if (res && res.success && res.product && !(typeof isProductDeleted === "function" && isProductDeleted(res.product))) {
+                const freshP = res.product;
+                if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+                  const exIdx = MOCK_DATA.products.findIndex(x => x && (String(x.id).toLowerCase() === String(freshP.id).toLowerCase() || (freshP.slug && String(x.slug).toLowerCase() === String(freshP.slug).toLowerCase())));
+                  if (exIdx !== -1) {
+                    MOCK_DATA.products[exIdx] = Object.assign({}, MOCK_DATA.products[exIdx], freshP);
+                  } else {
+                    MOCK_DATA.products.unshift(freshP);
+                  }
+                  try {
+                    localStorage.setItem("mmo_products", JSON.stringify(MOCK_DATA.products));
+                    localStorage.setItem("mmo_admin_products", JSON.stringify(MOCK_DATA.products));
+                  } catch(eLsUp) {}
+                }
+                currentSelectedProduct = Object.assign({}, currentSelectedProduct || {}, freshP);
+                window.currentSelectedProduct = currentSelectedProduct;
+                window._currentActiveDetailProduct = currentSelectedProduct;
+                if (typeof refreshActiveProductDetailUI === "function") refreshActiveProductDetailUI(freshP);
+                if (typeof renderDetailRelatedProducts === "function") renderDetailRelatedProducts(freshP);
+              }
+            }).catch(function(errLiveProd) {});
+          }
+        } catch(eLiveSync) {}
         try { window.scrollTo(0, 0); } catch(e) {}
       } else {
         // Nếu tiêu đề trang đã hiển thị sản phẩm hợp lệ, không giật màn hình hoặc tải lại
