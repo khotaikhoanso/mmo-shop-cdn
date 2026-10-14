@@ -7051,21 +7051,29 @@ if (typeof productOrId === "object") {
         if (ordersRes.status === "fulfilled" && ordersRes.value && Array.isArray(ordersRes.value.orders)) {
           ordersRes.value.orders.forEach(o => {
             const oId = String(o.orderId || "").trim();
-            const hasAccounts = Boolean(o.accounts || o.credentials || String(o.note || "").includes("|") || String(o.note || "").includes("@hotmail") || String(o.note || "").includes("@gmail") || String(o.note || "").includes("@outlook") || String(o.note || "").includes("YetskoAmoako28") || String(o.note || "").includes("charleslagankieran") || String(o.note || "").includes("nguyenhuongliendindenn"));
-            const isDep = !hasAccounts && !oId.startsWith("DH") && (o.prodId === "NAP_VI" || oId.startsWith("NAP") || String(o.prodName || "").toLowerCase().includes("nạp tiền ví") || String(o.prodName || "").toLowerCase().includes("nạp tiền vào ví"));
-            const isPaid = o.status === "COMPLETED" || o.status === "PAID";
+            const pNameLow = String(o.prodName || o.productName || "").toLowerCase();
+            const pIdUp = String(o.prodId || "").toUpperCase();
+            const isDep = pIdUp === "NAP_VI" || pIdUp.startsWith("NAP") || oId.startsWith("NAP") || pNameLow.includes("nạp tiền ví") || pNameLow.includes("nạp tiền vào ví");
+            const st = String(o.status || "").toLowerCase();
+            const isPaid = st.includes("completed") || st.includes("paid") || st.includes("thành công") || st.includes("success");
             if (isDep && isPaid) {
+              let realAmt = Number(o.totalAmount || o.price || 0);
+              if (o.accounts && String(o.accounts).includes("Đã cộng ")) {
+                const m = String(o.accounts).match(/Đã cộng ([\d\.]+) VN[ĐD]/i);
+                if (m && m[1]) realAmt = parseInt(m[1].replace(/\./g, ''), 10);
+              }
+              if (realAmt <= 0) realAmt = Number(o.totalAmount || o.price || 0) || 20000;
               newDeps.push({
                 id: oId,
                 orderId: oId,
                 prodId: "NAP_VI",
                 prodName: o.prodName || "Nạp tiền vào ví điện tử",
-                amount: Number(o.totalAmount || o.price || 0) || 20000,
+                amount: realAmt,
                 email: cleanEmail,
                 userEmail: cleanEmail,
                 userName: cleanEmail.split("@")[0],
                 status: "COMPLETED",
-                note: o.note || ("Đã cộng " + formatVND(Number(o.totalAmount || 0)) + " vào ví"),
+                note: o.accounts || o.note || ("Đã cộng " + formatVND(realAmt) + " vào ví"),
                 time: o.createdAt || (new Date().toLocaleString("vi-VN")),
                 date: o.createdAt || (new Date().toLocaleString("vi-VN")),
                 type: "Nạp tiền VietQR / SePay"
@@ -7175,11 +7183,15 @@ if (typeof productOrId === "object") {
               const tLow = String(tx.type || "").toLowerCase();
               const nLow = String(tx.note || "").toLowerCase();
               const oIdStr = String(tx.orderId || tx.id || "");
-              const isRefund = tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
-              const isPurchase = !isRefund && (tLow.includes("thanh toán") || tLow.includes("mua hàng") || amt < 0 || nLow.includes("|") || oIdStr.startsWith("DH") || oIdStr.startsWith("ORD"));
+              const oIdStrUp = oIdStr.toUpperCase();
+              const isRefund = tx.isRefund || tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
+              const isDeposit = !isRefund && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || nLow.includes("nạp tiền vào ví") || nLow.includes("nạp tiền ví") || nLow.includes("đã cộng"));
+              const isPurchase = !isRefund && !isDeposit && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || tLow.includes("thanh toán") || (oIdStrUp.startsWith("DH") && !nLow.includes("nạp tiền")) || oIdStrUp.startsWith("ORD") || nLow.includes("|"));
 
               if (isPurchase) {
                 amt = -Math.abs(amt);
+              } else if (isDeposit || isRefund) {
+                amt = +Math.abs(amt);
               }
 
               const isPlus = amt > 0;
@@ -7372,29 +7384,39 @@ if (typeof productOrId === "object") {
             const ordTime = o.date || (o.createdAt ? new Date(o.createdAt).toLocaleString("vi-VN") : "") || "";
 
             // PHÂN BIỆT ĐƠN NẠP TIỀN VÀ ĐƠN MUA HÀNG
-            const hasAccounts = Boolean(o.accounts || o.credentials || String(o.note || "").includes("|"));
-            const isDepositOrder = !hasAccounts && (
-              o.prodId === "NAP_VI" || 
+            const pNameLow = String(pName).toLowerCase();
+            const pIdUp = String(o.prodId || "").toUpperCase();
+            const isDepositOrder = (
+              pIdUp === "NAP_VI" || 
+              pIdUp.startsWith("NAP") || 
               oId.startsWith("NAP") || 
               oId.startsWith("DEP") ||
-              String(pName).toLowerCase().includes("nạp tiền ví") || 
-              String(pName).toLowerCase().includes("nạp tiền vào ví")
+              pNameLow.includes("nạp tiền ví") || 
+              pNameLow.includes("nạp tiền vào ví") ||
+              pNameLow.includes("nạp tiền thủ công")
             );
 
             if (isDepositOrder) {
               const st = String(o.status || "").toLowerCase();
               const isPaid = st.includes("thành công") || st.includes("success") || st.includes("completed") || st.includes("paid");
               if (isPaid && ordAmt > 0) {
+                let depAmt = ordAmt;
+                if (o.accounts && String(o.accounts).includes("Đã cộng ")) {
+                  const m = String(o.accounts).match(/Đã cộng ([\d\.]+) VN[ĐD]/i);
+                  if (m && m[1]) depAmt = parseInt(m[1].replace(/\./g, ''), 10);
+                }
                 rawLogs.push({
                   id: "DEP_" + oId,
                   orderId: oId,
                   time: ordTime,
                   type: "Nạp tiền VietQR / SePay",
-                  amount: +Math.abs(ordAmt),
+                  amount: +Math.abs(depAmt),
                   balanceAfter: o.balanceAfter !== undefined ? Number(o.balanceAfter) : null,
-                  note: o.note || pName || ("Nạp tiền ví #" + oId)
+                  note: o.accounts || o.note || ("Nạp tiền ví #" + oId)
                 });
               }
+              // TUYỆT ĐỐI RETURN KHÔNG BAO GIỜ CHẠY XUỐNG DƯỚI ĐỂ TRỪ TIỀN MUA HÀNG!
+              return;
             } else {
               // 1. Đơn mua hàng (trừ tiền)
               if (ordAmt > 0) {
@@ -7494,22 +7516,27 @@ if (typeof productOrId === "object") {
         const nLow = String(item.note || "").toLowerCase();
         if (extractedCode.includes("131154") || oIdUp.includes("131154") || nLow.includes("admin nạp tiền thủ công qua ngân hàng")) return;
         const isRef = amt > 0 && (tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền"));
-        const isExplicitPurchase = String(item.id || '').startsWith("ORD_") || oIdUp.startsWith("ORD") || tLow.includes("mua hàng") || nLow.includes("mua sp") || amt < 0;
-        const isDep = !isRef && !isExplicitPurchase && (
+        const isDep = !isRef && (
           oIdUp.startsWith("NAP") || 
           oIdUp.startsWith("DEP") || 
+          String(item.id || '').startsWith("DEP_") ||
           tLow.includes("nạp tiền") || 
           tLow.includes("nạp ví") || 
           tLow.includes("sepay") || 
           tLow.includes("vietqr") || 
-          ((nLow.includes("nạp tiền") || nLow.includes("đã cộng") || nLow.includes("nap tien")) && !nLow.includes("mua sp") && !nLow.includes("thanh toán"))
+          nLow.includes("nạp tiền vào ví") ||
+          nLow.includes("nạp tiền ví") ||
+          nLow.includes("đã cộng")
         );
         const hasAccounts = Boolean(nLow.includes("|") || nLow.includes("@hotmail") || nLow.includes("@gmail") || nLow.includes("@outlook") || nLow.includes("yetskoamoako28") || nLow.includes("charleslagankieran") || nLow.includes("nguyenhuongliendindenn"));
-        const isPurchase = isExplicitPurchase || (!isRef && !isDep && (
+        const isExplicitPurchase = String(item.id || '').startsWith("ORD_") || oIdUp.startsWith("ORD") || tLow.includes("mua hàng") || tLow.includes("thanh toán");
+        const isPurchase = !isRef && !isDep && (
+          isExplicitPurchase ||
           hasAccounts || 
-          oIdUp.startsWith("DH") || 
-          nLow.includes("mua sp")
-        ));
+          (oIdUp.startsWith("DH") && !nLow.includes("nạp tiền")) || 
+          nLow.includes("mua sp") ||
+          amt < 0
+        );
 
         let key = "";
         if (isPurchase) {
@@ -7742,8 +7769,8 @@ if (typeof productOrId === "object") {
             const oIdStr = String(tx.orderId || tx.id || "");
             const oIdStrUp = oIdStr.toUpperCase();
             const isRefund = tx.isRefund || tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
-            const isDeposit = !isRefund && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || nLow.includes("nạp tiền") || nLow.includes("đã cộng"));
-            const isPurchase = !isRefund && !isDeposit && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || oIdStrUp.startsWith("DH") || oIdStrUp.startsWith("ORD") || nLow.includes("|"));
+            const isDeposit = !isRefund && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || nLow.includes("nạp tiền vào ví") || nLow.includes("nạp tiền ví") || nLow.includes("đã cộng"));
+            const isPurchase = !isRefund && !isDeposit && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || tLow.includes("thanh toán") || (oIdStrUp.startsWith("DH") && !nLow.includes("nạp tiền")) || oIdStrUp.startsWith("ORD") || nLow.includes("|"));
 
             if (isPurchase) {
               amt = -Math.abs(amt);
@@ -32054,9 +32081,8 @@ function syncAllOpenViewsStock(changedProdId) {
           const oIdStr = String(tx.orderId || tx.id || "");
           const oIdStrUp = oIdStr.toUpperCase();
           const isRefund = tx.isRefund || tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
-          const isExplicitPurchase = oIdStrUp.startsWith("ORD") || String(tx.id || '').startsWith("ORD_") || tLow.includes("mua hàng") || nLow.includes("mua sp") || amt < 0;
-          const isDeposit = !isRefund && !isExplicitPurchase && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || ((nLow.includes("nạp tiền") || nLow.includes("đã cộng")) && !nLow.includes("mua sp") && !nLow.includes("thanh toán")));
-          const isPurchase = isExplicitPurchase || (!isRefund && !isDeposit && (tx.isPurchase || oIdStrUp.startsWith("DH") || nLow.includes("|")));
+          const isDeposit = !isRefund && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || nLow.includes("nạp tiền vào ví") || nLow.includes("nạp tiền ví") || nLow.includes("đã cộng"));
+          const isPurchase = !isRefund && !isDeposit && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || tLow.includes("thanh toán") || (oIdStrUp.startsWith("DH") && !nLow.includes("nạp tiền")) || oIdStrUp.startsWith("ORD") || nLow.includes("|"));
 
           if (isPurchase) {
             amt = -Math.abs(amt);
@@ -32162,6 +32188,34 @@ function syncAllOpenViewsStock(changedProdId) {
             const vName = (o.variantName && o.variantName !== "Mặc định") ? (" (" + o.variantName + ")") : "";
             const ordAmt = Number(o.total || o.totalCost || o.totalPrice || o.totalAmount) || 0;
             const ordTime = o.date || (o.createdAt ? new Date(o.createdAt).toLocaleString("vi-VN") : "") || "";
+
+            const pIdUp = String(o.productId || o.prodId || "").toUpperCase();
+            const pNameLow = String(pName).toLowerCase();
+            const isDepositOrder = pIdUp === "NAP_VI" || pNameLow.includes("nạp tiền vào ví") || pNameLow.includes("nạp tiền ví") || pIdUp.startsWith("NAP_");
+
+            if (isDepositOrder) {
+              const stUp = String(o.status || "").toUpperCase();
+              const isPaid = stUp === "COMPLETED" || stUp === "PAID" || stUp === "THÀNH CÔNG" || stUp === "SUCCESS";
+              if (isPaid && ordAmt > 0) {
+                let realAmt = ordAmt;
+                const accStr = String(o.accounts || o.accountData || o.taiKhoan || "");
+                const noteMatch = accStr.match(/Đã cộng\s+([\d.,]+)\s*VNĐ/i);
+                if (noteMatch) {
+                  const parsed = Number(noteMatch[1].replace(/[.,]/g, ""));
+                  if (!isNaN(parsed) && parsed > 0) realAmt = parsed;
+                }
+                rawLogs.push({
+                  id: "DEP_" + oId,
+                  orderId: oId,
+                  time: ordTime,
+                  type: "Nạp tiền VietQR / SePay",
+                  amount: +realAmt,
+                  balanceAfter: o.balanceAfter !== undefined ? o.balanceAfter : null,
+                  note: (accStr && accStr.includes("Đã cộng")) ? accStr : ("Nạp tiền vào ví điện tử - Đơn #" + oId)
+                });
+              }
+              return;
+            }
 
             // 1. Đơn mua hàng (trừ tiền)
             if (ordAmt > 0) {
@@ -32753,6 +32807,37 @@ function syncAllOpenViewsStock(changedProdId) {
           const oTime = o.date || o.createdAt || (new Date().toLocaleDateString("vi-VN"));
           const pName = o.productName || o.prodName || "Tài khoản MMO";
 
+          const pIdUp = String(o.productId || o.prodId || "").toUpperCase();
+          const pNameLow = String(pName).toLowerCase();
+          const isDepositOrder = pIdUp === "NAP_VI" || pNameLow.includes("nạp tiền vào ví") || pNameLow.includes("nạp tiền ví") || pIdUp.startsWith("NAP_");
+
+          if (isDepositOrder) {
+            const stUp = String(o.status || "").toUpperCase();
+            const isPaid = stUp === "COMPLETED" || stUp === "PAID" || stUp === "THÀNH CÔNG" || stUp === "SUCCESS";
+            if (isPaid && amt > 0) {
+              let realAmt = amt;
+              const accStr = String(o.accounts || o.accountData || o.taiKhoan || "");
+              const noteMatch = accStr.match(/Đã cộng\s+([\d.,]+)\s*VNĐ/i);
+              if (noteMatch) {
+                const parsed = Number(noteMatch[1].replace(/[.,]/g, ""));
+                if (!isNaN(parsed) && parsed > 0) realAmt = parsed;
+              }
+              rawItems.push({
+                id: "DEP_" + oid,
+                txId: "DEP_" + oid,
+                orderId: oid,
+                userEmail: uEmail,
+                userName: uName,
+                type: "Nạp tiền VietQR / SePay",
+                amount: +realAmt,
+                balanceAfter: o.balanceAfter !== undefined ? o.balanceAfter : null,
+                time: oTime,
+                note: (accStr && accStr.includes("Đã cộng")) ? accStr : ("Nạp tiền vào ví điện tử - Đơn #" + oid)
+              });
+            }
+            return;
+          }
+
           if (amt > 0) {
             rawItems.push({
               id: "ORD_" + oid,
@@ -32886,9 +32971,12 @@ function syncAllOpenViewsStock(changedProdId) {
         const wdMatch = rawStr.match(/(WD[\d\w_]+)/i);
         const typeStr = String(item.type || '').toLowerCase();
 
+        const isDepItem = typeStr.includes("nạp") || typeStr.includes("sepay") || typeStr.includes("vietqr") || String(item.id || '').startsWith("DEP_");
         let dedupKey = "";
-        if (dhMatch) {
+        if (dhMatch && isDepItem) {
           dedupKey = "DEP_" + dhMatch[1].toUpperCase();
+        } else if (dhMatch && !isDepItem) {
+          dedupKey = "ORD_" + dhMatch[1].toUpperCase();
         } else if (wdMatch) {
           dedupKey = "WD_" + wdMatch[1].toUpperCase();
         } else if (typeStr.includes("rút tiền") || typeStr.includes("rut tien")) {
