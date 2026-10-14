@@ -5799,7 +5799,14 @@ if (typeof productOrId === "object") {
       });
 
       // 1. Tìm số dư lớn nhất, đáng tin cậy nhất của tài khoản từ giao dịch gần nhất hoặc user profile
-      let maxKnownBalance = runningBal;
+      const uList = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
+      const uFound = uList.find(item => (item.email || "").toLowerCase().trim() === cleanEmail);
+      let maxKnownBalance = Math.max(
+        runningBal,
+        (uFound && !isNaN(Number(uFound.balance))) ? Number(uFound.balance) : 0,
+        (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && !isNaN(Number(currentUser.balance))) ? Number(currentUser.balance) : 0
+      );
+
       if (allLogs.length > 0) {
         // Duyệt từ giao dịch mới nhất lùi dần về trước để tìm balanceAfter chuẩn
         for (let i = allLogs.length - 1; i >= 0; i--) {
@@ -5809,15 +5816,6 @@ if (typeof productOrId === "object") {
             break;
           }
         }
-      }
-
-      const uList = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
-      const uFound = uList.find(item => (item.email || "").toLowerCase().trim() === cleanEmail);
-      if (uFound && !isNaN(Number(uFound.balance)) && Number(uFound.balance) > maxKnownBalance) {
-        maxKnownBalance = Number(uFound.balance);
-      }
-      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && !isNaN(Number(currentUser.balance)) && Number(currentUser.balance) > maxKnownBalance) {
-        maxKnownBalance = Number(currentUser.balance);
       }
 
       const curBal = maxKnownBalance;
@@ -5835,11 +5833,11 @@ if (typeof productOrId === "object") {
       }
 
       try {
-        if (uFound && curBal !== uFound.balance) {
+        if (uFound && curBal > (Number(uFound.balance) || 0)) {
           uFound.balance = curBal;
           localStorage.setItem("mmo_registered_users", JSON.stringify(uList));
         }
-        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== curBal) {
+        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && curBal > (Number(currentUser.balance) || 0)) {
           currentUser.balance = curBal;
           localStorage.setItem("mmo_user", JSON.stringify(currentUser));
         }
@@ -5905,13 +5903,16 @@ if (typeof productOrId === "object") {
         return;
       }
 
-      // 1. Thu thập toàn bộ biến động số dư & số dư chuẩn xác
+      // 1. Thu thập toàn bộ biến động số dư & số dư chuẩn xác (BẢO TOÀN SỐ DƯ TỐI ĐA TỪ DATABASE)
       const result = (typeof getUserComprehensiveTransactions === "function") 
         ? getUserComprehensiveTransactions(cleanEmail) 
         : { transactions: [], currentBalance: (u.balance || 0) };
       
       const allTx = result.transactions;
-      let accurateBalance = Math.max(Number(result.currentBalance) || 0, Number(u.balance) || 0);
+      let accurateBalance = Math.max(Number(u.balance) || 0, Number(result.currentBalance) || 0);
+      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail) {
+        accurateBalance = Math.max(accurateBalance, Number(currentUser.balance) || 0);
+      }
 
       // Đồng bộ số dư chuẩn vào người dùng và hệ thống
       u.balance = accurateBalance;
@@ -6021,7 +6022,45 @@ if (typeof productOrId === "object") {
       const modal = document.getElementById("adminUserDetailModal");
       if (modal) modal.style.display = "flex";
 
-      // 2. Tự động đồng bộ lịch sử nạp tiền từ Cloud GAS cho thành viên này không chặn UI (0ms delay)
+      // 2. TỰ ĐỘNG ĐỒNG BỘ SỐ DƯ & GIAO DỊCH LIVE TỪ CLOUDFLARE WORKER TURSO (SSOT)
+      try {
+        const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
+          ? MMO_WORKER_API.getApiUrl()
+          : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        const adminSec = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret)
+          ? MMO_WORKER_API.getAdminSecret()
+          : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+
+        fetch(workerUrl + "/api/user/wallet?email=" + encodeURIComponent(cleanEmail), {
+          headers: { "Authorization": "Bearer " + adminSec, "x-admin-token": adminSec },
+          cache: "no-store"
+        }).then(r => r.json()).then(wRes => {
+          if (wRes && wRes.success) {
+            const cloudBal = (wRes.balance !== undefined && !isNaN(Number(wRes.balance)))
+              ? Number(wRes.balance)
+              : ((wRes.user && !isNaN(Number(wRes.user.balance))) ? Number(wRes.user.balance) : null);
+            if (cloudBal !== null && !isNaN(cloudBal)) {
+              if (balanceEl) balanceEl.innerText = formatVND(cloudBal);
+              u.balance = cloudBal;
+              let curUsers = getRegisteredUsers();
+              const uIdx = curUsers.findIndex(item => (item.email || "").toLowerCase().trim() === cleanEmail);
+              if (uIdx !== -1) {
+                curUsers[uIdx].balance = cloudBal;
+                saveRegisteredUsers(curUsers);
+              }
+              if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail) {
+                currentUser.balance = cloudBal;
+                localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+                if (typeof updateUserUI === "function") updateUserUI();
+              }
+            }
+          }
+        }).catch(function(eLive) {
+          console.warn("Live wallet modal sync error:", eLive);
+        });
+      } catch(eFetchLive) {}
+
+      // 3. Tự động đồng bộ lịch sử nạp tiền từ Cloud cho thành viên này không chặn UI (0ms delay)
       if (typeof fetchAndSyncMemberCloudDeposits === "function") {
         setTimeout(function() {
           fetchAndSyncMemberCloudDeposits(cleanEmail);
