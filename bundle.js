@@ -7542,6 +7542,9 @@ if (typeof productOrId === "object") {
                 if (pillsContainer && Array.isArray(curP.variants) && curP.variants.length > 0) {
                   pillsContainer.innerHTML = curP.variants.map((v, idx) => {
                     let vStock = (typeof getVariantStockCount === "function") ? getVariantStockCount(curP, idx) : (Number(v.stock) || 0);
+                    if (vStock <= 0 && (curP.deliveryType === "api" || curP.delivery_type === "api" || curP.is_api_product === 1 || (typeof isProductApi === "function" && isProductApi(curP))) && Number(curP.stock) > 0) {
+                      vStock = Number(curP.stock);
+                    }
                     v.stock = vStock;
                     const stockBadge = vStock > 0 
                       ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>' 
@@ -14370,6 +14373,7 @@ if (typeof productOrId === "object") {
           if (variantIdx !== null && variantIdx !== undefined && variantIdx !== "ALL" && variantIdx !== "" && prod && Array.isArray(prod.variants) && prod.variants[Number(variantIdx)]) {
             const vStk = Number(prod.variants[Number(variantIdx)].stock);
             if (!isNaN(vStk) && vStk > 0) stock = vStk;
+            else if (prod && typeof prod.stock === "number" && prod.stock > 0) stock = prod.stock;
           } else if (prod && typeof prod.stock === "number" && prod.stock > 0) {
             stock = prod.stock;
           }
@@ -14386,10 +14390,13 @@ if (typeof productOrId === "object") {
       }
 
       // 3. Đọc từ mảng accounts hoặc stock của biến thể
+      const isApi = Boolean(prod && (prod.is_api_product === 1 || prod.is_api_product === true || prod.deliveryType === "api" || prod.delivery_type === "api" || (typeof isProductApi === "function" && isProductApi(prod))));
       const hasVars = prod && Array.isArray(prod.variants) && prod.variants.length > 0;
       if (variantIdx !== null && variantIdx !== undefined && variantIdx !== "ALL" && variantIdx !== "") {
         const v = hasVars ? prod.variants[Number(variantIdx)] : prod;
-        return (v && Array.isArray(v.accounts)) ? v.accounts.length : (Number(v && v.stock) || 0);
+        let cnt = (v && Array.isArray(v.accounts)) ? v.accounts.length : (Number(v && v.stock) || 0);
+        if (cnt <= 0 && isApi && prod && Number(prod.stock) > 0) cnt = Number(prod.stock);
+        return cnt;
       }
       if (hasVars) {
         return prod.variants.reduce((sum, v) => sum + ((v && Array.isArray(v.accounts)) ? v.accounts.length : (Number(v && v.stock) || 0)), 0);
@@ -17017,22 +17024,22 @@ function syncAllOpenViewsStock(changedProdId) {
               map.sourceProdName = src.name || map.sourceProdName;
               map.isSourceDeleted = false;
             } else {
-              const provLoaded = (typeof isFastSourceProviderLoaded === "function" ? isFastSourceProviderLoaded(map.provider) : false) || sourceList.some(s => (!map.provider || s.provider === map.provider));
-              if (provLoaded || map.isSourceDeleted) {
+              // Nếu tạm thời chưa có trong cache phân trang nguồn sỉ, tuyệt đối không gán xóa nguồn nhầm
+              if (map.isSourceDeleted && (!map.sourceStock || map.sourceStock <= 0)) {
                 map.sourceStock = 0;
-                map.isSourceDeleted = true;
               }
             }
 
-            const targetStock = (typeof map.sourceStock === "number") ? map.sourceStock : 0;
+            const targetStock = (typeof map.sourceStock === "number" && map.sourceStock > 0)
+              ? map.sourceStock
+              : ((typeof p.stock === "number" && p.stock > 0) ? p.stock : 0);
 
-            // NGUYÊN TẮC GEMINI.MD: KHÔNG GHI ĐÈ LÀM MẤT SỐ TỒN KHO CỦA SẢN PHẨM DỰA VÀO SỐ DƯ NGUỒN (CHỈ DỰA VÀO TỒN KHO LIVE NGUỒN)
-            if (targetStock <= 0) {
+            if (map.isSourceDeleted) {
               p.stock = 0;
               if (Array.isArray(p.variants)) {
                 p.variants.forEach(v => { if (v) v.stock = 0; });
               }
-            } else {
+            } else if (targetStock > 0) {
               p.stock = targetStock;
               if (Array.isArray(p.variants)) {
                 p.variants.forEach(v => { if (v) v.stock = targetStock; });
@@ -24206,48 +24213,53 @@ function syncAllOpenViewsStock(changedProdId) {
               ? getFastSourceProduct(apiMap.provider, cleanSrcId)
               : (cachedSourceProducts.find(s => String(s.id).trim().replace(/^#/, "") === cleanSrcId && (!apiMap.provider || s.provider === apiMap.provider))
                 || cachedSourceProducts.find(s => String(s.id).trim().replace(/^#/, "") === cleanSrcId));
-            const provLoaded = (typeof isFastSourceProviderLoaded === "function")
-              ? isFastSourceProviderLoaded(apiMap.provider)
-              : false;
             if (inCache && typeof inCache.amount === "number") {
               freshAmount = inCache.amount;
-            } else if (provLoaded && !inCache) {
-              isDeleted = true;
-              freshAmount = 0;
+              apiMap.isSourceDeleted = false;
+              apiMap.sourceStock = freshAmount;
+            } else if (typeof apiMap.sourceStock === "number" && apiMap.sourceStock > 0) {
+              freshAmount = apiMap.sourceStock;
             }
           }
 
-          if (isDeleted) {
+          if (isDeleted && (!freshAmount || freshAmount <= 0)) {
             freshAmount = 0;
             apiMap.isSourceDeleted = true;
             apiMap.sourceStock = 0;
-          } else if (freshAmount === null && typeof executeSourceApiCall === "function") {
-            const res = await executeSourceApiCall("getProductStock", {
-              provider: apiMap.provider || "selltainguyenmmo",
-              sourceProdId: cleanSrcId
-            });
-            if (res && res.success && typeof res.amount === "number") {
-              freshAmount = res.amount;
-              if (typeof window.cachedSourceProducts !== "undefined" && Array.isArray(window.cachedSourceProducts)) {
-                const cIdx = window.cachedSourceProducts.findIndex(s => String(s.id).trim().replace(/^#/, "") === cleanSrcId && (!apiMap.provider || s.provider === apiMap.provider));
-                if (cIdx !== -1) {
-                  window.cachedSourceProducts[cIdx].amount = freshAmount;
-                } else {
-                  window.cachedSourceProducts.push({
-                    id: cleanSrcId,
-                    name: res.name || apiMap.sourceProdName || curP.name,
-                    price: res.price || apiMap.sourcePrice || 0,
-                    amount: freshAmount,
-                    provider: apiMap.provider
-                  });
+          } else if (typeof executeSourceApiCall === "function") {
+            try {
+              const res = await executeSourceApiCall("getProductStock", {
+                provider: apiMap.provider || "selltainguyenmmo",
+                sourceProdId: cleanSrcId
+              });
+              if (res && res.success && typeof res.amount === "number") {
+                freshAmount = res.amount;
+                isDeleted = false;
+                apiMap.isSourceDeleted = false;
+                apiMap.sourceStock = freshAmount;
+                if (typeof window.cachedSourceProducts !== "undefined" && Array.isArray(window.cachedSourceProducts)) {
+                  const cIdx = window.cachedSourceProducts.findIndex(s => String(s.id).trim().replace(/^#/, "") === cleanSrcId && (!apiMap.provider || s.provider === apiMap.provider));
+                  if (cIdx !== -1) {
+                    window.cachedSourceProducts[cIdx].amount = freshAmount;
+                  } else {
+                    window.cachedSourceProducts.push({
+                      id: cleanSrcId,
+                      name: res.name || apiMap.sourceProdName || curP.name,
+                      price: res.price || apiMap.sourcePrice || 0,
+                      amount: freshAmount,
+                      provider: apiMap.provider
+                    });
+                  }
+                  if (typeof rebuildSourceProductsFastIndex === "function") rebuildSourceProductsFastIndex(window.cachedSourceProducts);
                 }
-                if (typeof rebuildSourceProductsFastIndex === "function") rebuildSourceProductsFastIndex(window.cachedSourceProducts);
+              } else if (res && !res.success && (String(res.error || "").toLowerCase().includes("not found") || String(res.msg || "").toLowerCase().includes("không tồn tại") || String(res.error || "").toLowerCase().includes("deleted"))) {
+                freshAmount = 0;
+                isDeleted = true;
+                apiMap.isSourceDeleted = true;
+                apiMap.sourceStock = 0;
               }
-            } else if (res && !res.success && (String(res.error || "").toLowerCase().includes("not found") || String(res.msg || "").toLowerCase().includes("không tồn tại") || String(res.error || "").toLowerCase().includes("deleted"))) {
-              freshAmount = 0;
-              isDeleted = true;
-              apiMap.isSourceDeleted = true;
-              apiMap.sourceStock = 0;
+            } catch(eCall) {
+              console.warn("executeSourceApiCall getProductStock non-fatal:", eCall);
             }
           }
 
@@ -24321,6 +24333,7 @@ function syncAllOpenViewsStock(changedProdId) {
         if (pillsContainer && Array.isArray(curP.variants) && curP.variants.length > 0) {
           pillsContainer.innerHTML = curP.variants.map((v, idx) => {
             let vStock = (freshAmount !== null) ? freshAmount : ((typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (v.stock || 0));
+            if (vStock <= 0 && Number(curP.stock) > 0) vStock = Number(curP.stock);
             v.stock = vStock;
             const stockBadge = vStock > 0
               ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
@@ -24994,22 +25007,20 @@ function syncAllOpenViewsStock(changedProdId) {
             ? getFastSourceProduct(apiMapInfo.provider, cleanMId)
             : (prods.find(s => String(s.id).trim().replace(/^#/, "") === cleanMId && (!apiMapInfo.provider || s.provider === apiMapInfo.provider))
               || prods.find(s => String(s.id).trim().replace(/^#/, "") === cleanMId));
-          if (provLoaded && !inSrc) {
-            liveMapStock = 0;
-            apiMapInfo.sourceStock = 0;
-            apiMapInfo.isSourceDeleted = true;
-          } else if (inSrc && typeof inSrc.amount === "number") {
+          if (inSrc && typeof inSrc.amount === "number") {
             liveMapStock = Math.max(0, Number(inSrc.amount));
             apiMapInfo.sourceStock = liveMapStock;
-          } else if (typeof apiMapInfo.sourceStock === "number" && apiMapInfo.sourceStock >= 0) {
+            apiMapInfo.isSourceDeleted = false;
+          } else if (typeof apiMapInfo.sourceStock === "number" && apiMapInfo.sourceStock > 0) {
             liveMapStock = Math.max(0, Number(apiMapInfo.sourceStock));
+            apiMapInfo.isSourceDeleted = false;
+          } else if (apiMapInfo.isSourceDeleted) {
+            liveMapStock = 0;
           } else {
-            const ssotStock = (p.variants && p.variants[currentSelectedVariantIndex] && typeof p.variants[currentSelectedVariantIndex].stock === "number")
+            const ssotStock = (p.variants && p.variants[currentSelectedVariantIndex] && typeof p.variants[currentSelectedVariantIndex].stock === "number" && p.variants[currentSelectedVariantIndex].stock > 0)
               ? p.variants[currentSelectedVariantIndex].stock
-              : (typeof p.stock === "number" ? p.stock : null);
-            if (ssotStock !== null) {
-              liveMapStock = Math.max(0, ssotStock);
-            }
+              : (typeof p.stock === "number" && p.stock > 0 ? p.stock : (Number(apiMapInfo.sourceStock) || 0));
+            liveMapStock = Math.max(0, ssotStock);
           }
         }
         if (liveMapStock !== null) {
@@ -25067,7 +25078,10 @@ function syncAllOpenViewsStock(changedProdId) {
       const pillsContainer = document.getElementById("dtlVariantPills");
       if (pillsContainer && Array.isArray(p.variants) && p.variants.length > 0) {
         pillsContainer.innerHTML = p.variants.map((v, idx) => {
-          let vStock = isProdApi ? initialVariantStock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (v.stock || 0));
+          let vStock = isProdApi
+            ? (initialVariantStock > 0 ? initialVariantStock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (Number(p.stock) || Number(v.stock) || 0)))
+            : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (v.stock || 0));
+          if (isProdApi && vStock <= 0 && Number(p.stock) > 0) vStock = Number(p.stock);
           v.stock = vStock;
           const stockBadge = vStock > 0
             ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
@@ -32904,7 +32918,10 @@ function changeAdmUsersPage(p) {
                 const pillsContainer = document.getElementById("dtlVariantPills");
                 if (pillsContainer && hasV) {
                   pillsContainer.innerHTML = currentSelectedProduct.variants.map((v, idx) => {
-                    const vs = getShopVariantStock(currentSelectedProduct, idx);
+                    let vs = getShopVariantStock(currentSelectedProduct, idx);
+                    if (vs <= 0 && (currentSelectedProduct.deliveryType === "api" || currentSelectedProduct.delivery_type === "api" || currentSelectedProduct.is_api_product === 1 || (typeof isProductApi === "function" && isProductApi(currentSelectedProduct))) && Number(currentSelectedProduct.stock) > 0) {
+                      vs = Number(currentSelectedProduct.stock);
+                    }
                     const badge = vs > 0 
                       ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + vs + ' acc)</small>' 
                       : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
@@ -33267,7 +33284,10 @@ function changeAdmUsersPage(p) {
               const pillsContainer = document.getElementById("dtlVariantPills");
               if (pillsContainer && hasVars) {
                 pillsContainer.innerHTML = freshP.variants.map((v, idx) => {
-                  const vs = getShopVariantStock(freshP, idx);
+                  let vs = getShopVariantStock(freshP, idx);
+                  if (vs <= 0 && (freshP.deliveryType === "api" || freshP.delivery_type === "api" || freshP.is_api_product === 1 || (typeof isProductApi === "function" && isProductApi(freshP))) && Number(freshP.stock) > 0) {
+                    vs = Number(freshP.stock);
+                  }
                   const badge = vs > 0 
                     ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + vs + ' acc)</small>' 
                     : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
