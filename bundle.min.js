@@ -4568,15 +4568,22 @@ if (typeof productOrId === "object") {
       else if (p.image_url && p.image_url.trim()) effectiveImg = p.image_url.trim();
       else if (p.imageUrl && p.imageUrl.trim()) effectiveImg = p.imageUrl.trim();
 
+      const hasRealImg = !!((savedCustomImg && savedCustomImg.trim()) || (p.image && p.image.trim()) || (p.image_url && p.image_url.trim()) || (p.imageUrl && p.imageUrl.trim()));
       if (!effectiveImg || effectiveImg.includes("img_17914936")) {
-        effectiveImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : "https://iili.io/nGs8RDv.jpg";
+        effectiveImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
       }
-      if (document.getElementById("admProdImage")) document.getElementById("admProdImage").value = effectiveImg || "";
-      if (document.getElementById("admProdImgPreview")) {
-        document.getElementById("admProdImgPreview").src = effectiveImg;
-        document.getElementById("admProdImgPreview").onerror = function() {
+      const admImgInput = document.getElementById("admProdImage");
+      if (admImgInput) {
+        admImgInput.removeAttribute("data-image-deleted");
+        admImgInput.value = hasRealImg ? (effectiveImg || "") : "";
+      }
+      const admImgPrev = document.getElementById("admProdImgPreview");
+      if (admImgPrev) {
+        admImgPrev.removeAttribute("data-image-deleted");
+        admImgPrev.src = effectiveImg || (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+        admImgPrev.onerror = function() {
           this.onerror = null;
-          this.src = "https://iili.io/nGs8RDv.jpg";
+          this.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
         };
       }
       if (document.getElementById("admProdWarranty")) document.getElementById("admProdWarranty").value = p.warranty || "Bảo Hành 1 Đổi 1";
@@ -7750,8 +7757,14 @@ if (typeof productOrId === "object") {
       if (document.getElementById("admProdBuffSold")) document.getElementById("admProdBuffSold").value = "0";
       if (document.getElementById("admProdBuffRating")) document.getElementById("admProdBuffRating").value = "4.9";
       if (document.getElementById("admProdBuffReviews")) document.getElementById("admProdBuffReviews").value = "15";
-      if (document.getElementById("admProdImage")) document.getElementById("admProdImage").value = "";
-      if (document.getElementById("admProdImgPreview")) document.getElementById("admProdImgPreview").src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "");
+      if (document.getElementById("admProdImage")) {
+        document.getElementById("admProdImage").value = "";
+        document.getElementById("admProdImage").removeAttribute("data-image-deleted");
+      }
+      if (document.getElementById("admProdImgPreview")) {
+        document.getElementById("admProdImgPreview").src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "");
+        document.getElementById("admProdImgPreview").removeAttribute("data-image-deleted");
+      }
       if (document.getElementById("admProdWarranty")) document.getElementById("admProdWarranty").value = "Bảo Hành 1 Đổi 1";
       if (document.getElementById("admProdDesc")) document.getElementById("admProdDesc").value = "";
 
@@ -8351,22 +8364,35 @@ if (typeof productOrId === "object") {
         ) : null;
         const actualTargetId = (oldProd && oldProd.id) ? oldProd.id : prodId;
 
-        // Đọc ảnh an toàn: input -> preview (Base64) -> oldProd -> localStorage -> fallback
-        const inputImg = (document.getElementById("admProdImage")?.value || "").trim();
+        // Đọc ảnh an toàn: kiểm tra cờ data-image-deleted do người dùng bấm XÓA ẢNH CŨ
+        const imgInputEl = document.getElementById("admProdImage");
         const previewEl = document.getElementById("admProdImgPreview");
+        const isImageDeleted = (imgInputEl && imgInputEl.getAttribute("data-image-deleted") === "1") ||
+                               (previewEl && previewEl.getAttribute("data-image-deleted") === "1");
+        const inputImg = (imgInputEl?.value || "").trim();
         const previewImg = (previewEl && previewEl.src) ? previewEl.src.trim() : "";
-        let image = inputImg;
-        if (!image && previewImg && previewImg.startsWith("data:image/")) {
+        let image = "";
+        if (isImageDeleted) {
+          // Người dùng đã ấn nút XÓA ẢNH CŨ -> TUYỆT ĐỐI KHÔNG KHÔI PHỤC ẢNH CŨ!
+          image = "";
+          clearProductImage(actualTargetId);
+          if (oldProd) {
+            oldProd.image = "";
+            oldProd.image_url = "";
+            oldProd.imageUrl = "";
+          }
+        } else if (inputImg) {
+          image = inputImg;
+        } else if (previewImg && previewImg.startsWith("data:image/")) {
           image = previewImg;
-        }
-        if (!image && oldProd) {
+        } else if (oldProd && !isImageDeleted) {
           image = (oldProd.image && oldProd.image.startsWith("data:image/")) ? oldProd.image :
                   ((typeof localStorage !== "undefined" && (localStorage.getItem("mmo_custom_img_" + actualTargetId) || localStorage.getItem("mmo_custom_img_" + String(actualTargetId).toUpperCase()))) || oldProd.image || oldProd.image_url || oldProd.imageUrl || "");
         }
-        if (!image && actualTargetId && typeof localStorage !== "undefined") {
+        if (!isImageDeleted && !image && actualTargetId && typeof localStorage !== "undefined") {
           image = localStorage.getItem("mmo_custom_img_" + actualTargetId) || localStorage.getItem("mmo_custom_img_" + String(actualTargetId).toUpperCase()) || "";
         }
-        if (!image || image.includes("img_17914936")) {
+        if (!isImageDeleted && (!image || image.includes("img_17914936"))) {
           image = (typeof resolveProductImage === "function") ? resolveProductImage(oldProd || { id: actualTargetId, name: name }) : "https://iili.io/nGs8RDv.jpg";
         }
 
@@ -8504,16 +8530,12 @@ if (typeof productOrId === "object") {
             liveSourcePrice = optPrice;
             liveSourceName = optName;
           } else {
-            liveSourceStock = (oldProd && typeof oldProd.stock === "number" && oldProd.stock > 0) ? oldProd.stock : 20;
+            liveSourceStock = (oldProd && typeof oldProd.stock === "number") ? oldProd.stock : 0;
           }
-          if (liveSourceStock <= 0 && oldProd && typeof oldProd.stock === "number" && oldProd.stock > 0) {
-            liveSourceStock = oldProd.stock;
-          } else if (liveSourceStock <= 0) {
-            liveSourceStock = 20;
-          }
+          liveSourceStock = Math.max(0, Number(liveSourceStock) || 0);
           variants.forEach(v => {
             v.stock = liveSourceStock;
-            v.available = true;
+            v.available = liveSourceStock > 0;
           });
         }
 
@@ -8665,7 +8687,27 @@ if (typeof productOrId === "object") {
           safeSetStorage("mmo_products", prodsJson);
         } catch(eStorage) {}
 
-        if (image && image.trim() !== "") {
+        if (isImageDeleted || !image || image.trim() === "") {
+          try {
+            localStorage.removeItem("mmo_custom_img_" + actualTargetId);
+            localStorage.removeItem("mmo_custom_img_" + String(actualTargetId).toUpperCase());
+            localStorage.removeItem("mmo_custom_img_" + String(actualTargetId).toLowerCase());
+            if (generatedSlug) {
+              localStorage.removeItem("mmo_custom_img_" + generatedSlug);
+              localStorage.removeItem("mmo_custom_img_" + String(generatedSlug).toLowerCase());
+            }
+            if (typeof KTS_PROD_TO_IILI !== "undefined") {
+              delete KTS_PROD_TO_IILI[actualTargetId];
+              delete KTS_PROD_TO_IILI[String(actualTargetId).toUpperCase()];
+              if (generatedSlug) delete KTS_PROD_TO_IILI[generatedSlug];
+            }
+            if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+              delete KTS_KNOWN_CDN_MAP[actualTargetId];
+              delete KTS_KNOWN_CDN_MAP[String(actualTargetId).toUpperCase()];
+              if (generatedSlug) delete KTS_KNOWN_CDN_MAP[generatedSlug];
+            }
+          } catch(eDelImg) {}
+        } else if (image && image.trim() !== "") {
           try {
             safeSetStorage("mmo_custom_img_" + actualTargetId, image.trim());
             safeSetStorage("mmo_custom_img_" + String(actualTargetId).toUpperCase(), image.trim());
@@ -14304,6 +14346,22 @@ if (typeof productOrId === "object") {
             if (typeof openPreOrderModal === "function") openPreOrderModal(curP, curVIdx);
           };
         }
+      }
+
+      // CẬP NHẬT BIẾN THỂ (PILLS): Đồng bộ 100% với tồn kho thực tế, triệt tiêu hoàn toàn mâu thuẫn trên dưới
+      const pillsContainer = document.getElementById("dtlVariantPills");
+      if (pillsContainer && curP && Array.isArray(curP.variants) && curP.variants.length > 0) {
+        pillsContainer.innerHTML = curP.variants.map((v, idx) => {
+          let vStock = (typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (v.stock || 0);
+          v.stock = vStock;
+          const stockBadge = vStock > 0
+            ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
+            : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
+          return '<div class="variant-pill-option ' + (idx === curVIdx ? 'active' : '') + '" onclick="selectVariant(' + idx + ', ' + (v.price || 0) + ')">' +
+            '<span>' + (typeof escapeHtml === 'function' ? escapeHtml(v.name || ("Gói " + (idx + 1))) : (v.name || ("Gói " + (idx + 1)))) + stockBadge + '</span>' +
+            '<span style="font-weight:700;">' + (typeof formatVND === 'function' ? formatVND(v.price || 0) : (v.price || 0)) + '</span>' +
+          '</div>';
+        }).join("");
       }
     }
     window.syncDetailStockUI = syncDetailStockUI;
@@ -21602,9 +21660,15 @@ function syncAllOpenViewsStock(changedProdId) {
       const pId = (document.getElementById("admProdId")?.value || "").trim();
       if (pId) clearProductImage(pId);
       const imgInput = document.getElementById("admProdImage");
-      if (imgInput) imgInput.value = "";
+      if (imgInput) {
+        imgInput.value = "";
+        imgInput.setAttribute("data-image-deleted", "1");
+      }
       const preview = document.getElementById("admProdImgPreview");
-      if (preview) preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+      if (preview) {
+        preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+        preview.setAttribute("data-image-deleted", "1");
+      }
       if (typeof showToast === "function") showToast("🗑️ Đã xóa bỏ ảnh cũ!", "info");
     }
     window.clearModalProductImage = clearModalProductImage;
@@ -21660,9 +21724,15 @@ function syncAllOpenViewsStock(changedProdId) {
             const compressed = canvas.toDataURL("image/jpeg", 0.82);
 
             const preview = document.getElementById("admProdImgPreview");
-            if (preview) preview.src = compressed;
+            if (preview) {
+              preview.src = compressed;
+              preview.removeAttribute("data-image-deleted");
+            }
             const imgInput = document.getElementById("admProdImage");
-            if (imgInput) imgInput.value = compressed;
+            if (imgInput) {
+              imgInput.value = compressed;
+              imgInput.removeAttribute("data-image-deleted");
+            }
 
             // 2. TẢI NGAY LÊN MÁY CHỦ CLOUDFLARE WORKER / CDN VĨNH VIỄN
             const workerUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") 
@@ -23900,9 +23970,11 @@ function syncAllOpenViewsStock(changedProdId) {
           apiMap = getApiProductMapping(curP) || (curP && curP.apiMapping);
         }
 
+        let freshAmount = null;
+        let isDeleted = false;
+
         if (apiMap && apiMap.enabled && apiMap.sourceProdId) {
-          let freshAmount = null;
-          let isDeleted = !!apiMap.isSourceDeleted;
+          isDeleted = !!apiMap.isSourceDeleted;
           const cleanSrcId = String(apiMap.sourceProdId || "").trim().replace(/^#/, "");
           if (typeof cachedSourceProducts !== "undefined" && Array.isArray(cachedSourceProducts)) {
             const inCache = (typeof getFastSourceProduct === "function")
