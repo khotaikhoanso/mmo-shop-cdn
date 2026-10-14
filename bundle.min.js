@@ -4109,7 +4109,7 @@ if (typeof productOrId === "object") {
       const pCfg = (typeof API_SOURCES !== "undefined" && API_SOURCES[provider]) ? API_SOURCES[provider] : null;
       if (!pCfg) return [];
 
-      let apiKey = pCfg.apiKey || (typeof localStorage !== "undefined" ? localStorage.getItem("mmo_source_key_" + provider) : "") || "";
+      let apiKey = (typeof localStorage !== "undefined" ? localStorage.getItem("mmo_source_key_" + provider) : "") || (pCfg ? pCfg.apiKey : "") || "";
 
       const countSpan = document.getElementById("admSourceSearchCount") || document.getElementById("admProdApiSourceCount");
       if (countSpan) {
@@ -4122,7 +4122,7 @@ if (typeof productOrId === "object") {
           payload.username = pCfg.username;
           payload.password = pCfg.password;
         } else {
-          payload.apiKey = pCfg.apiKey;
+          payload.apiKey = apiKey || pCfg.apiKey;
         }
 
         const res = await executeSourceApiCall("getProducts", payload);
@@ -14714,9 +14714,9 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "selltainguyenmmo.com",
         badgeColor: "#8b5cf6",
         baseUrl: "https://selltainguyenmmo.com",
-        apiKey: "",
+        apiKey: "e2c95231992c02fe582a536f59177052lLMCTW7NGJcxUFD1uiApZqnXg4d6mPt0",
         username: "LONGNGUYEN",
-        initialBalance: 53400,
+        initialBalance: 0,
         rechargeUrl: "https://selltainguyenmmo.com/client/wallet"
       },
       ultrammo: {
@@ -14724,9 +14724,9 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "ultrammo.com",
         badgeColor: "#6366f1",
         baseUrl: "https://ultrammo.com",
-        apiKey: "",
+        apiKey: "cae2aa742168bcfecb2eae858bc7812c0yZx8eIVaJYn2lgzktEcdvXb7mRAqfoU",
         username: "LONGNGUYENMMO",
-        initialBalance: 40000,
+        initialBalance: 0,
         rechargeUrl: "https://ultrammo.com/document-api"
       },
       nguyenlieummo: {
@@ -14734,7 +14734,7 @@ function syncAllOpenViewsStock(changedProdId) {
         name: "nguyenlieummo.com.vn",
         badgeColor: "#f59e0b",
         baseUrl: "https://nguyenlieummo.com.vn",
-        apiKey: "",
+        apiKey: "d3d596010c728d9701503ad77bf8334atkym2ps7WXHKw81OCldueEoBnFVcjbh6",
         username: "LONGNGUYENMMO",
         initialBalance: 0,
         rechargeUrl: "https://nguyenlieummo.com.vn/client/wallet"
@@ -15196,9 +15196,10 @@ function syncAllOpenViewsStock(changedProdId) {
 
       const pCfg = (typeof API_SOURCES !== "undefined" && API_SOURCES[provider]) ? Object.assign({}, API_SOURCES[provider]) : { baseUrl: "https://selltainguyenmmo.com", apiKey: "" };
       const baseUrl = pCfg.baseUrl || (payload && payload.baseUrl) || "https://selltainguyenmmo.com";
-      let apiKey = (payload && payload.apiKey) || pCfg.apiKey || (typeof localStorage !== "undefined" ? localStorage.getItem("mmo_source_key_" + provider) : "") || "";
-      if (provider === "ultrammo") {
-        // Fallback removed for security
+      const defaultKey = (typeof BUILTIN_API_SOURCES !== "undefined" && BUILTIN_API_SOURCES[provider]) ? BUILTIN_API_SOURCES[provider].apiKey : "";
+      let apiKey = (payload && payload.apiKey) || pCfg.apiKey || (typeof localStorage !== "undefined" ? localStorage.getItem("mmo_source_key_" + provider) : "") || defaultKey;
+      if (!apiKey || apiKey.length < 20 || apiKey.includes("YOUR")) {
+        apiKey = defaultKey;
       }
 
       const isOfficialSource = ["selltainguyenmmo", "ultrammo", "nguyenlieummo"].includes(provider) ||
@@ -15512,14 +15513,6 @@ function syncAllOpenViewsStock(changedProdId) {
         console.warn("fetchSingleSourceProfile error for " + providerKey + ":", e);
       }
 
-      if (providerKey === "ultrammo" && (!moneyVal || moneyVal <= 0)) {
-        moneyVal = 40000;
-        isSuccess = true;
-      }
-      if (providerKey === "selltainguyenmmo" && (!moneyVal || moneyVal <= 0)) {
-        moneyVal = 53400;
-        isSuccess = true;
-      }
 
       window.cachedSourceBalances[providerKey] = moneyVal;
       cachedSourceBalances = window.cachedSourceBalances;
@@ -17069,13 +17062,14 @@ function syncAllOpenViewsStock(changedProdId) {
 
         ["selltainguyenmmo", "ultrammo", "nguyenlieummo"].forEach(p => {
           let savedKey = localStorage.getItem("mmo_source_key_" + p);
-          if (p === "ultrammo") {
-            if (!savedKey || savedKey.includes("0yZx8elVa") || savedKey.includes("YOUR") || savedKey.length < 50) {
-              savedKey = "";
-              try { localStorage.setItem("mmo_source_key_ultrammo", savedKey); } catch(e) {}
+          const defaultKey = (typeof BUILTIN_API_SOURCES !== "undefined" && BUILTIN_API_SOURCES[p]) ? BUILTIN_API_SOURCES[p].apiKey : "";
+          if (!savedKey || savedKey.includes("YOUR") || savedKey.length < 20) {
+            savedKey = defaultKey;
+            if (savedKey) {
+              try { localStorage.setItem("mmo_source_key_" + p, savedKey); } catch(e) {}
             }
           }
-          if (savedKey && !savedKey.includes("YOUR_") && typeof API_SOURCES !== "undefined" && API_SOURCES[p]) {
+          if (savedKey && typeof API_SOURCES !== "undefined" && API_SOURCES[p]) {
             API_SOURCES[p].apiKey = savedKey;
           }
         });
