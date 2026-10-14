@@ -12979,7 +12979,7 @@ if (typeof productOrId === "object") {
 
       fetchProducts: async function(options) {
         const bust = (options && options.nocache) ? ("?_t=" + Date.now()) : "";
-        return await this._fetchJson(this.getApiUrl() + "/api/products" + bust, options || {}, 3500);
+        return await this._fetchJson(this.getApiUrl() + "/api/products" + bust, options || {}, 10000);
       },
 
       fetchProduct: async function(productIdOrSlug, options) {
@@ -13576,20 +13576,36 @@ if (typeof productOrId === "object") {
       let res = null;
       if (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.isConfigured()) {
         try {
-          res = await MMO_WORKER_API.fetchProducts({ nocache: true });
+          // Khong dung nocache: true tren storefront cong khai de tan dung Cloudflare Edge Caching phan hoi sieu toc ~50ms
+          res = await MMO_WORKER_API.fetchProducts();
         } catch(workerFetchErr) {
           console.warn("MMO_WORKER_API.fetchProducts error, fallback to direct fetch:", workerFetchErr);
         }
       }
       if (!res || !Array.isArray(res.products)) {
         try {
-          const directFetch = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products?nocache=1");
+          const directFetch = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products");
           if (directFetch.ok) {
             res = await directFetch.json();
           }
         } catch(eDirect) {}
       }
-      if (!res || !Array.isArray(res.products) || res.products.length === 0) return;
+      if (!res || !Array.isArray(res.products) || res.products.length === 0) {
+        // [FAILSAFE CHONG KET SPINNER]: Neu may chu cham hoac mat ket noi, luon render ngay tu localStorage va khong bao gio de ket spinner
+        if (!MOCK_DATA.products || MOCK_DATA.products.length === 0) {
+          try {
+            const rawProds = localStorage.getItem("mmo_products") || localStorage.getItem("mmo_admin_products");
+            if (rawProds) {
+              const parsed = JSON.parse(rawProds);
+              if (Array.isArray(parsed) && parsed.length > 0) MOCK_DATA.products = parsed;
+            }
+          } catch(eFs) {}
+        }
+        if (typeof renderProductGrid === "function") renderProductGrid();
+        if (typeof renderBestSellers === "function") renderBestSellers();
+        if (typeof renderRecommended === "function") renderRecommended();
+        return;
+      }
       try {
         const deletedIds = (typeof getDeletedProductIds === "function") ? getDeletedProductIds() : [];
         if (!MOCK_DATA.products) MOCK_DATA.products = [];
@@ -33173,6 +33189,15 @@ function changeAdmUsersPage(p) {
       // =========================================================================
       // [ZERO-DELAY RENDER ENGINE]: RENDER SẢN PHẨM TỨC THÌ 0MS - KHÔNG CHỜ SETTINGS
       // =========================================================================
+      try {
+        if (!MOCK_DATA.products || MOCK_DATA.products.length === 0) {
+          const rawProds = localStorage.getItem("mmo_products") || localStorage.getItem("mmo_admin_products");
+          if (rawProds) {
+            const parsed = JSON.parse(rawProds);
+            if (Array.isArray(parsed) && parsed.length > 0) MOCK_DATA.products = parsed;
+          }
+        }
+      } catch(eInitProds) {}
       try { if (typeof renderProductGrid === "function") renderProductGrid(); } catch(eGrid) { console.error("renderProductGrid early error:", eGrid); }
       try { if (typeof renderBestSellers === "function") renderBestSellers(); } catch(eBs) { console.error("renderBestSellers early error:", eBs); }
       try { if (typeof renderRecommended === "function") renderRecommended(); } catch(eRec) { console.error("renderRecommended early error:", eRec); }
@@ -33291,7 +33316,7 @@ function changeAdmUsersPage(p) {
         if (typeof syncAdminEmailsFromCloud === "function") {
           syncAdminEmailsFromCloud();
         }
-      }, _urlHasProd ? 200 : 1500);
+      }, _urlHasProd ? 50 : 80);
 
       // RESTORE CURRENT ACTIVE VIEW AND SUB-TABS ON F5 REFRESH
       try {
