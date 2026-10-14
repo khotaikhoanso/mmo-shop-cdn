@@ -7033,6 +7033,75 @@ if (typeof productOrId === "object") {
     }
     window.syncAllDepositsFromCloud = syncAllDepositsFromCloud;
 
+    // Chuẩn hóa và làm giàu ghi chú giao dịch (luôn hiển thị rõ sản phẩm gì, lý do trừ tiền)
+    function formatTransactionDisplayNote(tx, isPurchase, isRefund) {
+      if (!tx) return "";
+      let note = String(tx.note || "").trim();
+      const tLow = String(tx.type || "").toLowerCase();
+      const nLow = note.toLowerCase();
+      const amt = Number(tx.amount) || 0;
+      if (typeof isRefund === "undefined") {
+        isRefund = tx.isRefund || tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
+      }
+      if (typeof isPurchase === "undefined") {
+        isPurchase = !isRefund && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || tLow.includes("thanh toán") || (String(tx.orderId || tx.id || "").toUpperCase().startsWith("DH") && !nLow.includes("nạp tiền")));
+      }
+
+      const rawOrdId = String(tx.orderId || tx.id || "").replace(/^ORD_|^TX_ORD_|^TX_PO_|^TX_|^REFUND_|^DEP_/, "").replace("#", "").trim();
+
+      if (isRefund) {
+        if (!note || note.includes("NAP ") || note.includes("SePay")) {
+          return "Hoàn tiền đơn hàng bảo hành mã đơn #" + (rawOrdId || "");
+        }
+        return note;
+      }
+
+      if (isPurchase) {
+        // Nếu ghi chú đang rỗng hoặc là tài khoản bàn giao (chứa dấu |) hoặc chưa có tên sản phẩm
+        if (!note || !nLow.includes("mua") || note.includes("|")) {
+          let pInfo = "";
+          try {
+            const allO = (typeof getAllOrders === "function") ? getAllOrders() : [];
+            let matchO = allO.find(o => {
+              const oid = String(o.orderId || o.id || o.orderCode || "").replace("#", "").trim();
+              return oid && (oid === rawOrdId || oid.endsWith(rawOrdId) || rawOrdId.endsWith(oid));
+            });
+            if (!matchO) {
+              const uOrds = (typeof getUserOrders === "function") ? getUserOrders() : [];
+              matchO = uOrds.find(o => {
+                const oid = String(o.orderId || o.id || o.orderCode || "").replace("#", "").trim();
+                return oid && (oid === rawOrdId || oid.endsWith(rawOrdId) || rawOrdId.endsWith(oid));
+              });
+            }
+            if (matchO) {
+              const pn = matchO.productName || matchO.prodName || matchO.title || "Tài khoản MMO";
+              const vn = (matchO.variantName && matchO.variantName !== "Mặc định") ? (" (" + matchO.variantName + ")") : "";
+              const q = matchO.quantity || matchO.qty || 1;
+              const qStr = q > 1 ? (" (SL: " + q + ")") : "";
+              pInfo = pn + vn + qStr;
+            }
+          } catch(e) {}
+
+          if (pInfo) {
+            return "Mua SP: " + pInfo + (rawOrdId ? (" - Đơn #" + rawOrdId) : "");
+          } else if (rawOrdId && !rawOrdId.startsWith("BL_")) {
+            return "Thanh toán mua hàng đơn #" + rawOrdId;
+          } else {
+            return "Thanh toán mua hàng từ số dư ví";
+          }
+        }
+
+        // Nếu đã có ghi chú nhưng chưa có chữ "Mua SP:"
+        if (!nLow.includes("mua sp") && !nLow.includes("thanh toán")) {
+          return "Mua SP: " + note + (rawOrdId ? (" - Đơn #" + rawOrdId) : "");
+        }
+        return note;
+      }
+
+      return note;
+    }
+    window.formatTransactionDisplayNote = formatTransactionDisplayNote;
+
     // Tự động đồng bộ nạp tiền khi mở chi tiết thành viên
     async function fetchAndSyncMemberCloudDeposits(cleanEmail) {
       if (!cleanEmail) return;
@@ -7049,9 +7118,16 @@ if (typeof productOrId === "object") {
 
         let newDeps = [];
         if (ordersRes.status === "fulfilled" && ordersRes.value && Array.isArray(ordersRes.value.orders)) {
+          let curAllOrders = [];
+          try { curAllOrders = JSON.parse(localStorage.getItem("mmo_all_orders") || "[]"); } catch(e) {}
+          if (!Array.isArray(curAllOrders)) curAllOrders = [];
+          let hasNewOrders = false;
+
           ordersRes.value.orders.forEach(o => {
             const oId = String(o.orderId || "").trim();
-            const pNameLow = String(o.prodName || o.productName || "").toLowerCase();
+            if (!oId) return;
+            const pName = o.prodName || o.productName || "Sản phẩm";
+            const pNameLow = pName.toLowerCase();
             const pIdUp = String(o.prodId || "").toUpperCase();
             const isDep = pIdUp === "NAP_VI" || pIdUp.startsWith("NAP") || oId.startsWith("NAP") || pNameLow.includes("nạp tiền ví") || pNameLow.includes("nạp tiền vào ví");
             const st = String(o.status || "").toLowerCase();
@@ -7078,8 +7154,37 @@ if (typeof productOrId === "object") {
                 date: o.createdAt || (new Date().toLocaleString("vi-VN")),
                 type: "Nạp tiền VietQR / SePay"
               });
+            } else if (!isDep) {
+              const cleanOId = oId.replace("#", "").trim();
+              if (!curAllOrders.some(co => String(co.orderId || co.id || "").replace("#", "").trim() === cleanOId)) {
+                curAllOrders.push({
+                  id: cleanOId,
+                  orderId: cleanOId,
+                  orderCode: cleanOId,
+                  prodId: o.prodId || "",
+                  productId: o.prodId || "",
+                  prodName: pName,
+                  productName: pName,
+                  quantity: Number(o.quantity) || 1,
+                  total: Number(o.totalAmount || o.price) || 0,
+                  totalAmount: Number(o.totalAmount || o.price) || 0,
+                  email: cleanEmail,
+                  userEmail: cleanEmail,
+                  customerEmail: cleanEmail,
+                  buyerEmail: cleanEmail,
+                  status: o.status || "COMPLETED",
+                  date: o.createdAt || (new Date().toLocaleString("vi-VN")),
+                  createdAt: o.createdAt || (new Date().toLocaleString("vi-VN")),
+                  accounts: o.accounts || ""
+                });
+                hasNewOrders = true;
+              }
             }
           });
+
+          if (hasNewOrders) {
+            try { localStorage.setItem("mmo_all_orders", JSON.stringify(curAllOrders)); } catch(e) {}
+          }
         }
 
         if (walletRes.status === "fulfilled" && walletRes.value && walletRes.value.wallet && Array.isArray(walletRes.value.wallet.history)) {
@@ -7213,10 +7318,7 @@ if (typeof productOrId === "object") {
               }
 
               let balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter))) ? formatVND(Math.max(0, tx.balanceAfter)) : "-";
-              let displayNote = tx.note || "";
-              if (isRefund && (!displayNote || displayNote.includes("NAP ") || displayNote.includes("SePay"))) {
-                displayNote = "Hoàn tiền đơn hàng bảo hành mã đơn #" + (tx.orderId || "");
-              }
+              let displayNote = formatTransactionDisplayNote(tx, isPurchase, isRefund);
 
               return '<tr>' +
                 '<td style="font-size:0.75rem; color:#94a3b8; white-space:nowrap;">' + (tx.time || tx.date || '') + '</td>' +
@@ -7420,6 +7522,8 @@ if (typeof productOrId === "object") {
             } else {
               // 1. Đơn mua hàng (trừ tiền)
               if (ordAmt > 0) {
+                const qtyStr = (o.quantity && o.quantity > 1) ? (" (SL: " + o.quantity + ")") : "";
+                const purchaseNote = "Mua SP: " + pName + vName + qtyStr + " - Đơn #" + oId;
                 rawLogs.push({
                   id: "ORD_" + oId,
                   orderId: oId,
@@ -7427,7 +7531,9 @@ if (typeof productOrId === "object") {
                   type: "Thanh toán mua hàng",
                   amount: -Math.abs(ordAmt),
                   balanceAfter: o.balanceAfter !== undefined ? Number(o.balanceAfter) : null,
-                  note: o.accounts || ("Mua SP: " + pName + vName + " - Đơn #" + oId)
+                  note: purchaseNote,
+                  productName: pName,
+                  variantName: o.variantName || ""
                 });
               }
 
@@ -7561,14 +7667,36 @@ if (typeof productOrId === "object") {
           seenMap.set(key, item);
         } else {
           const existing = seenMap.get(key);
-          // Ưu tiên bản ghi có chi tiết ngân hàng thực tế (MBVCB/CT) hoặc có balanceAfter
+          // 1. Luôn cập nhật bổ sung ghi chú nếu bản ghi cũ chưa có hoặc ghi chú mới chi tiết hơn
+          if (!existing.note || (item.note && item.note.length > existing.note.length)) {
+            existing.note = item.note;
+          }
+          if ((!existing.orderId || existing.orderId.startsWith("TX_")) && item.orderId) {
+            existing.orderId = item.orderId;
+          }
+          if (item.productName && !existing.productName) {
+            existing.productName = item.productName;
+          }
+          if ((existing.balanceAfter === null || existing.balanceAfter === undefined) && (item.balanceAfter !== null && item.balanceAfter !== undefined)) {
+            existing.balanceAfter = item.balanceAfter;
+          }
+          // 2. Ưu tiên bản ghi có chi tiết ngân hàng thực tế (MBVCB/CT) hoặc có balanceAfter
           if ((item.note && (item.note.includes("MBVCB") || item.note.includes("CT tu"))) || (!existing.balanceAfter && item.balanceAfter)) {
-            seenMap.set(key, item);
+            const mergedNote = item.note || existing.note;
+            const mergedOrderId = item.orderId || existing.orderId;
+            seenMap.set(key, Object.assign({}, existing, item, { note: mergedNote, orderId: mergedOrderId }));
           }
         }
       });
 
       const allLogs = Array.from(seenMap.values());
+
+      // Làm giàu ghi chú cho toàn bộ giao dịch mua hàng / hoàn tiền
+      allLogs.forEach(tx => {
+        if (typeof formatTransactionDisplayNote === "function") {
+          tx.note = formatTransactionDisplayNote(tx);
+        }
+      });
 
       // H. Sắp xếp theo thời gian mới nhất lên đầu danh sách
       function parseVietnamDateTime(str) {
@@ -7798,10 +7926,9 @@ if (typeof productOrId === "object") {
 
             let balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter))) ? formatVND(Math.max(0, tx.balanceAfter)) : "-";
 
-            let displayNote = tx.note || "";
-            if (isRefund && (!displayNote || displayNote.includes("NAP ") || displayNote.includes("SePay"))) {
-              displayNote = "Hoàn tiền đơn hàng bảo hành mã đơn #" + (tx.orderId || "");
-            }
+            let displayNote = (typeof formatTransactionDisplayNote === "function")
+              ? formatTransactionDisplayNote(tx, isPurchase, isRefund)
+              : (tx.note || "");
 
             return '<tr>' +
               '<td style="font-size:0.75rem; color:#94a3b8; white-space:nowrap;">' + (tx.time || tx.date || '') + '</td>' +
@@ -32005,25 +32132,33 @@ function syncAllOpenViewsStock(changedProdId) {
           : '<span style="color:#ef4444; font-weight:800;">' + formatVND(amt) + '</span>';
         
         const tLow = (tx.type || "").toLowerCase();
+        const nLow = (tx.note || tx.content || "").toLowerCase();
         const isWithdraw = tLow.includes("rút") || tLow.includes("trừ");
         const isAdminTopup = tLow.includes("thủ công") || (tx.id && String(tx.id).includes("ADMIN_TOPUP")) || (tx.content && String(tx.content).includes("ADMIN_TOPUP"));
-        const isRefund = tLow.includes("hoàn tiền");
+        const isRefund = tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
+        const isPurchase = amt < 0 || tLow.includes("mua hàng") || tLow.includes("thanh toán");
 
         let typeBadge = '<span class="badge-verified" style="font-size:0.72rem; white-space:nowrap; display:inline-flex; align-items:center;">' + escapeHtml(tx.type || 'Nạp tiền VietQR') + '</span>';
-        if (isWithdraw) {
-          typeBadge = '<span class="badge-trust" style="font-size:0.72rem; background:rgba(239,68,68,0.15); color:#ef4444; white-space:nowrap; display:inline-flex; align-items:center;">' + escapeHtml(tx.type || 'Rút tiền') + '</span>';
-        } else if (isRefund) {
+        if (isRefund) {
           typeBadge = '<span class="badge-trust" style="font-size:0.72rem; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); white-space:nowrap; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-rotate-left"></i> Hoàn tiền bảo hành</span>';
+        } else if (isPurchase) {
+          typeBadge = '<span class="badge-verified" style="font-size:0.72rem; color:#f87171; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.1); white-space:nowrap; display:inline-flex; align-items:center;"><i class="fa-solid fa-cart-shopping"></i> Thanh toán mua hàng</span>';
+        } else if (isWithdraw) {
+          typeBadge = '<span class="badge-trust" style="font-size:0.72rem; background:rgba(239,68,68,0.15); color:#ef4444; white-space:nowrap; display:inline-flex; align-items:center;">' + escapeHtml(tx.type || 'Rút tiền') + '</span>';
         } else if (isAdminTopup) {
           typeBadge = '<span class="badge-trust" style="font-size:0.72rem; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); white-space:nowrap; display:inline-flex; align-items:center;">Nạp thủ công Admin</span>';
         }
+
+        let displayNote = (typeof formatTransactionDisplayNote === "function") 
+          ? formatTransactionDisplayNote(tx, isPurchase, isRefund) 
+          : (tx.note || tx.content || '');
 
         return '<tr>' +
           '<td style="font-size:0.78rem; color:#94a3b8; white-space:nowrap;">' + (tx.time || tx.date || '') + '</td>' +
           '<td style="white-space:nowrap;">' + typeBadge + '</td>' +
           '<td style="white-space:nowrap;">' + amtHtml + '</td>' +
           '<td style="white-space:nowrap;"><span class="badge-trust" style="font-size:0.7rem; background:rgba(16,185,129,0.15); color:#10b981; white-space:nowrap; display:inline-flex; align-items:center;">' + escapeHtml(tx.status || 'Thành công') + '</span></td>' +
-          '<td style="font-size:0.78rem; color:#cbd5e1; white-space:nowrap;">' + escapeHtml(tx.note || tx.content || '') + '</td>' +
+          '<td style="font-size:0.78rem; color:#cbd5e1;">' + escapeHtml(displayNote) + '</td>' +
         '</tr>';
       }).join("");
 
