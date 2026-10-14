@@ -11134,6 +11134,70 @@ if (typeof productOrId === "object") {
       }
     });
 
+    // UY TÍN 100%: CLICK DELEGATION CHO TẤT CẢ SẢN PHẨM THANH BÊN & HERO SPONSOR CARDS
+    document.addEventListener("click", function(e) {
+      if (e.target.closest("button") || e.target.closest("input")) return;
+      const sponsorCard = e.target.closest(".hero-sponsor-card");
+      if (sponsorCard) {
+        if (e.target.closest("a")) return; // Defer to anchor tag
+        const dataProd = sponsorCard.getAttribute("data-prod-id");
+        let targetId = dataProd;
+        if (!targetId) {
+          const oc = sponsorCard.getAttribute("onclick");
+          if (oc) {
+            const m = oc.match(/openProductDetailById\(['"]([^'"]+)['"]\)/);
+            if (m) targetId = m[1];
+          }
+        }
+        if (!targetId) {
+          const aTag = sponsorCard.querySelector("a[href*='prod=']");
+          if (aTag) {
+            const m = aTag.href.match(/prod=([^&]+)/);
+            if (m) targetId = decodeURIComponent(m[1]);
+          }
+        }
+        if (targetId) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof openProductDetailById === "function") {
+            openProductDetailById(targetId);
+          } else {
+            window.location.href = "?prod=" + encodeURIComponent(targetId) + "&view=viewProductDetail";
+          }
+        }
+        return;
+      }
+
+      const compactCard = e.target.closest(".compact-product-item");
+      if (compactCard) {
+        if (e.target.closest("a")) return; // Defer to anchor tag
+        const dataProd = compactCard.getAttribute("data-prod-id");
+        let targetId = dataProd;
+        if (!targetId) {
+          const oc = compactCard.getAttribute("onclick");
+          if (oc) {
+            const m = oc.match(/openProductDetailById\(['"]([^'"]+)['"]\)/);
+            if (m) targetId = m[1];
+          }
+        }
+        if (!targetId) {
+          const aTag = compactCard.querySelector("a[href*='prod=']");
+          if (aTag) {
+            const m = aTag.href.match(/prod=([^&]+)/);
+            if (m) targetId = decodeURIComponent(m[1]);
+          }
+        }
+        if (targetId) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof openProductDetailById === "function") {
+            openProductDetailById(targetId);
+          } else {
+            window.location.href = "?prod=" + encodeURIComponent(targetId) + "&view=viewProductDetail";
+          }
+        }
+      }
+    });
 
     function switchWalletSubTab(subTab = "deposit") {
       const btnDeposit = document.getElementById("profWalletSubBtnDeposit");
@@ -11821,10 +11885,10 @@ if (typeof productOrId === "object") {
         const displaySold = (typeof getRealisticProductSold === "function") ? getRealisticProductSold(p).toLocaleString("vi-VN") : (p.buffSold || p.sold || 0);
         const imgUrl = (typeof resolveProductImage === "function") ? resolveProductImage(p) : (p.image || '');
         const pSlugOrId = p.slug || p.id;
-        return '<div class="compact-product-item" onclick="openProductDetailById(\'' + pSlugOrId + '\')">' +
+        return '<div class="compact-product-item" data-prod-id="' + pSlugOrId + '" onclick="if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + pSlugOrId + '\'); } else { window.location.href=\'?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail\'; }" style="cursor:pointer;">' +
           '<div class="compact-thumb"><img data-id="' + p.id + '" data-name="' + escapeHtml(p.name) + '" src="' + imgUrl + '" alt="' + escapeHtml(p.name) + '" loading="lazy" onerror="this.onerror=null; if(typeof handleProductImgError===\'function\'){ handleProductImgError(this); } else { this.src=KTS_CLEAN_FALLBACK_SVG; }" /></div>' +
           '<div class="compact-info">' +
-            '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&view=viewProductDetail" target="_blank" class="compact-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + pSlugOrId + '\'); }" style="text-decoration:none; color:inherit; display:block;">' + escapeHtml(p.name) + '</a>' +
+            '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail" target="_blank" class="compact-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + pSlugOrId + '\'); } else { location.href=this.href; } }" style="text-decoration:none; color:inherit; display:block;">' + escapeHtml(p.name) + '</a>' +
             '<div class="compact-meta">' +
               '<span class="compact-price">' + ((typeof getProductPriceDisplay === "function") ? getProductPriceDisplay(p) : formatVND(p.price)) + '</span>' +
               '<span class="compact-sold">Đã bán: ' + displaySold + '</span>' +
@@ -13717,6 +13781,7 @@ if (typeof productOrId === "object") {
         if (typeof renderProductGrid === "function") renderProductGrid();
         if (typeof renderBestSellers === "function") renderBestSellers();
         if (typeof renderRecommended === "function") renderRecommended();
+        if (typeof renderDynamicFlankingProducts === "function") renderDynamicFlankingProducts();
         return;
       }
       try {
@@ -13934,6 +13999,7 @@ if (typeof productOrId === "object") {
         if (typeof renderProductGrid === "function") renderProductGrid();
         if (typeof renderBestSellers === "function") renderBestSellers();
         if (typeof renderRecommended === "function") renderRecommended();
+        if (typeof renderDynamicFlankingProducts === "function") renderDynamicFlankingProducts();
         if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
         if (typeof renderAdminDashboard === "function") renderAdminDashboard();
         if (typeof renderAllProductsPage === "function") renderAllProductsPage();
@@ -21583,12 +21649,14 @@ function syncAllOpenViewsStock(changedProdId) {
           const ratingStr = (p.rating || 5.0).toFixed ? (p.rating || 5.0).toFixed(1) : (p.rating || "5.0");
 
           const pSlugOrId = p.slug || p.id;
+          cardEl.style.cursor = "pointer";
+          cardEl.setAttribute("data-prod-id", pSlugOrId);
           cardEl.innerHTML = 
             '<div class="sponsor-img-wrap">' +
               '<img alt="' + escapeHtml(p.name) + '" src="' + escapeHtml((typeof resolveProductImage === "function") ? resolveProductImage(p) : (p.image || KTS_CLEAN_FALLBACK_SVG)) + '" onerror="this.onerror=null; this.src=KTS_CLEAN_FALLBACK_SVG;" />' +
             '</div>' +
             '<h4 class="sponsor-title">' +
-              '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail" target="_blank" onclick="if(!event.ctrlKey &amp;&amp; !event.metaKey &amp;&amp; event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + escapeHtml(pSlugOrId) + '\'); }" style="color:inherit; text-decoration:none;">' +
+              '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail" target="_blank" onclick="if(!event.ctrlKey &amp;&amp; !event.metaKey &amp;&amp; event.button === 0){ event.preventDefault(); event.stopPropagation(); if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + escapeHtml(pSlugOrId) + '\'); } else { location.href=this.href; } }" style="color:inherit; text-decoration:none;">' +
                 escapeHtml(p.name) +
               '</a>' +
             '</h4>' +
@@ -21600,7 +21668,11 @@ function syncAllOpenViewsStock(changedProdId) {
 
           cardEl.onclick = function(e) {
             if (e.target.closest('a')) return;
-            if (typeof openProductDetailById === "function") openProductDetailById(pSlugOrId);
+            if (typeof openProductDetailById === "function") {
+              openProductDetailById(pSlugOrId);
+            } else {
+              window.location.href = "?prod=" + encodeURIComponent(pSlugOrId) + "&view=viewProductDetail";
+            }
           };
         }
 
@@ -24519,10 +24591,6 @@ function syncAllOpenViewsStock(changedProdId) {
         openProductDetailById(existingInMock.id);
         return;
       }
-      const currentTitleEl = document.getElementById("dtlTitle");
-      if (currentTitleEl && currentTitleEl.innerText && !currentTitleEl.innerText.includes("Đang tải") && !currentTitleEl.innerText.includes("Không thể kết nối") && currentTitleEl.innerText.trim().length > 0) {
-        return;
-      }
 
       if (typeof switchView === "function") switchView("viewProductDetail");
       try { window.scrollTo(0, 0); } catch(e) {}
@@ -24590,6 +24658,14 @@ function syncAllOpenViewsStock(changedProdId) {
       if (!id) return;
       const cleanId = String(id).trim();
 
+      // [CRITICAL FIX 0MS]: Đánh dấu mở sản phẩm & URL ngay lập tức để switchView không bao giờ chặn hoặc ép về viewStore
+      window._isOpeningProductDetail = true;
+      window._openingProductId = cleanId;
+      try {
+        const newUrl = (window.location.origin || "https://www.khotaikhoanso.net") + "/?prod=" + encodeURIComponent(cleanId) + "&view=viewProductDetail";
+        window.history.replaceState({ prod: cleanId, view: "viewProductDetail" }, "", newUrl);
+      } catch(e) {}
+
       // BƯỚC 1: KIỂM TRA SẢN PHẨM ĐÃ XÓA NGAY LẬP TỨC
       if (typeof isProductDeleted === "function" && isProductDeleted(cleanId)) {
         console.warn("[KTS] Sản phẩm đã xóa:", cleanId);
@@ -24638,6 +24714,21 @@ function syncAllOpenViewsStock(changedProdId) {
       if (!p && (cleanId === "PROD_MTPG0PUD" || cleanId === "PROD_MTPIJ9XV" || cleanId === "SP_TIKTOK_BRAZIL")) {
         const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
         p = allProds.find(item => item && !(typeof isProductDeleted === "function" && isProductDeleted(item)) && (item.id === "PROD_MTPIJ9XV" || item.id === "PROD_MTPG0PUD" || (item.name && item.name.toUpperCase().includes("TIKTOK") && item.name.toUpperCase().includes("BRAZIL"))));
+      }
+
+      // FUZZY MATCH NẾU SLUG LÀ SLUG CŨ HOẶC CÓ KEYWORD TƯƠNG ĐỒNG
+      if (!p) {
+        const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
+        const cleanLower = cleanId.toLowerCase().replace(/^kts-/, '');
+        p = allProds.find(item => {
+          if (!item || (typeof isProductDeleted === "function" && isProductDeleted(item))) return false;
+          const iSlug = String(item.slug || '').toLowerCase().replace(/^kts-/, '');
+          const iName = String(item.name || '').toLowerCase();
+          if (cleanLower.length > 5 && (iSlug.includes(cleanLower) || cleanLower.includes(iSlug))) return true;
+          if (cleanLower.includes("gemini") && (iSlug.includes("gemini") || iName.includes("gemini"))) return true;
+          if (cleanLower.includes("tiktok") && (cleanLower.includes("us") || cleanLower.includes("beta")) && (iSlug.includes("tiktok") || iName.includes("tiktok"))) return true;
+          return false;
+        });
       }
 
       // KIỂM TRA LẠI: NẾU SẢN PHẨM TÌM THẤY ĐÃ BỊ XÓA -> KHÔNG ĐƯỢC PHÉP HIỂN THỊ
@@ -24702,14 +24793,16 @@ function syncAllOpenViewsStock(changedProdId) {
         } catch(eLiveSync) {}
         try { window.scrollTo(0, 0); } catch(e) {}
       } else {
-        // Nếu tiêu đề trang đã hiển thị sản phẩm hợp lệ, không giật màn hình hoặc tải lại
-        const currentTitleEl = document.getElementById("dtlTitle");
-        if (currentTitleEl && currentTitleEl.innerText && !currentTitleEl.innerText.includes("Đang tải") && !currentTitleEl.innerText.includes("Không thể kết nối") && currentTitleEl.innerText.trim().length > 0) {
-          return;
+        // NẾU CHƯA CÓ TRONG LOCAL: Đánh dấu mở sản phẩm & nạp siêu tốc từ Cloudflare Worker Turso API
+        window._isOpeningProductDetail = true;
+        window._openingProductId = cleanId;
+        const activeNow = localStorage.getItem("mmo_current_view") || "viewStore";
+        if (activeNow !== "viewProductDetail" && activeNow !== "viewPreOrderDetail") {
+          _previousView = activeNow;
         }
-
-        // NẾU CHƯA CÓ: Nạp siêu tốc từ Cloudflare Worker Turso API (100ms) - KHÔNG tạo dummy product
         if (typeof switchView === "function") switchView("viewProductDetail");
+        try { window.scrollTo(0, 0); } catch(e) {}
+
         const dtlTitleEl = document.getElementById("dtlTitle");
         if (dtlTitleEl) dtlTitleEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải thông tin sản phẩm...';
         const dtlDesc = document.getElementById("dtlDesc");
@@ -24735,10 +24828,26 @@ function syncAllOpenViewsStock(changedProdId) {
                 }
               } catch(e) {}
               openProductDetailById(wp.id);
-            } else if (res && (res.notFound || res.code === "NOT_FOUND")) {
-              handleProductNotFoundUI(cleanId);
             } else {
-              handleProductLoadRetryUI(cleanId, res && (res.error || res.message));
+              // Thử fuzzy tìm kiếm từ toàn bộ danh sách sản phẩm hiện có
+              const allProds = (typeof getVisibleProducts === "function") ? getVisibleProducts() : ((MOCK_DATA && MOCK_DATA.products) ? MOCK_DATA.products : []);
+              const cleanLower = cleanId.toLowerCase().replace(/^kts-/, '');
+              const altProduct = allProds.find(item => {
+                if (!item || (typeof isProductDeleted === "function" && isProductDeleted(item))) return false;
+                const iSlug = String(item.slug || '').toLowerCase();
+                const iName = String(item.name || '').toLowerCase();
+                if (cleanLower.includes("gemini") && (iSlug.includes("gemini") || iName.includes("gemini"))) return true;
+                if (cleanLower.includes("tiktok") && (iSlug.includes("tiktok") || iName.includes("tiktok"))) return true;
+                if (cleanLower.includes("gmail") && (iSlug.includes("gmail") || iName.includes("gmail"))) return true;
+                return false;
+              });
+              if (altProduct) {
+                openProductDetailById(altProduct.id);
+              } else if (res && (res.notFound || res.code === "NOT_FOUND")) {
+                handleProductNotFoundUI(cleanId);
+              } else {
+                handleProductLoadRetryUI(cleanId, res && (res.error || res.message));
+              }
             }
           }).catch(err => {
             handleProductLoadRetryUI(cleanId, err && err.message);
