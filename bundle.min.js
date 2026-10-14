@@ -4723,7 +4723,7 @@ if (typeof productOrId === "object") {
 
               return '<tr>' +
                 '<td>' + p.id + '</td>' +
-                '<td><img src="' + (typeof resolveProductImage === "function" ? resolveProductImage(p) : (p.image || (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : ""))) + '" style="width:36px; height:36px; border-radius:4px; object-fit:cover;" /></td>' +
+                '<td><img data-id="' + p.id + '" data-name="' + esc(p.name) + '" src="' + (typeof resolveProductImage === "function" ? resolveProductImage(p) : (p.image || (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : ""))) + '" style="width:36px; height:36px; border-radius:4px; object-fit:cover;" onerror="this.onerror=null; if(typeof handleProductImgError===\'function\'){ handleProductImgError(this); } else { this.src=KTS_CLEAN_FALLBACK_SVG; }" /></td>' +
                 '<td style="max-width:480px; min-width:240px; overflow:hidden;"><a href="?prod=' + encodeURIComponent(p.slug || p.id) + '&view=viewProductDetail" target="_blank" style="color:#ffffff; text-decoration:none; font-weight:700; display:inline-flex; align-items:center; gap:5px; font-size:0.88rem; max-width:100%;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'#ffffff\'" title="Mở xem chi tiết sản phẩm"><strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:440px; display:inline-block;">' + esc(p.name) + '</strong> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.7rem; color:#38bdf8; flex-shrink:0;"></i></a>' +
                   sourceInfoHtml +
                 '</td>' +
@@ -6559,19 +6559,24 @@ if (typeof productOrId === "object") {
       if (document.getElementById("admProdBuffSold")) document.getElementById("admProdBuffSold").value = p.buffSold !== undefined ? p.buffSold : (p.sold || 0);
       if (document.getElementById("admProdBuffRating")) document.getElementById("admProdBuffRating").value = p.rating || "4.9";
       if (document.getElementById("admProdBuffReviews")) document.getElementById("admProdBuffReviews").value = p.reviewCount || 11;
-      const savedCustomImg = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_img_" + p.id) || localStorage.getItem("mmo_custom_img_" + String(p.id).toUpperCase())) : "";
+      const savedCustomImg = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_img_" + p.id) || localStorage.getItem("mmo_custom_img_" + String(p.id).toUpperCase()) || localStorage.getItem("mmo_custom_img_" + String(p.id).toLowerCase())) : "";
       let effectiveImg = "";
-      // Ưu tiên Base64 từ đối tượng sản phẩm (Turso Cloud) hoặc localStorage
-      if (p.image && p.image.startsWith("data:image/")) effectiveImg = p.image;
-      else if (p.image_url && p.image_url.startsWith("data:image/")) effectiveImg = p.image_url;
-      else if (savedCustomImg && savedCustomImg.startsWith("data:image/")) effectiveImg = savedCustomImg;
-      else effectiveImg = (savedCustomImg && savedCustomImg.trim()) || p.image || p.image_url || p.imageUrl || "";
+      if (savedCustomImg && savedCustomImg.trim()) effectiveImg = savedCustomImg.trim();
+      else if (p.image && p.image.trim()) effectiveImg = p.image.trim();
+      else if (p.image_url && p.image_url.trim()) effectiveImg = p.image_url.trim();
+      else if (p.imageUrl && p.imageUrl.trim()) effectiveImg = p.imageUrl.trim();
 
       if (!effectiveImg || effectiveImg.includes("img_17914936")) {
         effectiveImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : "https://iili.io/nGs8RDv.jpg";
       }
       if (document.getElementById("admProdImage")) document.getElementById("admProdImage").value = effectiveImg || "";
-      if (document.getElementById("admProdImgPreview")) document.getElementById("admProdImgPreview").src = effectiveImg;
+      if (document.getElementById("admProdImgPreview")) {
+        document.getElementById("admProdImgPreview").src = effectiveImg;
+        document.getElementById("admProdImgPreview").onerror = function() {
+          this.onerror = null;
+          this.src = "https://iili.io/nGs8RDv.jpg";
+        };
+      }
       if (document.getElementById("admProdWarranty")) document.getElementById("admProdWarranty").value = p.warranty || "Bảo Hành 1 Đổi 1";
       const savedCustomDesc = (typeof localStorage !== "undefined") ? localStorage.getItem("mmo_custom_desc_" + p.id) : "";
       const effectiveDesc = (savedCustomDesc && savedCustomDesc.trim()) ? savedCustomDesc.trim() : (p.description || "");
@@ -10051,18 +10056,38 @@ if (typeof productOrId === "object") {
       function broadcastProductUpdateRealtime(prod) {
         if (!prod || !prod.id) return;
         try {
+          var cleanId = String(prod.id).trim();
+          var cleanSlug = String(prod.slug || '').trim();
+          var prodImg = prod.image || prod.image_url || prod.imageUrl || "";
+
+          // 0. Cập nhật MOCK_DATA.products trong RAM
+          if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+            var mIdx = MOCK_DATA.products.findIndex(function(p) {
+              return p && (String(p.id).toLowerCase() === cleanId.toLowerCase() || (cleanSlug && String(p.slug || '').toLowerCase() === cleanSlug.toLowerCase()));
+            });
+            if (mIdx !== -1) {
+              MOCK_DATA.products[mIdx] = Object.assign({}, MOCK_DATA.products[mIdx], prod);
+            }
+          }
+
           // 1. Cập nhật DOM trang chi tiết ngay lập tức 0ms
           refreshActiveProductDetailUI(prod);
 
           // 2. Cập nhật tất cả các ảnh thẻ sản phẩm đang hiển thị trong DOM
-          var prodImg = prod.image || prod.image_url || prod.imageUrl || "";
           if (prodImg) {
-            var selector = 'img[data-id="' + prod.id + '"], img[data-id="' + String(prod.id).toUpperCase() + '"]' + (prod.slug ? ', img[data-slug="' + prod.slug + '"]' : '');
+            var selector = 'img[data-id="' + cleanId + '"], img[data-id="' + cleanId.toUpperCase() + '"], img[data-id="' + cleanId.toLowerCase() + '"]' + (cleanSlug ? ', img[data-slug="' + cleanSlug + '"], img[data-slug="' + cleanSlug.toLowerCase() + '"]' : '');
             var cardImgs = document.querySelectorAll(selector);
             if (cardImgs && cardImgs.forEach) {
               cardImgs.forEach(function(ci) {
                 ci.src = prodImg;
               });
+            }
+            var dtlImg = document.getElementById("dtlImage");
+            if (dtlImg) {
+              var curP = window.currentSelectedProduct || window._currentActiveDetailProduct;
+              if (curP && (String(curP.id).toLowerCase() === cleanId.toLowerCase() || (cleanSlug && String(curP.slug || '').toLowerCase() === cleanSlug.toLowerCase()))) {
+                dtlImg.src = prodImg;
+              }
             }
           }
 
@@ -10071,6 +10096,7 @@ if (typeof productOrId === "object") {
           if (typeof renderBestSellers === "function") renderBestSellers();
           if (typeof renderRecommended === "function") renderRecommended();
           if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
+          if (typeof renderAdminDashboard === "function") renderAdminDashboard();
           if (typeof renderAllProductsPage === "function") renderAllProductsPage();
 
           // 4. Phát sóng qua BroadcastChannel trên 3 kênh đồng bộ cho mọi tab (<5ms)
@@ -10250,6 +10276,49 @@ if (typeof productOrId === "object") {
         }
       }
       initRealtimeProductListener();
+
+      var _LAST_LOCAL_PRODUCTS_VERSION = Date.now();
+      var _isPollingCloudTimestamp = false;
+
+      async function checkCloudProductsTimestamp() {
+        if (_isPollingCloudTimestamp) return;
+        _isPollingCloudTimestamp = true;
+        try {
+          var workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
+            ? MMO_WORKER_API.getApiUrl()
+            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+          var res = await fetch(workerUrl + "/api/products/timestamp?_t=" + Date.now(), {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-cache" }
+          });
+          if (res && res.ok) {
+            var data = await res.json();
+            if (data && data.success && data.timestamp) {
+              if (data.timestamp > _LAST_LOCAL_PRODUCTS_VERSION) {
+                _LAST_LOCAL_PRODUCTS_VERSION = data.timestamp;
+                if (typeof syncTursoProductsToLocalUI === "function") {
+                  await syncTursoProductsToLocalUI();
+                }
+              }
+            }
+          }
+        } catch(ePoll) {
+        } finally {
+          _isPollingCloudTimestamp = false;
+        }
+      }
+
+      function startRealtimeCloudWatcher() {
+        if (window._hasStartedRealtimeCloudWatcher) return;
+        window._hasStartedRealtimeCloudWatcher = true;
+        setInterval(checkCloudProductsTimestamp, 4000);
+        window.addEventListener("focus", function() { checkCloudProductsTimestamp(); });
+        document.addEventListener("visibilitychange", function() {
+          if (document.visibilityState === "visible") checkCloudProductsTimestamp();
+        });
+      }
+      window.startRealtimeCloudWatcher = startRealtimeCloudWatcher;
+      try { startRealtimeCloudWatcher(); } catch(eW) {}
 
       function handleSaveProduct(event) {
         if (event && event.preventDefault) event.preventDefault();
@@ -15731,9 +15800,33 @@ if (typeof productOrId === "object") {
                 if (Array.isArray(cur.variants)) localStorage.setItem("mmo_custom_variants_" + tp.id, JSON.stringify(cur.variants));
                 if (targetImage && !targetImage.includes("img_17914936")) {
                   localStorage.setItem("mmo_custom_img_" + tp.id, targetImage);
+                  localStorage.setItem("mmo_custom_img_" + String(tp.id).toUpperCase(), targetImage);
                   if (cur.slug) localStorage.setItem("mmo_custom_img_" + cur.slug, targetImage);
+                  if (typeof KTS_PROD_TO_IILI !== "undefined") {
+                    KTS_PROD_TO_IILI[tp.id] = targetImage;
+                    KTS_PROD_TO_IILI[String(tp.id).toUpperCase()] = targetImage;
+                    if (cur.slug) KTS_PROD_TO_IILI[cur.slug] = targetImage;
+                  }
+                  if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+                    KTS_KNOWN_CDN_MAP[tp.id] = targetImage;
+                    KTS_KNOWN_CDN_MAP[String(tp.id).toUpperCase()] = targetImage;
+                    if (cur.slug) KTS_KNOWN_CDN_MAP[cur.slug] = targetImage;
+                  }
                 }
               } catch(eSyncLs) {}
+
+              // Cập nhật ngay lập tức các thẻ img hiển thị trong DOM
+              if (targetImage) {
+                try {
+                  var sel = 'img[data-id="' + tp.id + '"], img[data-id="' + String(tp.id).toUpperCase() + '"]' + (cur.slug ? ', img[data-slug="' + cur.slug + '"]' : '');
+                  var matchingImgs = document.querySelectorAll(sel);
+                  if (matchingImgs && matchingImgs.forEach) {
+                    matchingImgs.forEach(function(imgEl) {
+                      if (imgEl && imgEl.src !== targetImage) imgEl.src = targetImage;
+                    });
+                  }
+                } catch(eDomImg) {}
+              }
             }
           } else {
             // Sản phẩm mới
@@ -15748,6 +15841,23 @@ if (typeof productOrId === "object") {
               deliveryType: tp.delivery_type || tp.deliveryType || "local",
               delivery_type: tp.delivery_type || tp.deliveryType || "local"
             });
+            if (targetImage && !targetImage.includes("img_17914936")) {
+              try {
+                localStorage.setItem("mmo_custom_img_" + newProd.id, targetImage);
+                localStorage.setItem("mmo_custom_img_" + String(newProd.id).toUpperCase(), targetImage);
+                if (newProd.slug) localStorage.setItem("mmo_custom_img_" + newProd.slug, targetImage);
+                if (typeof KTS_PROD_TO_IILI !== "undefined") {
+                  KTS_PROD_TO_IILI[newProd.id] = targetImage;
+                  KTS_PROD_TO_IILI[String(newProd.id).toUpperCase()] = targetImage;
+                  if (newProd.slug) KTS_PROD_TO_IILI[newProd.slug] = targetImage;
+                }
+                if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+                  KTS_KNOWN_CDN_MAP[newProd.id] = targetImage;
+                  KTS_KNOWN_CDN_MAP[String(newProd.id).toUpperCase()] = targetImage;
+                  if (newProd.slug) KTS_KNOWN_CDN_MAP[newProd.slug] = targetImage;
+                }
+              } catch(eNewImg) {}
+            }
             MOCK_DATA.products.unshift(newProd);
           }
         });
@@ -15782,6 +15892,7 @@ if (typeof productOrId === "object") {
         if (typeof renderBestSellers === "function") renderBestSellers();
         if (typeof renderRecommended === "function") renderRecommended();
         if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
+        if (typeof renderAdminDashboard === "function") renderAdminDashboard();
         if (typeof renderAllProductsPage === "function") renderAllProductsPage();
       } catch(e) {
         console.warn("syncTursoProductsToLocalUI error:", e);
@@ -23607,10 +23718,18 @@ function syncAllOpenViewsStock(changedProdId) {
 
     // IMAGE UPLOAD PREVIEW & COMPRESS
     function handleProdImgInput(e) {
-      const url = e.target.value;
+      const url = (e && e.target && e.target.value ? e.target.value : (document.getElementById("admProdImage") ? document.getElementById("admProdImage").value : "")).trim();
       const preview = document.getElementById("admProdImgPreview");
-      if (preview && url) {
-        preview.src = url;
+      if (preview) {
+        if (url) {
+          preview.src = url;
+          preview.onerror = function() {
+            this.onerror = null;
+            this.src = "https://iili.io/nGs8RDv.jpg";
+          };
+        } else {
+          preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+        }
       }
     }
     window.handleProdImgInput = handleProdImgInput;
@@ -23629,7 +23748,7 @@ function syncAllOpenViewsStock(changedProdId) {
         return;
       }
 
-      showToast("⏳ Đang xử lý & tối ưu hóa ảnh 500x500...", "info");
+      showToast("⏳ Đang xử lý & tối ưu hóa ảnh...", "info");
       const reader = new FileReader();
       reader.onload = function(evt) {
         const rawData = evt.target.result;
@@ -23637,7 +23756,7 @@ function syncAllOpenViewsStock(changedProdId) {
         img.onload = async function() {
           try {
             const canvas = document.createElement("canvas");
-            const TARGET_SIZE = 500;
+            const TARGET_SIZE = 420;
             canvas.width = TARGET_SIZE;
             canvas.height = TARGET_SIZE;
             const ctx = canvas.getContext("2d");
@@ -23656,8 +23775,8 @@ function syncAllOpenViewsStock(changedProdId) {
             }
             ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, TARGET_SIZE, TARGET_SIZE);
 
-            // Nén JPEG 0.82 Base64 an toàn tuyệt đối
-            const compressed = canvas.toDataURL("image/jpeg", 0.82);
+            // Nén JPEG 0.80 siêu nhẹ (~20KB), lưu trữ siêu tốc chống tràn quota
+            const compressed = canvas.toDataURL("image/jpeg", 0.80);
 
             const preview = document.getElementById("admProdImgPreview");
             if (preview) preview.src = compressed;
