@@ -7441,22 +7441,20 @@ if (typeof productOrId === "object") {
                 _lastEditedAt: currentProd._lastEditedAt || 0
               });
 
-              // [FRESH API MAPPING]: Luôn dùng sourceStock từ mmo_api_product_mappings (fresh) sau merge
-              // Tránh serverProd.apiMapping (stale, sourceStock=0) ghi đè apiMapping đã cập nhật của admin
+              // [SSOT TURSO CORE]: Ưu tiên apiMapping chuẩn từ Server Database Turso
               try {
-                const freshMaps = (typeof getApiProductMappings === "function") ? getApiProductMappings() : {};
                 const mergedProdId = MOCK_DATA.products[existingIdx].id;
-                if (freshMaps[mergedProdId] && freshMaps[mergedProdId].enabled && freshMaps[mergedProdId].sourceProdId) {
-                  // Admin: dùng fresh local maps
-                  MOCK_DATA.products[existingIdx].apiMapping = freshMaps[mergedProdId];
-                } else if (serverProd && serverProd.apiMapping && serverProd.apiMapping.enabled && serverProd.apiMapping.sourceProdId) {
-                  // Non-admin: fallback về apiMapping từ GAS (admin đã save có sourceStock)
+                const freshMaps = (typeof getApiProductMappings === "function") ? getApiProductMappings() : {};
+                if (serverProd && serverProd.apiMapping && serverProd.apiMapping.enabled && serverProd.apiMapping.sourceProdId) {
+                  // Server Turso là SSOT: Luôn luôn áp dụng mapping từ Server và đồng bộ vào local
                   MOCK_DATA.products[existingIdx].apiMapping = serverProd.apiMapping;
-                  // Cache vào localStorage để getApiProductMapping() dùng được
                   try {
                     freshMaps[mergedProdId] = serverProd.apiMapping;
                     localStorage.setItem("mmo_api_product_mappings", JSON.stringify(freshMaps));
+                    localStorage.setItem("mmo_api_map_" + mergedProdId, JSON.stringify(serverProd.apiMapping));
                   } catch(e2) {}
+                } else if (freshMaps[mergedProdId] && freshMaps[mergedProdId].enabled && freshMaps[mergedProdId].sourceProdId) {
+                  MOCK_DATA.products[existingIdx].apiMapping = freshMaps[mergedProdId];
                 }
               } catch(e) {}
 
@@ -24196,10 +24194,10 @@ function syncAllOpenViewsStock(changedProdId) {
           fetchApiSourceProducts(false).catch(() => {});
         }
 
-        // 2. Tra cứu mapping API của sản phẩm hoặc biến thể hiện tại
-        let apiMap = null;
-        if (typeof getApiProductMapping === "function") {
-          apiMap = getApiProductMapping(curP) || (curP && curP.apiMapping);
+        // 2. Tra cứu mapping API của sản phẩm hoặc biến thể hiện tại (ƯU TIÊN SSOT TỪ SERVER)
+        let apiMap = (curP && curP.apiMapping && curP.apiMapping.sourceProdId) ? curP.apiMapping : null;
+        if (!apiMap && typeof getApiProductMapping === "function") {
+          apiMap = getApiProductMapping(curP);
         }
 
         let freshAmount = null;
@@ -24975,7 +24973,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
       const isLocalDelivery = (p.deliveryType === "local" || p.delivery_type === "local" || p.deliveryType === "manual" || p.delivery_type === "manual");
       const isProdApi = !isLocalDelivery && ((p.deliveryType === "api" || p.delivery_type === "api") || ((typeof isProductApi === "function") ? isProductApi(p) : false));
-      const apiMapInfo = isProdApi ? (((typeof getApiProductMapping === "function") ? getApiProductMapping(p) : null) || (p && p.apiMapping)) : null;
+      const apiMapInfo = isProdApi ? ((p && p.apiMapping && p.apiMapping.sourceProdId ? p.apiMapping : null) || ((typeof getApiProductMapping === "function") ? getApiProductMapping(p) : null)) : null;
 
       const dtlDeliveryType = document.getElementById("dtlDeliveryType") || document.querySelector(".dtl-delivery-type");
       if (dtlDeliveryType) {
@@ -25723,10 +25721,13 @@ function syncAllOpenViewsStock(changedProdId) {
         const qtyInput = document.getElementById("dtlQtyInput");
         const qty = Math.max(1, parseInt(qtyInput ? qtyInput.value : "1") || 1);
 
-        // Kiểm tra API On-Demand
-        let apiMap = null;
-        if (typeof getApiProductMapping === "function") {
-          apiMap = getApiProductMapping(p) || (p && p.apiMapping);
+        // Kiểm tra API On-Demand (ƯU TIÊN TUYỆT ĐỐI p.apiMapping TỪ SERVER SSOT)
+        let apiMap = (p && p.apiMapping && p.apiMapping.sourceProdId) ? p.apiMapping : null;
+        if (!apiMap && targetVar && targetVar.apiMapping && targetVar.apiMapping.sourceProdId) {
+          apiMap = targetVar.apiMapping;
+        }
+        if (!apiMap && typeof getApiProductMapping === "function") {
+          apiMap = getApiProductMapping(p);
           if (!apiMap || !apiMap.sourceProdId) {
             apiMap = getApiProductMapping(p.id + "_" + vIdx);
           }
