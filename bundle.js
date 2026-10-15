@@ -6603,9 +6603,12 @@ if (typeof productOrId === "object") {
       try {
         if (!referrerCode) return [];
         const cleanRef = String(referrerCode).trim().toLowerCase();
+        const token = (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_session_token") || localStorage.getItem("mmo_admin_secret"))) || "";
+        const headers = { "Accept": "application/json" };
+        if (token) headers["Authorization"] = "Bearer " + token;
         const res = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/affiliate/members?referrer=" + encodeURIComponent(cleanRef), {
           method: "GET",
-          headers: { "Accept": "application/json" }
+          headers: headers
         });
         const json = await res.json().catch(() => null);
         if (json && json.status === "success" && Array.isArray(json.members)) {
@@ -6617,6 +6620,28 @@ if (typeof productOrId === "object") {
       return [];
     }
     window.fetchCloudAffiliateMembers = fetchCloudAffiliateMembers;
+
+    async function fetchCloudAffiliateOrders(referrerCode) {
+      try {
+        if (!referrerCode) return [];
+        const cleanRef = String(referrerCode).trim().toLowerCase();
+        const token = (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_session_token") || localStorage.getItem("mmo_admin_secret"))) || "";
+        const headers = { "Accept": "application/json" };
+        if (token) headers["Authorization"] = "Bearer " + token;
+        const res = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/affiliate/orders?referrer=" + encodeURIComponent(cleanRef), {
+          method: "GET",
+          headers: headers
+        });
+        const json = await res.json().catch(() => null);
+        if (json && json.status === "success" && Array.isArray(json.orders)) {
+          return json.orders;
+        }
+      } catch(e) {
+        console.warn("fetchCloudAffiliateOrders error:", e);
+      }
+      return [];
+    }
+    window.fetchCloudAffiliateOrders = fetchCloudAffiliateOrders;
 
     function renderAffiliateDashboard() {
       try {
@@ -6758,7 +6783,7 @@ if (typeof productOrId === "object") {
         // Render ngay lập tức từ bộ nhớ cục bộ (0ms không giật lag)
         renderAffiliateF1AndCommissions();
 
-        // Đồng bộ tức thì từ Cloudflare Worker Turso DB để lấy thành viên đăng ký từ máy khác / trình duyệt khác
+        // Đồng bộ tức thì từ Cloudflare Worker Turso DB để lấy thành viên F1 và đơn hàng F1 toàn cầu
         if (typeof fetchCloudAffiliateMembers === "function") {
           fetchCloudAffiliateMembers(affCode).then(function(cloudMembers) {
             if (Array.isArray(cloudMembers) && cloudMembers.length > 0) {
@@ -6786,6 +6811,27 @@ if (typeof productOrId === "object") {
               });
               if (updated) {
                 saveRegisteredUsers(localUsers);
+                renderAffiliateF1AndCommissions();
+              }
+            }
+          }).catch(function() {});
+        }
+
+        if (typeof fetchCloudAffiliateOrders === "function") {
+          fetchCloudAffiliateOrders(affCode).then(function(cloudOrders) {
+            if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
+              let localAffOrders = getAffiliateOrders();
+              let updatedOrders = false;
+              cloudOrders.forEach(function(co) {
+                if (!co || !co.orderId) return;
+                const found = localAffOrders.find(o => String(o.orderId) === String(co.orderId));
+                if (!found) {
+                  localAffOrders.unshift(co);
+                  updatedOrders = true;
+                }
+              });
+              if (updatedOrders) {
+                saveAffiliateOrders(localAffOrders);
                 renderAffiliateF1AndCommissions();
               }
             }
@@ -10275,9 +10321,10 @@ if (typeof productOrId === "object") {
           avatar: picture
         };
 
-        // Bind affiliate referrer if available
+        // Bind affiliate referrer if available (Tự động gắn mã người giới thiệu khi đăng nhập Google)
         const savedRefCode = (localStorage.getItem("mmo_ref_code") || sessionStorage.getItem("mmo_ref_code") || "").trim().toLowerCase();
-        if (savedRefCode && savedRefCode !== email && savedRefCode !== email.split("@")[0]) {
+        const uPrefix = email.split("@")[0];
+        if (savedRefCode && savedRefCode !== email && savedRefCode !== uPrefix) {
           currentUser.referredBy = (existingUser && existingUser.referredBy) ? existingUser.referredBy : savedRefCode;
           if (typeof syncAffiliateRegistrationToCloud === "function" && currentUser.referredBy) {
             syncAffiliateRegistrationToCloud(email, name, currentUser.referredBy, "GOOGLE");
@@ -10292,6 +10339,25 @@ if (typeof productOrId === "object") {
 
         saveRegisteredUsers(users);
         localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+        localStorage.setItem("mmo_current_user", JSON.stringify(currentUser));
+        try { sessionStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
+        try { sessionStorage.setItem("mmo_current_user", JSON.stringify(currentUser)); } catch(e) {}
+
+        // Đồng bộ tức thì lên Cloudflare Worker Turso SSOT kèm mã giới thiệu Affiliate
+        try {
+          fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/user/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: currentUser.email,
+              name: currentUser.name,
+              avatar: currentUser.avatar,
+              role: currentUser.role,
+              referredBy: currentUser.referredBy,
+              authType: "GOOGLE"
+            })
+          }).catch(function(){});
+        } catch(eSync) {}
 
         closeModal("authModal");
         updateUserUI();
