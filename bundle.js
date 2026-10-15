@@ -49,7 +49,7 @@ if (typeof window !== "undefined") {
 // =========================================================================
 var MMO_AI_KEYS = (typeof window !== "undefined" && window.MMO_AI_KEYS) ? window.MMO_AI_KEYS : null;
 var KTS_KNOWN_CDN_MAP = (typeof window !== "undefined" && window.KTS_KNOWN_CDN_MAP) ? window.KTS_KNOWN_CDN_MAP : null;
-var KTS_CLEAN_FALLBACK_SVG = (typeof window !== "undefined" && window.KTS_CLEAN_FALLBACK_SVG) ? window.KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg";
+var KTS_CLEAN_FALLBACK_SVG = (typeof window !== "undefined" && window.KTS_CLEAN_FALLBACK_SVG) ? window.KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8AOJ.png";
 var cachedCloudWalletHistory = [];
 var currentUser = (typeof window !== "undefined" && window.currentUser) ? window.currentUser : null;
 
@@ -698,13 +698,14 @@ if (typeof productOrId === "object") {
       }
 
       // TUYỆT ĐỐI KHÔNG HIỂN THỊ BẤT KỲ SẢN PHẨM DEMO HOẶC TEST NÀO
-      if (pid === "PROD_TEST" || pid === "PROD_CODE" || pid === "PROD_MTPI7PIO" || pid.toUpperCase() === "PROD_MTPI7PIO" || pid === "zalo-new-2016" || pid.toUpperCase() === "PROD_CODE" || pid.startsWith("SP_") || DUMMY_SEED_IDS.includes(pid) || PHONE_FARM_DELETED_IDS.includes(pid)) return true;
+      if (pid === "PROD_TEST" || pid === "PROD_CODE" || pid === "PROD_MTPI7PIO" || pid.toUpperCase() === "PROD_MTPI7PIO" || pid === "PROD_MV4JIHMM" || pid === "zalo-new-2016" || pid.toUpperCase() === "PROD_CODE" || pid.startsWith("SP_") || DUMMY_SEED_IDS.includes(pid) || PHONE_FARM_DELETED_IDS.includes(pid)) return true;
+      if (pid.toLowerCase().includes("phone-farm") || pid.toLowerCase().includes("flash-rom") || pid.toLowerCase().includes("rom-tool")) return true;
       if (typeof productOrId === "object") {
         const pCat = String(productOrId.category || "").trim().toLowerCase();
-        if (pCat.includes("phone farm") || pCat.includes("phonefarm") || pCat.includes("rom & tool") || pCat === "phone farm") return true;
+        if (pCat.includes("phone farm") || pCat.includes("phonefarm") || pCat.includes("rom & tool") || pCat.includes("flash rom") || pCat.includes("rom") || pCat === "phone farm") return true;
         const pName = String(productOrId.name || "").trim().toLowerCase();
         if (pName.includes("nhóm zalo có sẵn thành viên") || pName.includes("nhóm zalo new 2016")) return true;
-        if (pName.includes("mod adb") && (pName.includes("rom") || pName.includes("not") || pName.includes("galaxy") || pName.includes("s7") || pName.includes("s8") || pName.includes("s9") || pName.includes("s10") || pName.includes("s22") || pName.includes("j7"))) return true;
+        if (pName.includes("phone farm") || pName.includes("phonefarm") || pName.includes("flash rom") || pName.includes("mod adb") || (pName.includes("rom") && (pName.includes("samsung") || pName.includes("fix chớp") || pName.includes("treo logo")))) return true;
       }
       if (typeof productOrId === "object") {
         const pName = String(productOrId.name || "").trim().toLowerCase();
@@ -1156,8 +1157,15 @@ if (typeof productOrId === "object") {
     try {
       const savedCats = localStorage.getItem("mmo_categories");
       if (savedCats) {
-        const parsedCats = JSON.parse(savedCats);
-        if (Array.isArray(parsedCats) && parsedCats.length > 0) MOCK_DATA.categories = parsedCats;
+        let parsedCats = JSON.parse(savedCats);
+        if (Array.isArray(parsedCats) && parsedCats.length > 0) {
+          parsedCats = parsedCats.filter(function(c) {
+            const lc = String(c || "").toLowerCase();
+            return !lc.includes("phone farm") && !lc.includes("phonefarm") && !lc.includes("rom & tool") && !lc.includes("rom");
+          });
+          MOCK_DATA.categories = parsedCats;
+          localStorage.setItem("mmo_categories", JSON.stringify(parsedCats));
+        }
       }
     } catch(e) {}
 
@@ -4582,7 +4590,7 @@ if (typeof productOrId === "object") {
 
       const hasRealImg = !!((savedCustomImg && savedCustomImg.trim()) || (p.image && p.image.trim()) || (p.image_url && p.image_url.trim()) || (p.imageUrl && p.imageUrl.trim()));
       if (!effectiveImg || effectiveImg.includes("img_17914936")) {
-        effectiveImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+        effectiveImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8AOJ.png");
       }
       const admImgInput = document.getElementById("admProdImage");
       if (admImgInput) {
@@ -4592,10 +4600,10 @@ if (typeof productOrId === "object") {
       const admImgPrev = document.getElementById("admProdImgPreview");
       if (admImgPrev) {
         admImgPrev.removeAttribute("data-image-deleted");
-        admImgPrev.src = effectiveImg || (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+        admImgPrev.src = effectiveImg || (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8AOJ.png");
         admImgPrev.onerror = function() {
           this.onerror = null;
-          this.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+          this.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8AOJ.png");
         };
       }
       if (document.getElementById("admProdWarranty")) document.getElementById("admProdWarranty").value = p.warranty || "Bảo Hành 1 Đổi 1";
@@ -8099,7 +8107,7 @@ if (typeof productOrId === "object") {
               }
             }
             if (!exactImg) {
-              exactImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : "https://iili.io/nGs8RDv.jpg";
+              exactImg = (typeof resolveProductImage === "function") ? resolveProductImage(p) : "https://iili.io/nGs8AOJ.png";
             }
 
             var dtlImg = document.getElementById("dtlImage");
@@ -8111,7 +8119,7 @@ if (typeof productOrId === "object") {
               dtlImg.onerror = function() {
                 this.onerror = null;
                 if (typeof handleProductImgError === 'function') handleProductImgError(this);
-                else this.src = 'https://iili.io/nGs8RDv.jpg';
+                else this.src = 'https://iili.io/nGs8AOJ.png';
               };
             }
 
@@ -8503,7 +8511,7 @@ if (typeof productOrId === "object") {
           image = localStorage.getItem("mmo_custom_img_" + actualTargetId) || localStorage.getItem("mmo_custom_img_" + String(actualTargetId).toUpperCase()) || "";
         }
         if (!isImageDeleted && (!image || image.includes("img_17914936"))) {
-          image = (typeof resolveProductImage === "function") ? resolveProductImage(oldProd || { id: actualTargetId, name: name }) : "https://iili.io/nGs8RDv.jpg";
+          image = (typeof resolveProductImage === "function") ? resolveProductImage(oldProd || { id: actualTargetId, name: name }) : "https://iili.io/nGs8AOJ.png";
         }
 
         // Parse old variants
@@ -11625,31 +11633,39 @@ if (typeof productOrId === "object") {
 
     var KTS_KNOWN_CDN_MAP = window.KTS_KNOWN_CDN_MAP = {};
 
-    var KTS_CLEAN_FALLBACK_SVG = window.KTS_CLEAN_FALLBACK_SVG = "https://iili.io/nGs8RDv.jpg";
+    var KTS_CLEAN_FALLBACK_SVG = window.KTS_CLEAN_FALLBACK_SVG = "https://iili.io/nGs8AOJ.png";
     window.KTS_CLEAN_FALLBACK_SVG = KTS_CLEAN_FALLBACK_SVG;
 
     function resolveProductImage(p) {
-      if (!p) return "https://iili.io/nGs8RDv.jpg";
+      if (!p) return "https://iili.io/nGs8AOJ.png";
 
       // A. Nếu là chuỗi trực tiếp
       if (typeof p === "string") {
         var trStr = p.trim();
         if (trStr.startsWith("data:image/")) return trStr;
-        if ((trStr.startsWith("http://") || trStr.startsWith("https://") || trStr.startsWith("/")) && trStr.indexOf("img_17914936") === -1 && trStr.indexOf("nfv4rln") === -1 && trStr.indexOf("placeholder") === -1) {
+        if ((trStr.startsWith("http://") || trStr.startsWith("https://") || trStr.startsWith("/")) && trStr.indexOf("img_17914936") === -1 && trStr.indexOf("nfv4rln") === -1 && trStr.indexOf("placeholder") === -1 && trStr.indexOf("nGs8RDv.jpg") === -1) {
           return trStr;
         }
       }
 
       const pId = String((typeof p === "object" && p.id) || (typeof p === "string" ? p : "")).trim();
       const pSlug = String((typeof p === "object" && p.slug) || "").trim();
-      let prodObj = (typeof p === "object") ? p : ((typeof findShopProduct === "function") ? findShopProduct(pId) : null);
+
+      // Tìm đối tượng sản phẩm đầy đủ trong bộ nhớ nếu p chỉ là { id, name }
+      let prodObj = (typeof p === "object" && (p.image || p.image_url || p.imageUrl)) ? p : null;
+      if (!prodObj && pId) {
+        if (typeof findShopProduct === "function") prodObj = findShopProduct(pId);
+        if (!prodObj && typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+          prodObj = MOCK_DATA.products.find(x => x && (String(x.id).toLowerCase() === pId.toLowerCase() || (pSlug && x.slug && String(x.slug).toLowerCase() === pSlug.toLowerCase())));
+        }
+      }
 
       // B. [ƯU TIÊN TUYỆT ĐỐI #1]: Cập nhật thời gian thực từ ảnh trực tiếp của sản phẩm
       let directImg = prodObj ? (prodObj.image || prodObj.image_url || prodObj.imageUrl || "") : "";
       if (directImg && typeof directImg === "string" && directImg.trim() !== "") {
         let trimmed = directImg.trim();
         if (trimmed.startsWith("data:image/")) return trimmed;
-        if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) && trimmed.indexOf("img_17914936") === -1 && trimmed.indexOf("nfv4rln") === -1 && trimmed.indexOf("placeholder") === -1) {
+        if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) && trimmed.indexOf("img_17914936") === -1 && trimmed.indexOf("nfv4rln") === -1 && trimmed.indexOf("placeholder") === -1 && trimmed.indexOf("nGs8RDv.jpg") === -1) {
           return trimmed;
         }
       }
@@ -11663,14 +11679,14 @@ if (typeof productOrId === "object") {
                               (pSlug ? localStorage.getItem("mmo_custom_img_" + pSlug) : "");
           if (customSaved && customSaved.trim() !== "") {
             const trimmed = customSaved.trim();
-            if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("/")) && trimmed.indexOf("img_17914936") === -1 && trimmed.indexOf("nfv4rln") === -1 && trimmed.indexOf("placeholder") === -1) {
+            if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("/")) && trimmed.indexOf("img_17914936") === -1 && trimmed.indexOf("nfv4rln") === -1 && trimmed.indexOf("placeholder") === -1 && trimmed.indexOf("nGs8RDv.jpg") === -1) {
               return trimmed;
             }
           }
         } catch(e) {}
       }
 
-      return "https://iili.io/nGs8RDv.jpg";
+      return "https://iili.io/nGs8AOJ.png";
     }
     window.resolveProductImage = resolveProductImage;
 
@@ -11679,12 +11695,24 @@ if (typeof productOrId === "object") {
       el.onerror = null;
       var name = (el.getAttribute('data-name') || el.alt || el.title || '').trim();
       var pId = (el.getAttribute('data-id') || '').trim();
+      var pSlug = (el.getAttribute('data-slug') || '').trim();
       var fallback = '';
-      if (typeof resolveProductImage === 'function') {
-        fallback = resolveProductImage({ id: pId, name: name });
+      if (pId && typeof MOCK_DATA !== 'undefined' && Array.isArray(MOCK_DATA.products)) {
+        var foundP = MOCK_DATA.products.find(function(x) {
+          return x && (String(x.id).toLowerCase() === pId.toLowerCase() || (pSlug && x.slug && String(x.slug).toLowerCase() === pSlug.toLowerCase()));
+        });
+        if (foundP && (foundP.image || foundP.image_url)) {
+          var fImg = (foundP.image || foundP.image_url).trim();
+          if (fImg && !fImg.includes('img_17914936') && !fImg.includes('nfv4rln') && !fImg.includes('nGs8RDv.jpg')) {
+            fallback = fImg;
+          }
+        }
       }
-      if (!fallback || fallback.includes('nFV4Rln.png')) {
-        fallback = 'https://iili.io/nGs8RDv.jpg';
+      if (!fallback && typeof resolveProductImage === 'function') {
+        fallback = resolveProductImage({ id: pId, name: name, slug: pSlug });
+      }
+      if (!fallback || fallback.includes('nFV4Rln.png') || fallback.includes('nGs8RDv.jpg')) {
+        fallback = 'https://iili.io/nGs8AOJ.png';
       }
       el.src = fallback;
     }
@@ -13899,15 +13927,19 @@ if (typeof productOrId === "object") {
           const localCustomPrice = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_price_" + tp.id) || localStorage.getItem("mmo_custom_price_" + String(tp.id).toUpperCase())) : null;
           const localCustomVars = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_variants_" + tp.id) || localStorage.getItem("mmo_custom_variants_" + String(tp.id).toUpperCase())) : null;
 
-          // Ưu tiên tuyệt đối ảnh mới sửa của Admin trong localStorage, không bao giờ bị đè bởi ảnh cũ từ server
+          // [SSOT TURSO CLOUD PRIORITY]:
+          // Chỉ ưu tiên localCustomImg nếu admin VỪA MỚI SỬA trên tab này trong vòng 120s (isLocallyInFlight = true).
+          // Ngoài ra, ảnh Live từ Turso SQLite SSOT luôn là nguồn chuẩn mực cao nhất, không bị đè bởi ảnh cũ!
           const localCustomImg = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_img_" + tp.id) || localStorage.getItem("mmo_custom_img_" + String(tp.id).toUpperCase())) : "";
-          let targetImage = (localCustomImg && !localCustomImg.includes("img_17914936")) ? localCustomImg : tpImg;
-          if (!targetImage || targetImage.includes("img_17914936")) {
-            if (typeof resolveProductImage === "function") {
-              targetImage = resolveProductImage(tp);
-            } else {
-              targetImage = "https://iili.io/nGs8RDv.jpg";
-            }
+          let targetImage = "";
+          if (isLocallyInFlight && localCustomImg && !localCustomImg.includes("img_17914936") && !localCustomImg.includes("nGs8RDv.jpg")) {
+            targetImage = localCustomImg;
+          } else if (tpImg && !tpImg.includes("img_17914936") && !tpImg.includes("placeholder") && !tpImg.includes("nGs8RDv.jpg")) {
+            targetImage = tpImg;
+          } else if (localCustomImg && !localCustomImg.includes("img_17914936") && !localCustomImg.includes("placeholder") && !localCustomImg.includes("nGs8RDv.jpg")) {
+            targetImage = localCustomImg;
+          } else {
+            targetImage = (typeof resolveProductImage === "function") ? resolveProductImage(tp) : "https://iili.io/nGs8AOJ.png";
           }
 
           if (existingIdx !== -1 && cur) {
@@ -21001,7 +21033,7 @@ function syncAllOpenViewsStock(changedProdId) {
         gasUrl: cfg.GAS_BACKEND_URL || "",
         brandLogo: "https://iili.io/nGs8AOJ.png",
         brandFavicon: "https://iili.io/nGsvaae.png",
-        brandOgImage: "https://iili.io/nGs8RDv.jpg"
+        brandOgImage: "https://iili.io/nGs8AOJ.png"
       };
       try {
         let stored = localStorage.getItem("khotaikhoanso_settings");
@@ -21250,8 +21282,8 @@ function syncAllOpenViewsStock(changedProdId) {
         previewBrandUrl("https://iili.io/nGsvaae.png", "setSiteFaviconPreview", "setSiteFaviconHint", "btnResetFavicon");
       } else if (type === "ogImage") {
         const inp = document.getElementById("setSiteOgImageUrl");
-        if (inp) inp.value = "https://iili.io/nGs8RDv.jpg";
-        previewBrandUrl("https://iili.io/nGs8RDv.jpg", "setSiteOgImagePreview", "setSiteOgImageHint", "btnResetOgImage");
+        if (inp) inp.value = "https://iili.io/nGs8AOJ.png";
+        previewBrandUrl("https://iili.io/nGs8AOJ.png", "setSiteOgImagePreview", "setSiteOgImageHint", "btnResetOgImage");
       }
     }
     window.resetBrandField = resetBrandField;
@@ -21304,7 +21336,7 @@ function syncAllOpenViewsStock(changedProdId) {
         // 4. Ảnh OG Image
         const cleanOg = (settings.brandOgImage && settings.brandOgImage.trim() && !settings.brandOgImage.includes("workers.dev") && !settings.brandOgImage.includes("nFV4Rln.png")) 
           ? settings.brandOgImage.trim() 
-          : "https://iili.io/nGs8RDv.jpg";
+          : "https://iili.io/nGs8AOJ.png";
         let ogMeta = document.querySelector("meta[property='og:image']");
         if (ogMeta) ogMeta.setAttribute("content", cleanOg);
         let ogSec = document.querySelector("meta[property='og:image:secure_url']");
@@ -21459,7 +21491,7 @@ function syncAllOpenViewsStock(changedProdId) {
       previewBrandUrl(faviconUrl, "setSiteFaviconPreview", "setSiteFaviconHint", "btnResetFavicon");
 
       // OG Image URL & Preview
-      const ogUrl = (s.brandOgImage && s.brandOgImage.trim() && !s.brandOgImage.includes("workers.dev") && !s.brandOgImage.includes("nFV4Rln.png")) ? s.brandOgImage.trim() : "https://iili.io/nGs8RDv.jpg";
+      const ogUrl = (s.brandOgImage && s.brandOgImage.trim() && !s.brandOgImage.includes("workers.dev") && !s.brandOgImage.includes("nFV4Rln.png")) ? s.brandOgImage.trim() : "https://iili.io/nGs8AOJ.png";
       if (document.getElementById("setSiteOgImageUrl")) document.getElementById("setSiteOgImageUrl").value = ogUrl;
       previewBrandUrl(ogUrl, "setSiteOgImagePreview", "setSiteOgImageHint", "btnResetOgImage");
 
@@ -21567,7 +21599,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
         if (!brandLogo || brandLogo.includes("workers.dev")) brandLogo = "https://iili.io/nGs8AOJ.png";
         if (!brandFavicon || brandFavicon.includes("workers.dev")) brandFavicon = "https://iili.io/nGsvaae.png";
-        if (!brandOgImage || brandOgImage.includes("workers.dev") || brandOgImage.includes("nFV4Rln.png")) brandOgImage = "https://iili.io/nGs8RDv.jpg";
+        if (!brandOgImage || brandOgImage.includes("workers.dev") || brandOgImage.includes("nFV4Rln.png")) brandOgImage = "https://iili.io/nGs8AOJ.png";
 
         const settings = {
           siteName: siteName,
@@ -21885,10 +21917,10 @@ function syncAllOpenViewsStock(changedProdId) {
           preview.src = url;
           preview.onerror = function() {
             this.onerror = null;
-            this.src = "https://iili.io/nGs8RDv.jpg";
+            this.src = "https://iili.io/nGs8AOJ.png";
           };
         } else {
-          preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+          preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8AOJ.png");
         }
       }
     }
@@ -21935,7 +21967,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }
       const preview = document.getElementById("admProdImgPreview");
       if (preview) {
-        preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8RDv.jpg");
+        preview.src = (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : "https://iili.io/nGs8AOJ.png");
         preview.setAttribute("data-image-deleted", "1");
       }
       if (typeof showToast === "function") showToast("🗑️ Đã xóa bỏ ảnh cũ!", "info");
@@ -25250,8 +25282,28 @@ function syncAllOpenViewsStock(changedProdId) {
                   if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, cleanFinal);
                   try {
                     localStorage.setItem("mmo_custom_img_" + p.id, cleanFinal);
+                    localStorage.setItem("mmo_custom_img_" + String(p.id).toUpperCase(), cleanFinal);
                     if (p.slug) localStorage.setItem("mmo_custom_img_" + p.slug, cleanFinal);
                   } catch(e) {}
+
+                  // [ĐỒNG BỘ TỨC THÌ CARD TRÊN GIAO DIỆN & LOCALSTORAGE]:
+                  try {
+                    if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
+                      const mIdx = MOCK_DATA.products.findIndex(x => x && (String(x.id).toLowerCase() === String(p.id).toLowerCase()));
+                      if (mIdx !== -1) {
+                        MOCK_DATA.products[mIdx].image = cleanFinal;
+                        MOCK_DATA.products[mIdx].image_url = cleanFinal;
+                        MOCK_DATA.products[mIdx].imageUrl = cleanFinal;
+                      }
+                      const pJson = JSON.stringify(MOCK_DATA.products);
+                      localStorage.setItem("mmo_products", pJson);
+                      localStorage.setItem("mmo_admin_products", pJson);
+                    }
+                    const cardImgs = document.querySelectorAll('img[data-id="' + p.id + '"], img[data-id="' + String(p.id).toUpperCase() + '"]' + (p.slug ? ', img[data-slug="' + p.slug + '"]' : ''));
+                    cardImgs.forEach(function(img) {
+                      if (img && img.src !== cleanFinal) img.src = cleanFinal;
+                    });
+                  } catch(eCardSync) {}
                 }
               }
             }
@@ -27263,7 +27315,7 @@ function syncAllOpenViewsStock(changedProdId) {
         // Cập nhật thẻ Meta Open Graph, Twitter Card và Tiêu đề trang cho bài viết
         try {
           const fullPostUrl = window.location.origin + prettyPostPath;
-          const postImg = b.image || "https://iili.io/nGs8RDv.jpg";
+          const postImg = b.image || "https://iili.io/nGs8AOJ.png";
           document.title = (b.title || "Bài viết") + " | KHO TÀI KHOẢN SỐ";
 
           let ogTit = document.querySelector('meta[property="og:title"]');
@@ -33554,7 +33606,11 @@ function changeAdmUsersPage(p) {
           const rawProds = localStorage.getItem("mmo_products") || localStorage.getItem("mmo_admin_products");
           if (rawProds) {
             const parsed = JSON.parse(rawProds);
-            if (Array.isArray(parsed) && parsed.length > 0) MOCK_DATA.products = parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              MOCK_DATA.products = parsed.filter(function(p) {
+                return p && p.id && (typeof isProductDeleted !== "function" || !isProductDeleted(p));
+              });
+            }
           }
         }
       } catch(eInitProds) {}
@@ -34354,8 +34410,8 @@ function getProductSchemaReviews(p, idx) {
           const isAll = (cat === "Tất cả");
           const count = isAll ? allProds.length : allProds.filter(function(p) { return (p.category || "").toLowerCase() === cat.toLowerCase(); }).length;
           const lowCat = (cat || "").toLowerCase();
-          if (!isAll && (lowCat.includes("phone farm") || lowCat.includes("phonefarm") || lowCat.includes("rom & tool")) && count === 0) {
-            return; // Ẩn hoàn toàn danh mục Phone Farm & Rom khi đã xóa hết sản phẩm
+          if (!isAll && (lowCat.includes("phone farm") || lowCat.includes("phonefarm") || lowCat.includes("rom & tool") || lowCat.includes("flash rom") || lowCat.includes("rom"))) {
+            return; // Ẩn vĩnh viễn danh mục Phone Farm & Rom 100% không phụ thuộc số lượng
           }
           const isActive = (allProdCurrentCat === cat);
 
