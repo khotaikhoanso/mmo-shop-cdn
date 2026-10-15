@@ -676,14 +676,7 @@ const API_URL = "";
   "telegram +27 south africa 2fa veri phone tạo 3+ ngày",
   "twitter | email verified 2fa| enabled | tokens included",
   "nordvpn (7 days) - 1 năm",
-  "paypal 2025 - 2016 đã ngâm lâu cực kỳ trâu",
-  "PROD_MUKAMO9XPD",
-  "api codex - claude 50m token1 day",
-  "api codex - claude 50m token 1 day",
-  "kts-api-codex-claude-50m-token1-day",
-  "kts-api-codex-claude-50m-token-1-day",
-  "api-codex-claude-50m-token1-day",
-  "api-codex-claude-50m-token-1-day"
+  "paypal 2025 - 2016 đã ngâm lâu cực kỳ trâu"
 ];
     window.GLOBAL_PERMANENT_DELETED_IDS = GLOBAL_PERMANENT_DELETED_IDS;
 
@@ -776,7 +769,6 @@ if (typeof productOrId === "object") {
     function getVisibleProducts() {
       if (!MOCK_DATA || !Array.isArray(MOCK_DATA.products)) return [];
       const seenIds = new Set();
-      const seenNormNames = new Set();
       const result = [];
 
       for (let i = 0; i < MOCK_DATA.products.length; i++) {
@@ -786,35 +778,7 @@ if (typeof productOrId === "object") {
         const cleanId = String(p.id).trim();
         if (cleanId === "PROD_CODE" || seenIds.has(cleanId)) continue;
 
-        // Chuẩn hóa tên sản phẩm để loại bỏ triệt để sản phẩm bị trùng lặp (ví dụ Proxy Nhật trùng lặp)
-        const rawName = String(p.name || '').trim();
-        const normName = rawName.toLowerCase()
-          .replace(/[–—−-]/g, '-')
-          .replace(/\s+/g, ' ')
-          .replace(/[\(\)\[\]]/g, '')
-          .trim();
-
-        if (normName && seenNormNames.has(normName)) {
-          // Chỉ loại bỏ bản demo SP_ nếu đã có bản PROD_ thật
-          const existingIdx = result.findIndex(x => {
-            const xn = String(x.name || '').trim().toLowerCase().replace(/[–—−-]/g, '-').replace(/\s+/g, ' ').replace(/[\(\)\[\]]/g, '').trim();
-            return xn === normName;
-          });
-          if (existingIdx !== -1) {
-            const existing = result[existingIdx];
-            if (existing.id.startsWith("SP_") && !p.id.startsWith("SP_")) {
-              result[existingIdx] = p;
-              continue;
-            }
-            if (!existing.id.startsWith("SP_") && p.id.startsWith("SP_")) {
-              continue;
-            }
-            // Nếu cả 2 đều là sản phẩm PROD_ thật với ID khác nhau -> GIỮ NGUYÊN CẢ HAI, TUYỆT ĐỐI KHÔNG XÓA!
-          }
-        }
-
         seenIds.add(cleanId);
-        if (normName) seenNormNames.add(normName);
         result.push(p);
       }
       return result;
