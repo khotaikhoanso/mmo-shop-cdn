@@ -13860,13 +13860,18 @@ if (typeof productOrId === "object") {
         return;
       }
       try {
-        const deletedIds = (typeof getDeletedProductIds === "function") ? getDeletedProductIds() : [];
+        let deletedIds = (typeof getDeletedProductIds === "function") ? getDeletedProductIds() : [];
         if (!MOCK_DATA.products) MOCK_DATA.products = [];
 
         // ĐỒNG BỘ TRIỆT ĐỂ VỚI TURSO CLOUD SQLITE (SSOT):
         const serverIds = new Set(res.products.map(p => String(p.id).toLowerCase()));
         const serverSlugs = new Set(res.products.map(p => String(p.slug || '').toLowerCase()).filter(Boolean));
         const serverNames = new Set(res.products.map(p => String(p.name || '').trim().toLowerCase()).filter(Boolean));
+
+        // Tự động làm sạch blacklist deletedIds trong localStorage: bất kỳ sản phẩm nào còn trên Turso SSOT thì TUYỆT ĐỐI KHÔNG BỊ XÓA
+        const activeServerIdSet = new Set(res.products.map(p => String(p.id).toLowerCase()));
+        deletedIds = deletedIds.filter(id => !activeServerIdSet.has(String(id).toLowerCase()));
+        try { localStorage.setItem("mmo_deleted_product_ids", JSON.stringify(deletedIds)); } catch(eDl) {}
 
         MOCK_DATA.products = (MOCK_DATA.products || []).filter(p => {
           if (!p || !p.id) return false;
@@ -13886,10 +13891,6 @@ if (typeof productOrId === "object") {
           }
           return true;
         });
-        // Tự động làm sạch blacklist deletedIds trong localStorage: bất kỳ sản phẩm nào còn trên Turso SSOT thì TUYỆT ĐỐI KHÔNG BỊ XÓA
-        const activeServerIdSet = new Set(res.products.map(p => String(p.id).toLowerCase()));
-        deletedIds = deletedIds.filter(id => !activeServerIdSet.has(String(id).toLowerCase()));
-        try { localStorage.setItem("mmo_deleted_product_ids", JSON.stringify(deletedIds)); } catch(eDl) {}
 
         res.products.forEach(function(tp) {
           if (!tp || !tp.id || tp.id === 'zalo-new-2016' || tp.id === 'PROD_CODE') return;
