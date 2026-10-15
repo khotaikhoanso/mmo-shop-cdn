@@ -14045,7 +14045,7 @@ if (typeof productOrId === "object") {
             }
           }
         });
-        ["Gmail", "HOT MAIL", "TikTok", "AI & Video", "Chatgpt", "VPN Proxy", "Intagram", "YOUTUBE", "Capcut", "Canva", "Tài Khoản Khác", "Khác"].forEach(c => validCats.add(c));
+        ["Gmail", "Facebook", "HOT MAIL", "TikTok", "AI & Video", "Chatgpt", "VPN Proxy", "Intagram", "YOUTUBE", "Capcut", "Canva", "Tài Khoản Khác", "Khác"].forEach(c => validCats.add(c));
         MOCK_DATA.categories = Array.from(validCats);
         try { localStorage.setItem("mmo_categories", JSON.stringify(MOCK_DATA.categories)); } catch(eCat) {}
 
