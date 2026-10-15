@@ -2506,14 +2506,12 @@ if (typeof productOrId === "object") {
             });
           }
 
-          const ADM_PRODS_PER_PAGE = 10;
-          const page = (typeof paginationState !== "undefined" && paginationState.admProd) ? paginationState.admProd : 1;
-          const totalPages = Math.ceil(prods.length / ADM_PRODS_PER_PAGE);
-          const safePage = Math.max(1, Math.min(page, totalPages || 1));
-          if (typeof paginationState !== "undefined") paginationState.admProd = safePage;
+          const ADM_PRODS_PER_PAGE = 99999;
+          const page = 1;
+          const totalPages = 1;
+          if (typeof paginationState !== "undefined") paginationState.admProd = 1;
 
-          const startIndex = (safePage - 1) * ADM_PRODS_PER_PAGE;
-          const pageProds = prods.slice(startIndex, startIndex + ADM_PRODS_PER_PAGE);
+          const pageProds = prods;
 
           if (prods.length === 0) {
             const emptyMsg = admProductSearchQuery
@@ -34457,13 +34455,8 @@ function getProductSchemaReviews(p, idx) {
         return;
       }
 
-      // 4. Pagination
-      const totalPages = Math.ceil(list.length / ALL_PROD_PAGE_SIZE);
-      if (allProdCurrentPage > totalPages) allProdCurrentPage = totalPages;
-      if (allProdCurrentPage < 1) allProdCurrentPage = 1;
-
-      const startIndex = (allProdCurrentPage - 1) * ALL_PROD_PAGE_SIZE;
-      const pageProds = list.slice(startIndex, startIndex + ALL_PROD_PAGE_SIZE);
+      // 4. HIỂN THỊ KHÔNG GIỚI HẠN 100% TẤT CẢ SẢN PHẨM (KHÔNG CẮT TRANG)
+      const pageProds = list;
 
       if (allProdViewMode === "list") {
         container.className = "all-prods-list";
@@ -34480,9 +34473,8 @@ function getProductSchemaReviews(p, idx) {
         container.innerHTML = pageProds.map(function(p) { return renderSingleCard(p, false); }).join("");
       }
 
-      if (typeof renderPaginationUI === "function") {
-        renderPaginationUI("allProductsPagination", allProdCurrentPage, list.length, "changeAllProdPage", ALL_PROD_PAGE_SIZE);
-      }
+      const allPagEl = document.getElementById("allProductsPagination");
+      if (allPagEl) allPagEl.innerHTML = "";
     }
     window.renderAllProductsPage = renderAllProductsPage;
 
