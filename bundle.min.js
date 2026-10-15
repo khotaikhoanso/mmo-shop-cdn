@@ -23332,8 +23332,20 @@ function syncAllOpenViewsStock(changedProdId) {
             buyerUsername: co.buyerUsername || co.customerName || co.userName || co.username || "Khách Hàng"
           };
 
-          const hasDeliveredAccounts = (normOrder.deliveredAccounts && normOrder.deliveredAccounts.length > 0) || Boolean(normOrder.credentials);
-          const isCloudCompleted = normOrder.status === "COMPLETED" || normOrder.status === "DELIVERED" || hasDeliveredAccounts;
+          const isPreOrderType = normOrder.type === "PRE_ORDER" || cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_");
+          let validAccs = [];
+          if (Array.isArray(normOrder.deliveredAccounts)) {
+            validAccs = normOrder.deliveredAccounts.filter(function(a) { return typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(a) : Boolean(a && String(a).trim()); });
+          } else if (normOrder.credentials) {
+            validAccs = String(normOrder.credentials).split("\n").map(function(s) { return s.trim(); }).filter(function(a) { return typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(a) : Boolean(a && String(a).trim()); });
+          }
+          const hasDeliveredAccounts = validAccs.length > 0;
+          const isCloudCompleted = isPreOrderType ? hasDeliveredAccounts : (normOrder.status === "COMPLETED" || normOrder.status === "DELIVERED" || hasDeliveredAccounts);
+
+          if (isPreOrderType && !hasDeliveredAccounts && (normOrder.status === "COMPLETED" || normOrder.status === "DELIVERED")) {
+            normOrder.status = "WAITING_CONFIRM";
+            normOrder.statusText = "Chờ xác nhận";
+          }
 
           // Helper cập nhật dữ liệu đồng bộ cho 1 đối tượng đơn hàng trong mảng
           function applySyncToTarget(targetItem) {
@@ -37186,11 +37198,17 @@ function getProductSchemaReviews(p, idx) {
                   p.deliveredAccounts = pAccs;
                   p.credentials = pAccs.join("\n");
                   
-                  // Giữ nguyên trạng thái thực tế của đơn hàng, không tự ý ép ngược về WAITING_CONFIRM
                   const pSt = String(p.status || "").toUpperCase();
+                  const pIsCancel = pSt === "CANCELLED" || pSt === "REFUNDED" || Boolean(p.isCancelled) || Boolean(p.isRefunded);
                   if (pAccs.length > 0) {
                     p.status = "COMPLETED";
                     p.statusText = "Đã giao hàng";
+                  } else if (!pIsCancel) {
+                    // Chưa bàn giao tài khoản thực tế thì tuyệt đối không được để COMPLETED hay DELIVERED
+                    if (pSt === "COMPLETED" || pSt === "DELIVERED") {
+                      p.status = "WAITING_CONFIRM";
+                      p.statusText = "Chờ xác nhận";
+                    }
                   }
                   
                   autoFixPreOrderZeroTotal(p);
@@ -37384,6 +37402,31 @@ function getProductSchemaReviews(p, idx) {
     function savePreOrders(orders) {
       try {
         orders = (orders || []).filter(function(o) { return !isForbiddenLegacyOrder(o); });
+
+        // CHỐNG NHIỄM TRẠNG THÁI: Đơn đặt trước nếu chưa có tài khoản thật thì KHÔNG ĐƯỢC LÀ COMPLETED!
+        orders.forEach(function(po) {
+          if (!po) return;
+          let pAccs = [];
+          if (Array.isArray(po.deliveredAccounts)) {
+            pAccs = po.deliveredAccounts.filter(isRealDeliveredAccount);
+          } else if (po.credentials) {
+            pAccs = String(po.credentials).split("\n").map(s => s.trim()).filter(isRealDeliveredAccount);
+          }
+          const pSt = String(po.status || "").toUpperCase();
+          const pIsCancel = pSt === "CANCELLED" || pSt === "REFUNDED" || Boolean(po.isCancelled) || Boolean(po.isRefunded);
+          if (pAccs.length > 0) {
+            po.status = "COMPLETED";
+            po.statusText = "Đã giao hàng";
+            po.deliveredAccounts = pAccs;
+            po.credentials = pAccs.join("\n");
+          } else if (!pIsCancel && (pSt === "COMPLETED" || pSt === "DELIVERED")) {
+            po.status = "WAITING_CONFIRM";
+            po.statusText = "Chờ xác nhận";
+            po.deliveredAccounts = [];
+            po.credentials = "";
+          }
+        });
+
         _cachedPreOrdersList = orders;
         _lastPreOrdersFetchTime = Date.now();
         localStorage.setItem("mmo_pre_orders", JSON.stringify(orders));
@@ -38553,8 +38596,22 @@ function getProductSchemaReviews(p, idx) {
         const rawStatus = String(o.status || '').toUpperCase().trim();
         const rawStatusTxt = String(o.statusText || '').toLowerCase().trim();
 
-        const isCompleted = rawStatus === 'COMPLETED' || rawStatus === 'DELIVERED' || rawStatusTxt.includes('đã giao') || rawStatusTxt.includes('hoàn thành');
+        // Lọc danh sách tài khoản hợp lệ đã bàn giao thực tế
+        let validAccounts = [];
+        if (Array.isArray(o.deliveredAccounts)) {
+          validAccounts = o.deliveredAccounts.filter(function(acc) {
+            return typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(acc) : Boolean(acc && String(acc).trim());
+          });
+        } else if (o.credentials) {
+          validAccounts = String(o.credentials).split("\n").map(function(s) { return s.trim(); }).filter(function(acc) {
+            return typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(acc) : Boolean(acc && String(acc).trim());
+          });
+        }
+        const hasRealAccs = validAccounts.length > 0;
+
         const isCancelled = rawStatus === 'CANCELLED' || rawStatus === 'REFUNDED' || rawStatusTxt.includes('hủy') || rawStatusTxt.includes('hoàn tiền') || Boolean(o.isCancelled) || Boolean(o.isRefunded);
+        // ĐƠN CHỈ HOÀN THÀNH KHI ADMIN ĐÃ THỰC SỰ BÀN GIAO TÀI KHOẢN (hasRealAccs === true)
+        const isCompleted = !isCancelled && hasRealAccs && (rawStatus === 'COMPLETED' || rawStatus === 'DELIVERED' || rawStatusTxt.includes('đã giao') || rawStatusTxt.includes('hoàn thành'));
         const isProcessing = !isCompleted && !isCancelled && (rawStatus === 'PROCESSING' || rawStatusTxt.includes('gom hàng') || rawStatusTxt.includes('đang xử lý'));
         const isWaiting = !isCompleted && !isCancelled && !isProcessing;
 
@@ -38796,6 +38853,10 @@ function getProductSchemaReviews(p, idx) {
     window.openAdminFulfillModal = openAdminFulfillModal;
 
     function closeAdminFulfillModal() {
+      const elId = document.getElementById("admFulfillOrderId");
+      if (elId) elId.value = "";
+      const elInp = document.getElementById("admFulfillAccountsInput");
+      if (elInp) elInp.value = "";
       const m = document.getElementById("adminFulfillPreOrderModal");
       if (m) {
         m.style.display = "none";
@@ -39360,7 +39421,8 @@ function executeAdminFulfillPreOrder() {
             } else {
               const localOrder = preOrders[existingIdx];
               const localIsDone = (localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED") && (localOrder.deliveredAccounts && localOrder.deliveredAccounts.length > 0);
-              const cloudIsDone = (cp.status === "COMPLETED" || cp.status === "DELIVERED");
+              const cloudHasAccs = Array.isArray(cp.deliveredAccounts) && cp.deliveredAccounts.length > 0;
+              const cloudIsDone = (cp.status === "COMPLETED" || cp.status === "DELIVERED") && cloudHasAccs;
 
               if (localIsDone && !cloudIsDone) {
                 // Đơn đã giao thành công tại local, đồng bộ lại lên cloud thay vì bị ghi đè thành chờ xác nhận
@@ -39373,13 +39435,18 @@ function executeAdminFulfillPreOrder() {
                   }).catch(function() {});
                 }
               } else if (cp.status && localOrder.status !== cp.status) {
-                localOrder.status = cp.status;
-                localOrder.statusText = cp.statusText || localOrder.statusText;
-                if (cp.deliveredAccounts && cp.deliveredAccounts.length > 0) {
-                  localOrder.deliveredAccounts = cp.deliveredAccounts;
-                  localOrder.credentials = Array.isArray(cp.deliveredAccounts) ? cp.deliveredAccounts.join("\n") : cp.deliveredAccounts;
+                // CHỐNG NHIỄM: Nếu cloud báo COMPLETED nhưng không có tài khoản thì không nhận COMPLETED
+                if ((cp.status === "COMPLETED" || cp.status === "DELIVERED") && !cloudHasAccs) {
+                  // Giữ nguyên trạng thái hiện tại (WAITING_CONFIRM / PROCESSING)
+                } else {
+                  localOrder.status = cp.status;
+                  localOrder.statusText = cp.statusText || localOrder.statusText;
+                  if (cloudHasAccs) {
+                    localOrder.deliveredAccounts = cp.deliveredAccounts;
+                    localOrder.credentials = Array.isArray(cp.deliveredAccounts) ? cp.deliveredAccounts.join("\n") : cp.deliveredAccounts;
+                  }
+                  hasNewOrChanged = true;
                 }
-                hasNewOrChanged = true;
               }
             }
           });
