@@ -6071,15 +6071,16 @@ if (typeof productOrId === "object") {
     window.getUserComprehensiveTransactions = getUserComprehensiveTransactions;
 
     function openUserBalanceModal(email) {
+      const cleanEmail = (email || "").toLowerCase().trim();
       let users = getRegisteredUsers();
-      const u = users.find(item => (item.email || "").toLowerCase().trim() === (email || "").toLowerCase().trim());
+      const u = users.find(item => (item.email || "").toLowerCase().trim() === cleanEmail);
       if (!u) {
         showToast("Không tìm thấy người dùng này!", "danger");
         return;
       }
 
       let curBal = (u.balance !== undefined) ? Number(u.balance) : 0;
-      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === (email || "").toLowerCase().trim() && currentUser.balance !== undefined && !isNaN(Number(currentUser.balance))) {
+      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined && !isNaN(Number(currentUser.balance))) {
         curBal = Number(currentUser.balance);
       }
 
@@ -6094,14 +6095,41 @@ if (typeof productOrId === "object") {
       if (nameTxt) nameTxt.innerText = u.name;
       if (emailTxt) emailTxt.innerText = u.email;
       if (curBalTxt) curBalTxt.innerText = formatVND(curBal);
-      if (amtInp) amtInp.value = "20000";
-      if (noteInp) noteInp.value = "ADMIN Nạp tiền thủ công qua ngân hàng";
+      if (amtInp) amtInp.value = "200000";
+      if (noteInp) noteInp.value = "Nạp tiền thủ công qua ngân hàng";
 
       const radio = document.querySelector("input[name='balActionType'][value='add']");
       if (radio) radio.checked = true;
 
       const modal = document.getElementById("userBalanceModal");
       if (modal) modal.style.display = "flex";
+
+      // Đồng bộ ngay số dư live SSOT mới nhất từ Turso Database trước khi thao tác
+      try {
+        const workerApiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+          ? MMO_WORKER_API.getApiUrl()
+          : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        fetch(workerApiUrl + "/api/user/profile?email=" + encodeURIComponent(cleanEmail), { cache: "no-store" })
+          .then(r => r.json())
+          .then(res => {
+            if (res && res.success && res.user && res.user.balance !== undefined && !isNaN(Number(res.user.balance))) {
+              const liveBal = Number(res.user.balance);
+              if (curBalTxt) curBalTxt.innerText = formatVND(liveBal);
+              u.balance = liveBal;
+              let allU = getRegisteredUsers();
+              const idx = allU.findIndex(item => (item.email || "").toLowerCase().trim() === cleanEmail);
+              if (idx !== -1) {
+                allU[idx].balance = liveBal;
+                saveRegisteredUsers(allU);
+              }
+              if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail) {
+                currentUser.balance = liveBal;
+                localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+                if (typeof updateUserUI === "function") updateUserUI();
+              }
+            }
+          }).catch(() => {});
+      } catch(e) {}
     }
     window.openUserBalanceModal = openUserBalanceModal;
 
@@ -9265,7 +9293,7 @@ if (typeof productOrId === "object") {
     }
     window.handleBalTypeChange = handleBalTypeChange;
 
-    function submitUserBalanceAdjustment() {
+    async function submitUserBalanceAdjustment() {
       const emailInp = document.getElementById("balModalUserEmail") || document.getElementById("adjBalUserEmail");
       const email = (emailInp?.value || document.getElementById("balModalUserEmailText")?.innerText || "").trim().toLowerCase();
       
@@ -9283,107 +9311,18 @@ if (typeof productOrId === "object") {
         return;
       }
 
-      let users = getRegisteredUsers();
-      let idx = users.findIndex(u => (u.email || "").toLowerCase().trim() === email);
-      if (idx === -1) {
-        const uName = document.getElementById("balModalUserName")?.innerText || email.split("@")[0];
-        users.push({
-          id: "USR_" + Date.now(),
-          email: email,
-          name: uName,
-          balance: Math.max(0, amt),
-          role: "USER"
-        });
-        idx = users.length - 1;
-      } else {
-        let baseBal = (users[idx].balance !== undefined) ? Number(users[idx].balance) : 0;
-        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === email && currentUser.balance !== undefined && !isNaN(Number(currentUser.balance))) {
-          baseBal = Number(currentUser.balance);
-        }
-        users[idx].balance = Math.max(0, baseBal + amt);
-      }
-      saveRegisteredUsers(users);
-
-      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === email) {
-        currentUser.balance = users[idx].balance;
-        localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-        if (typeof updateUserUI === "function") updateUserUI();
+      // Khóa nút bấm chống double click
+      const submitBtn = document.querySelector("#userBalanceModal .btn-big-buy") || document.getElementById("btnSubmitAdjustBalance");
+      const origBtnHtml = submitBtn ? submitBtn.innerHTML : "";
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang cập nhật...';
       }
 
       const admOrderId = "ADM_" + Date.now();
       const admNowStr = new Date().toLocaleString("vi-VN");
       const transType = amt >= 0 ? "Nạp tiền thủ công Admin" : "Trừ tiền thủ công Admin";
 
-      if (typeof recordTransaction === "function") {
-        recordTransaction(email, users[idx].name || email, transType, amt, users[idx].balance, reason, admOrderId);
-      }
-
-      if (amt > 0) {
-        try {
-          const depItem = {
-            id: "DEP_" + admOrderId,
-            orderId: admOrderId,
-            prodId: "NAP_VI",
-            prodName: "Nạp tiền thủ công bởi Quản trị viên",
-            amount: amt,
-            email: email,
-            userEmail: email,
-            userName: users[idx].name || email.split("@")[0],
-            status: "COMPLETED",
-            note: reason,
-            balanceAfter: users[idx].balance,
-            time: admNowStr,
-            date: admNowStr,
-            type: "Nạp tiền thủ công Admin"
-          };
-          if (typeof savePlatformDeposits === "function") {
-            savePlatformDeposits([depItem]);
-          } else {
-            const curDeps = JSON.parse(localStorage.getItem("mmo_deposits") || "[]");
-            curDeps.unshift(depItem);
-            localStorage.setItem("mmo_deposits", JSON.stringify(curDeps));
-          }
-        } catch(e) {}
-      }
-
-      try {
-        let bLogs = JSON.parse(localStorage.getItem("mmo_balance_logs") || "[]");
-        if (!Array.isArray(bLogs)) bLogs = [];
-        bLogs.unshift({
-          id: admOrderId,
-          orderId: admOrderId,
-          userEmail: email,
-          email: email,
-          type: transType,
-          amount: amt,
-          balanceAfter: users[idx].balance,
-          reason: reason,
-          time: admNowStr,
-          date: admNowStr
-        });
-        localStorage.setItem("mmo_balance_logs", JSON.stringify(bLogs.slice(0, 500)));
-      } catch(eBL) {}
-
-      closeModal("userBalanceModal");
-      if (typeof renderAdminUsersTable === "function") renderAdminUsersTable();
-      if (typeof openAdminUserDetailModal === "function") {
-        const dtlModal = document.getElementById("adminUserDetailModal");
-        if (dtlModal && dtlModal.style.display === "flex") {
-          openAdminUserDetailModal(email);
-        }
-      }
-      showToast("Đã " + (amt >= 0 ? "cộng " : "trừ ") + formatVND(Math.abs(amt)) + " cho " + email + " thành công!", "success");
-
-      // Bắn tín hiệu sang tất cả các tab/cửa sổ đang mở để cập nhật số dư tức thì
-      try {
-        localStorage.setItem("mmo_balance_sync_trigger", JSON.stringify({ email: email, balance: users[idx].balance, time: Date.now() }));
-        if (typeof BroadcastChannel !== "undefined") {
-          const bc = new BroadcastChannel("mmo_channel");
-          bc.postMessage({ type: "BALANCE_UPDATED", email: email, balance: users[idx].balance });
-        }
-      } catch(e) {}
-
-      // Đồng bộ trực tiếp lên Cloudflare Worker Turso Database (SSOT 24/7)
       try {
         const workerApiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
           ? MMO_WORKER_API.getApiUrl()
@@ -9392,7 +9331,8 @@ if (typeof productOrId === "object") {
           ? MMO_WORKER_API.getAdminSecret()
           : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
 
-        fetch(workerApiUrl + "/api/admin/user/balance", {
+        // GỌI DUY NHẤT 1 API NÀY LÀM NGUỒN CHUẨN SSOT TÀI CHÍNH
+        const response = await fetch(workerApiUrl + "/api/admin/user/balance", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -9406,110 +9346,135 @@ if (typeof productOrId === "object") {
             reason: reason,
             orderId: admOrderId
           })
-        }).then(r => r.json()).then(res => {
-          if (res && res.success && res.balance !== undefined) {
-            let uList = getRegisteredUsers();
-            let uI = uList.findIndex(u => (u.email || "").toLowerCase().trim() === email);
-            if (uI !== -1 && uList[uI].balance !== res.balance) {
-              uList[uI].balance = res.balance;
-              saveRegisteredUsers(uList);
-              if (typeof renderAdminUsersTable === "function") renderAdminUsersTable();
-              const dtlModal = document.getElementById("adminUserDetailModal");
-              if (dtlModal && dtlModal.style.display === "flex") {
-                openAdminUserDetailModal(email);
-              }
-            }
-          }
-        }).catch(() => {});
-
-        fetch(workerApiUrl + "/api/user/sync", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + adminSec,
-            "x-admin-token": adminSec
-          },
-          body: JSON.stringify({
-            email: email,
-            name: users[idx].name || email.split("@")[0],
-            balance: users[idx].balance,
-            role: users[idx].role || "USER"
-          })
-        }).then(r => r.json()).catch(() => {});
-      } catch(eSync) {}
-
-      // Đồng bộ ngầm lên Google Apps Script backend: Dual-path sync
-      const targetUser = users[idx];
-      const adminEmail = (currentUser && currentUser.email) ? currentUser.email : "khotaikhoanso.net@gmail.com";
-      const apiUrl = typeof getBackendApiUrl === "function" ? getBackendApiUrl() : "";
-
-      function applyNewBalance(em, nBal) {
-        let uList = getRegisteredUsers();
-        let uIdx = uList.findIndex(u => (u.email || "").toLowerCase().trim() === em);
-        if (uIdx !== -1) {
-          uList[uIdx].balance = nBal;
-          saveRegisteredUsers(uList);
-          if (currentUser && (currentUser.email || "").toLowerCase().trim() === em) {
-            currentUser.balance = nBal;
-            localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-            if (typeof updateUserUI === "function") updateUserUI();
-          }
-          if (typeof renderAdminUsersTable === "function") renderAdminUsersTable();
-        }
-      }
-
-      if (typeof callGasApi === "function") {
-        callGasApi("adminUpdateBalance", {
-          adminEmail: adminEmail,
-          targetEmail: email,
-          amount: amt,
-          reason: reason
-        }).then(res => {
-          if (res && res.success && res.newBalance !== undefined) {
-            applyNewBalance(email, Number(res.newBalance));
-          } else if (amt > 0 && apiUrl) {
-            // Fallback: Gọi endpoint webhook nạp tiền trực tiếp tương thích 100% mọi phiên bản Apps Script
-            const cleanPrefix = email.split("@")[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const cleanUId = (targetUser.userId || targetUser.id || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const topupOrderId = "ADM_" + Date.now();
-            const topupContent = "HOAN_TIEN " + (cleanUId || cleanPrefix) + " DON_" + topupOrderId;
-            
-            fetch(apiUrl, {
-              method: "POST",
-              headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify({
-                transferAmount: amt,
-                transferContent: topupContent,
-                gateway: "MBBank",
-                referenceCode: "ADMIN_TOPUP_" + Date.now()
-              })
-            }).then(r => r.json()).then(webRes => {
-              if (webRes && webRes.success && webRes.newBalance !== undefined) {
-                applyNewBalance(email, Number(webRes.newBalance));
-              }
-            }).catch(() => {});
-          }
-        }).catch(() => {
-          if (amt > 0 && apiUrl) {
-            const cleanPrefix = email.split("@")[0].toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const cleanUId = (targetUser.userId || targetUser.id || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-            const topupContent = "NAP " + (cleanUId || cleanPrefix) + " " + cleanPrefix;
-            fetch(apiUrl, {
-              method: "POST",
-              headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify({
-                transferAmount: amt,
-                transferContent: topupContent,
-                gateway: "MBBank",
-                referenceCode: "ADMIN_TOPUP_" + Date.now()
-              })
-            }).then(r => r.json()).then(webRes => {
-              if (webRes && webRes.success && webRes.newBalance !== undefined) {
-                applyNewBalance(email, Number(webRes.newBalance));
-              }
-            }).catch(() => {});
-          }
         });
+
+        const res = await response.json().catch(() => null);
+
+        if (!response.ok || !res || !res.success) {
+          const errMsg = (res && res.error) ? res.error : "Không thể cập nhật số dư trên Cloudflare Worker!";
+          showToast("❌ Lỗi: " + errMsg, "danger");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = origBtnHtml;
+          }
+          return;
+        }
+
+        const newBalance = Number(res.balance);
+
+        // 1. Cập nhật danh sách registered users
+        let users = getRegisteredUsers();
+        let idx = users.findIndex(u => (u.email || "").toLowerCase().trim() === email);
+        if (idx === -1) {
+          const uName = document.getElementById("balModalUserName")?.innerText || email.split("@")[0];
+          users.push({
+            id: "USR_" + Date.now(),
+            email: email,
+            name: uName,
+            balance: newBalance,
+            role: "USER"
+          });
+          idx = users.length - 1;
+        } else {
+          users[idx].balance = newBalance;
+        }
+        saveRegisteredUsers(users);
+
+        // 2. Cập nhật currentUser nếu đang đăng nhập tài khoản này
+        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === email) {
+          currentUser.balance = newBalance;
+          localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+          if (typeof updateUserUI === "function") updateUserUI();
+        }
+
+        // 3. Khóa timestamp bảo vệ số dư vừa cập nhật, chặn mọi hàm polling / GAS ghi đè trong 60 giây
+        try {
+          localStorage.setItem("mmo_last_balance_change_time", String(Date.now()));
+          localStorage.setItem("mmo_expected_balance_" + email, String(newBalance));
+        } catch(e) {}
+
+        // 4. Ghi nhật ký giao dịch vào transaction_history
+        if (typeof recordTransaction === "function") {
+          recordTransaction(email, users[idx]?.name || email, transType, amt, newBalance, reason, admOrderId);
+        }
+
+        // 5. Ghi nhật ký ví vào mmo_deposits nếu nạp tiền
+        if (amt > 0) {
+          try {
+            const depItem = {
+              id: "DEP_" + admOrderId,
+              orderId: admOrderId,
+              prodId: "NAP_VI",
+              prodName: "Nạp tiền thủ công bởi Quản trị viên",
+              amount: amt,
+              email: email,
+              userEmail: email,
+              userName: users[idx]?.name || email.split("@")[0],
+              status: "COMPLETED",
+              note: reason,
+              balanceAfter: newBalance,
+              time: admNowStr,
+              date: admNowStr,
+              type: "Nạp tiền thủ công Admin"
+            };
+            if (typeof savePlatformDeposits === "function") {
+              savePlatformDeposits([depItem]);
+            } else {
+              const curDeps = JSON.parse(localStorage.getItem("mmo_deposits") || "[]");
+              curDeps.unshift(depItem);
+              localStorage.setItem("mmo_deposits", JSON.stringify(curDeps));
+            }
+          } catch(eDep) {}
+        }
+
+        // 6. Ghi nhật ký vào mmo_balance_logs
+        try {
+          let bLogs = JSON.parse(localStorage.getItem("mmo_balance_logs") || "[]");
+          if (!Array.isArray(bLogs)) bLogs = [];
+          bLogs.unshift({
+            id: admOrderId,
+            orderId: admOrderId,
+            userEmail: email,
+            email: email,
+            type: transType,
+            amount: amt,
+            balanceAfter: newBalance,
+            reason: reason,
+            time: admNowStr,
+            date: admNowStr
+          });
+          localStorage.setItem("mmo_balance_logs", JSON.stringify(bLogs.slice(0, 500)));
+        } catch(eBL) {}
+
+        // 7. Bắn tín hiệu sang các tab khác qua BroadcastChannel
+        try {
+          localStorage.setItem("mmo_balance_sync_trigger", JSON.stringify({ email: email, balance: newBalance, time: Date.now() }));
+          if (typeof BroadcastChannel !== "undefined") {
+            const bc = new BroadcastChannel("mmo_channel");
+            bc.postMessage({ type: "BALANCE_UPDATED", email: email, balance: newBalance });
+          }
+        } catch(eBc) {}
+
+        // 8. Đóng modal và render lại UI
+        closeModal("userBalanceModal");
+        if (typeof renderAdminUsersTable === "function") renderAdminUsersTable();
+        if (typeof openAdminUserDetailModal === "function") {
+          const dtlModal = document.getElementById("adminUserDetailModal");
+          if (dtlModal && dtlModal.style.display === "flex") {
+            openAdminUserDetailModal(email);
+          }
+        }
+
+        showToast("✅ Đã " + (amt >= 0 ? "cộng +" : "trừ -") + formatVND(Math.abs(amt)) + " cho " + email + " thành công! Số dư hiện tại: " + formatVND(newBalance), "success");
+
+      } catch(err) {
+        console.error("submitUserBalanceAdjustment error:", err);
+        showToast("❌ Có lỗi xảy ra khi kết nối máy chủ: " + (err.message || err), "danger");
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = origBtnHtml;
+        }
       }
     }
     window.submitUserBalanceAdjustment = submitUserBalanceAdjustment;
@@ -22751,21 +22716,15 @@ function syncAllOpenViewsStock(changedProdId) {
               const found = localUsers.find(u => (u.email || "").toLowerCase().trim() === cEmail);
               if (found) {
                 found.name = cloudU.name || found.name;
-                if (cloudU.balance !== undefined && cloudU.balance !== null && !isNaN(Number(cloudU.balance))) {
-                  found.balance = Number(cloudU.balance);
-                  if (currentUser && (currentUser.email || "").toLowerCase().trim() === cEmail) {
-                    currentUser.balance = found.balance;
-                    localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-                    if (typeof updateUserUI === "function") updateUserUI();
-                  }
-                }
+                // BẢO VỆ SSOT: Turso DB là nguồn sự thật duy nhất cho số dư ví.
+                // Tuyệt đối không lấy số dư cũ từ Google Apps Script để đè lên số dư Turso DB!
               } else {
                 localUsers.push({
                   userId: cloudU.userId || ("USR_" + Math.random().toString(36).substr(2, 6)),
                   email: cEmail,
                   name: cloudU.name || cEmail.split("@")[0],
                   role: (cloudU.role === "ADMIN" || cEmail === "khotaikhoanso.net@gmail.com") ? "Quản Trị Viên" : (cloudU.role || "Thành Viên"),
-                  balance: Number(cloudU.balance) || 0,
+                  balance: 0,
                   created: cloudU.createdAt || "05/10/2026",
                   lastLogin: cloudU.lastLogin || "",
                   avatar: cloudU.avatar || ("https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(cEmail))
