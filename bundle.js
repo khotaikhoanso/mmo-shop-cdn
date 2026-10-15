@@ -583,7 +583,6 @@ const API_URL = "";
     const DUMMY_SEED_IDS = [
   "PROD_TEST",
   "PROD_MTPI7PIO",
-  "NÂNG CẤP GEMINI PRO CHÍNH CHỦ 1 NĂM - 365 NGÀY",
   "SP_CAPCUT_PRO",
   "SP_CHATGPT",
   "SP_FANPAGE",
@@ -660,14 +659,19 @@ const API_URL = "";
         ids = JSON.parse(localStorage.getItem("mmo_deleted_product_ids") || "[]");
       } catch(e) { ids = []; }
       if (!Array.isArray(ids)) ids = [];
+      // Chỉ giữ lại ID hợp lệ (PROD_, SP_, số thuần), TUYỆT ĐỐI KHÔNG chứa khoảng trắng hoặc từ ngữ
+      ids = ids.filter(function(id) {
+        if (typeof id !== "string") return false;
+        var s = id.trim();
+        if (s.length < 3 || s.includes(" ") || s.includes("/")) return false;
+        return s.startsWith("PROD_") || s.startsWith("SP_") || /^\d+$/.test(s) || s === "zalo-new-2016";
+      });
       if (typeof GLOBAL_PERMANENT_DELETED_IDS !== "undefined" && Array.isArray(GLOBAL_PERMANENT_DELETED_IDS)) {
         GLOBAL_PERMANENT_DELETED_IDS.forEach(function(dId) {
-          if (!ids.includes(dId)) ids.push(dId);
+          if (typeof dId === "string" && !dId.includes(" ") && !ids.includes(dId)) ids.push(dId);
         });
       }
-      return ids.filter(function(id) {
-        return typeof id === "string" && id.trim().length > 0;
-      });
+      return ids;
     }
     window.getDeletedProductIds = getDeletedProductIds;
 
@@ -3432,36 +3436,29 @@ if (typeof productOrId === "object") {
     // =========================================================================
     function purgeDeletedProductsFromDOM() {
       try {
-        var hardcodedDeleted = (typeof GLOBAL_PERMANENT_DELETED_IDS !== "undefined" && Array.isArray(GLOBAL_PERMANENT_DELETED_IDS))
-          ? GLOBAL_PERMANENT_DELETED_IDS
-          : ["PROD_TEST"];
-        var localDeleted = (typeof getDeletedProductIds === "function") ? getDeletedProductIds() : [];
-        var allDeleted = [...new Set(hardcodedDeleted.concat(localDeleted).map(function(x) { return String(x || "").trim().toLowerCase(); }))];
-        if (!allDeleted || allDeleted.length === 0) return;
-        var allCards = document.querySelectorAll(".product-card, .sponsor-card, .compact-item, .compact-product-item, tr");
-        allCards.forEach(function(el) {
-          var onclick = (el.getAttribute("onclick") || "").toLowerCase();
-          var href = "";
-          var a = el.querySelector("a");
-          if (a) href = (a.getAttribute("href") || "").toLowerCase();
-          var title = (el.getAttribute("title") || "").toLowerCase();
-          var text = (el.innerText || "").toLowerCase();
+        var badIds = ["PROD_TEST", "PROD_CODE", "PROD_MTPI7PIO", "PROD_MV4JIHMM", "zalo-new-2016"];
+        if (typeof PHONE_FARM_DELETED_IDS !== "undefined" && Array.isArray(PHONE_FARM_DELETED_IDS)) {
+          PHONE_FARM_DELETED_IDS.forEach(function(id) {
+            if (id && String(id).startsWith("PROD_") && badIds.indexOf(id) === -1) badIds.push(id);
+          });
+        }
+        var badIdSet = new Set(badIds.map(function(x) { return String(x).toLowerCase(); }));
 
-          var shouldRemove = false;
-          for (var i = 0; i < allDeleted.length; i++) {
-            var d = allDeleted[i];
-            if (!d || d.length < 3) continue;
-            if (onclick.indexOf(d) !== -1 || href.indexOf(d) !== -1 || (title && title.indexOf(d) !== -1)) {
-              shouldRemove = true;
-              break;
-            }
-            if (d.startsWith("prod_") && text.indexOf(d) !== -1) {
-              shouldRemove = true;
-              break;
-            }
-          }
-          if (shouldRemove) {
+        var cards = document.querySelectorAll(".product-card, .sponsor-card, .compact-item, .compact-product-item");
+        cards.forEach(function(el) {
+          var img = el.querySelector("img[data-id]");
+          var cardId = img ? (img.getAttribute("data-id") || "").trim().toLowerCase() : (el.getAttribute("data-id") || "").trim().toLowerCase();
+          if (cardId && badIdSet.has(cardId)) {
             el.remove();
+            return;
+          }
+          var onclick = (el.getAttribute("onclick") || "").toLowerCase();
+          for (var i = 0; i < badIds.length; i++) {
+            var b = badIds[i].toLowerCase();
+            if (onclick.indexOf("'" + b + "'") !== -1 || onclick.indexOf('"' + b + '"') !== -1) {
+              el.remove();
+              break;
+            }
           }
         });
 
@@ -11435,7 +11432,7 @@ if (typeof productOrId === "object") {
             const curPath = (window.location.pathname || "").toLowerCase();
             const isKnownRoot = (curPath === "/" || curPath === "" || curPath === "/index.html");
             const isKnownView = (curPath === "/viewstore" || curPath === "/viewallproducts" || curPath === "/viewblog");
-            const isArticlePath = !isKnownRoot && !isKnownView && (curPath.indexOf("/blog/") !== -1 || curPath.indexOf(".html") !== -1 || /\/\d{4}\/\d{2}\//.test(curPath) || curPath.indexOf("/p/") !== -1 || (curPath.split("/").filter(Boolean).length === 1 && !curPath.includes(".")));
+            const isAllProdPath = curPath.includes("tat-ca-san-pham") || curPath.includes("all-products") || curPath === "/viewallproducts"; const isArticlePath = !isAllProdPath && !isKnownRoot && !isKnownView && (curPath.indexOf("/blog/") !== -1 || (curPath.indexOf(".html") !== -1 && !curPath.includes("/p/")) || /\/\d{4}\/\d{2}\//.test(curPath) || (curPath.split("/").filter(Boolean).length === 1 && !curPath.includes(".")));
 
             if (isArticlePath) {
               if (typeof resolveAndOpenBlogByUrl === "function") {
@@ -13885,14 +13882,13 @@ if (typeof productOrId === "object") {
           const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 120000));
 
           if (!inServer && !isLocallyInFlight) {
-            // Sản phẩm đã bị xóa khỏi Turso SSOT -> tự động thêm vào blacklist deletedIds
-            if (!deletedIds.includes(p.id)) deletedIds.push(p.id);
-            if (p.slug && !deletedIds.includes(p.slug)) deletedIds.push(p.slug);
-            if (p.name && !deletedIds.includes(p.name)) deletedIds.push(p.name);
             return false;
           }
           return true;
         });
+        // Tự động làm sạch blacklist deletedIds trong localStorage: bất kỳ sản phẩm nào còn trên Turso SSOT thì TUYỆT ĐỐI KHÔNG BỊ XÓA
+        const activeServerIdSet = new Set(res.products.map(p => String(p.id).toLowerCase()));
+        deletedIds = deletedIds.filter(id => !activeServerIdSet.has(String(id).toLowerCase()));
         try { localStorage.setItem("mmo_deleted_product_ids", JSON.stringify(deletedIds)); } catch(eDl) {}
 
         res.products.forEach(function(tp) {
@@ -33743,9 +33739,10 @@ function changeAdmUsersPage(p) {
         const qSearchParam = urlParams.get("q");
         let pathProdSlug = null;
         const curPath = (window.location.pathname || "").toLowerCase();
+        const isAllProdPath = curPath.includes("tat-ca-san-pham") || curPath.includes("all-products") || curPath === "/viewallproducts";
         if (curPath.startsWith("/san-pham/")) {
           pathProdSlug = curPath.replace("/san-pham/", "").split("/")[0].split("?")[0].trim();
-        } else if (curPath.startsWith("/p/") && !curPath.endsWith(".html")) {
+        } else if (curPath.startsWith("/p/") && !curPath.endsWith(".html") && !isAllProdPath) {
           pathProdSlug = curPath.replace("/p/", "").split("/")[0].split("?")[0].trim();
         }
         const explicitProdId = urlParams.get("prod") || urlParams.get("product") || pathProdSlug || ((qSearchParam && (qSearchParam.includes("PROD_") || qSearchParam.includes("SP_") || qSearchParam.startsWith("kts-"))) ? qSearchParam.trim() : null) || (hash.startsWith("product_") ? hash.replace("product_", "").split("?")[0] : null);
@@ -33753,12 +33750,14 @@ function changeAdmUsersPage(p) {
         const hasBlogParam = !!(urlParams.get("post") || urlParams.get("blog"));
         const isKnownRoot = (curPath === "/" || curPath === "" || curPath === "/index.html");
         const isKnownView = (curPath === "/viewstore" || curPath === "/viewallproducts" || curPath === "/viewblog");
-        const isArticlePath = !pathProdSlug && !isKnownRoot && !isKnownView && (curPath.startsWith("/blog/") || curPath.indexOf("/blog/") !== -1 || curPath.endsWith(".html") || /\/\d{4}\/\d{2}\//.test(curPath) || (curPath.indexOf("/p/") !== -1 && curPath.endsWith(".html")) || (curPath.split("/").filter(Boolean).length === 1 && !curPath.includes(".")));
+        const isArticlePath = !isAllProdPath && !pathProdSlug && !isKnownRoot && !isKnownView && (curPath.startsWith("/blog/") || curPath.indexOf("/blog/") !== -1 || (curPath.endsWith(".html") && !curPath.includes("/p/")) || /\/\d{4}\/\d{2}\//.test(curPath) || (curPath.split("/").filter(Boolean).length === 1 && !curPath.includes(".")));
         
         const validViews = ["viewStore", "viewProductDetail", "viewBlog", "viewBlogDetail", "viewTools", "viewProfile", "viewDeposit", "viewAdmin", "viewAllProducts", "viewSitemap", "viewTerms", "viewPrivacy", "viewWarranty"];
         const viewParam = urlParams.get("view");
         const catParam = urlParams.get("category");
-        if (hash === "viewPrivacy" || hash === "privacy" || viewParam === "viewPrivacy" || (viewParam === "viewTerms" && (hash === "viewPrivacy" || hash === "privacy"))) {
+        if (isAllProdPath || viewParam === "viewAllProducts" || hash === "viewAllProducts") {
+          targetView = "viewAllProducts";
+        } else if (hash === "viewPrivacy" || hash === "privacy" || viewParam === "viewPrivacy" || (viewParam === "viewTerms" && (hash === "viewPrivacy" || hash === "privacy"))) {
           targetView = "viewPrivacy";
         } else if (hash === "viewTerms" || hash === "terms" || viewParam === "viewTerms") {
           targetView = "viewTerms";
@@ -33864,7 +33863,8 @@ function changeAdmUsersPage(p) {
       window.addEventListener("popstate", function() {
         const curPath = (window.location.pathname || "").toLowerCase();
         const isKnownRoot = (curPath === "/" || curPath === "" || curPath === "/index.html");
-        const isArticlePath = !isKnownRoot && (curPath.startsWith("/blog/") || curPath.indexOf("/blog/") !== -1 || curPath.endsWith(".html") || /\/\d{4}\/\d{2}\//.test(curPath) || curPath.indexOf("/p/") !== -1 || (curPath.split("/").filter(Boolean).length === 1 && !curPath.includes(".")));
+        const isAllProdPath = curPath.includes("tat-ca-san-pham") || curPath.includes("all-products") || curPath === "/viewallproducts";
+        const isArticlePath = !isAllProdPath && !isKnownRoot && (curPath.startsWith("/blog/") || curPath.indexOf("/blog/") !== -1 || (curPath.endsWith(".html") && !curPath.includes("/p/")) || /\/\d{4}\/\d{2}\//.test(curPath) || (curPath.split("/").filter(Boolean).length === 1 && !curPath.includes(".")));
         if (isArticlePath && typeof resolveAndOpenBlogByUrl === "function") {
           resolveAndOpenBlogByUrl(curPath);
         } else {
@@ -34585,15 +34585,19 @@ function getProductSchemaReviews(p, idx) {
         ids = JSON.parse(localStorage.getItem("mmo_deleted_product_ids") || "[]");
       } catch(e) { ids = []; }
       if (!Array.isArray(ids)) ids = [];
+      ids = ids.filter(function(id) {
+        if (typeof id !== "string") return false;
+        var s = id.trim();
+        if (s.length < 3 || s.includes(" ") || s.includes("/")) return false;
+        return s.startsWith("PROD_") || s.startsWith("SP_") || /^\d+$/.test(s) || s === "zalo-new-2016";
+      });
       var hardcoded = (typeof GLOBAL_PERMANENT_DELETED_IDS !== "undefined" && Array.isArray(GLOBAL_PERMANENT_DELETED_IDS))
         ? GLOBAL_PERMANENT_DELETED_IDS
         : ["PROD_TEST"];
       hardcoded.forEach(function(dId) {
-        if (ids.indexOf(dId) === -1) ids.push(dId);
+        if (typeof dId === "string" && !dId.includes(" ") && ids.indexOf(dId) === -1) ids.push(dId);
       });
-      return ids.filter(function(id) {
-        return typeof id === "string" && id.trim().length > 0;
-      });
+      return ids;
     }
     window.getDeletedProductIds = getDeletedProductIds;
 
@@ -34658,16 +34662,7 @@ function getProductSchemaReviews(p, idx) {
       // 1. Thêm vào danh sách đen đã xóa vĩnh viễn (mmo_deleted_product_ids)
       try {
         var deletedIds = getDeletedProductIds();
-        var toAdd = [targetId, pid, prodName];
-        if (p && p.slug) toAdd.push(p.slug);
-        if (p && p.name) toAdd.push(p.name);
-        if (typeof generateCleanKtsSlug === "function") {
-          toAdd.push(generateCleanKtsSlug(prodName, targetId));
-          toAdd.push(generateCleanKtsSlug(prodName));
-        }
-        if (typeof generateProductSlug === "function") {
-          toAdd.push(generateProductSlug(prodName));
-        }
+        var toAdd = [targetId, pid];
         toAdd.forEach(function(val) {
           if (val && typeof val === "string") {
             var tr = val.trim();
