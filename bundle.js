@@ -12222,7 +12222,17 @@ if (typeof productOrId === "object") {
     }
     window.matchProductQuery = matchProductQuery;
 
-    // RENDER PRODUCT GRID WITH 10-ITEM PAGINATION
+    function getStorePageSize() {
+      if (typeof window === "undefined") return 18;
+      const w = window.innerWidth;
+      if (w <= 768) return 6;    // Mobile: 2 cột x 3 hàng = 6 sản phẩm
+      if (w <= 992) return 9;    // Tablet nhỏ: 3 cột x 3 hàng = 9 sản phẩm
+      if (w <= 1300) return 12;  // Laptop/Tablet vừa: 4 cột x 3 hàng = 12 sản phẩm
+      return 18;                 // Desktop (> 1300px): 6 cột x 3 hàng = 18 sản phẩm
+    }
+    window.getStorePageSize = getStorePageSize;
+
+    // RENDER PRODUCT GRID WITH 3-ROW PAGINATION
     function renderProductGrid() {
       const container = document.getElementById("productGrid");
       if (!container) return;
@@ -12276,23 +12286,55 @@ if (typeof productOrId === "object") {
         return;
       }
 
-      // Phân trang Sản Phẩm Nổi Bật:
-      // Trên điện thoại (<= 768px): Hiển thị đúng 2 cột x 3 hàng = 6 sản phẩm mỗi trang, vừa khít không tràn màn hình
-      // Trên máy tính (> 768px): Hiển thị đúng 6 cột x 2 hàng = 12 sản phẩm mỗi trang
-      // HIỂN THỊ ĐẦY ĐỦ 100% TẤT CẢ SẢN PHẨM TRÊN TRANG NGƯỜI DÙNG
-      const STORE_PRODS_PER_PAGE = 100;
-      const page = 1;
-      const totalPages = 1;
-      if (typeof paginationState !== "undefined") paginationState.storeProd = 1;
+      // Phân trang Sản Phẩm Nổi Bật: Đúng 3 hàng sản phẩm theo từng kích thước màn hình
+      // - Mobile (<= 768px): 2 cột x 3 hàng = 6 sản phẩm
+      // - Tablet nhỏ (<= 992px): 3 cột x 3 hàng = 9 sản phẩm
+      // - Laptop/Tablet vừa (<= 1300px): 4 cột x 3 hàng = 12 sản phẩm
+      // - Desktop (> 1300px): 6 cột x 3 hàng = 18 sản phẩm
+      const pageSize = getStorePageSize();
+      const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+      let page = (typeof paginationState !== "undefined" && paginationState.storeProd) ? paginationState.storeProd : 1;
+      if (page < 1) page = 1;
+      if (page > totalPages) page = totalPages;
+      if (typeof paginationState !== "undefined") {
+        paginationState.storeProd = page;
+      }
 
-      container.innerHTML = filtered.map(p => renderSingleCard(p, false)).join("");
+      const startIndex = (page - 1) * pageSize;
+      const pageProds = filtered.slice(startIndex, startIndex + pageSize);
 
-      // Cập nhật thông số trang ở thanh tiêu đề (< 1/1 >)
+      container.innerHTML = pageProds.map(p => renderSingleCard(p, false)).join("");
+
+      // Cập nhật thông số trang ở thanh tiêu đề (< 1/3 >)
       const pageInfoEl = document.getElementById("storeProdHeaderPaginationInfo") || document.querySelector(".pagination-controls .pagination-info");
-      if (pageInfoEl) pageInfoEl.innerText = "1/1";
+      if (pageInfoEl) pageInfoEl.innerText = page + "/" + totalPages;
 
+      // Cập nhật trạng thái nút Prev/Next ở tiêu đề
+      try {
+        const headerPagControls = pageInfoEl ? pageInfoEl.closest(".pagination-controls") : null;
+        if (headerPagControls) {
+          const prevBtn = headerPagControls.querySelector(".pagination-btn:first-of-type") || headerPagControls.children[1];
+          const nextBtn = headerPagControls.querySelector(".pagination-btn:last-of-type") || headerPagControls.children[3];
+          if (prevBtn) {
+            prevBtn.style.opacity = page <= 1 ? "0.35" : "1";
+            prevBtn.style.pointerEvents = page <= 1 ? "none" : "auto";
+            prevBtn.style.cursor = page <= 1 ? "not-allowed" : "pointer";
+          }
+          if (nextBtn) {
+            nextBtn.style.opacity = page >= totalPages ? "0.35" : "1";
+            nextBtn.style.pointerEvents = page >= totalPages ? "none" : "auto";
+            nextBtn.style.cursor = page >= totalPages ? "not-allowed" : "pointer";
+          }
+        }
+      } catch(ePagBtn) {}
+
+      // Render thanh phân trang đầy đủ ở chân danh sách sản phẩm nổi bật
       const storePagEl = document.getElementById("storeProductPagination");
-      if (storePagEl) storePagEl.innerHTML = "";
+      if (storePagEl) {
+        if (typeof renderPaginationUI === "function") {
+          renderPaginationUI("storeProductPagination", page, filtered.length, "changeStoreProdPage", pageSize);
+        }
+      }
     }
 
 
@@ -32818,12 +32860,13 @@ function changeAdmUsersPage(p) {
       if (q) {
         filtered = filtered.filter(function(prod) { return matchProductQuery(prod, q); });
       }
-      const isMobileStore = (typeof window !== "undefined" && window.innerWidth <= 768);
-      const pageSizeStore = isMobileStore ? 6 : 12;
+      const pageSizeStore = (typeof getStorePageSize === "function") ? getStorePageSize() : (window.innerWidth <= 768 ? 6 : 18);
       const totalPages = Math.ceil(filtered.length / pageSizeStore) || 1;
       if (p < 1) p = 1;
       if (p > totalPages) p = totalPages;
-      paginationState.storeProd = p;
+      if (typeof paginationState !== "undefined") {
+        paginationState.storeProd = p;
+      }
       renderProductGrid();
       const el = document.getElementById("storeProductsSection") || document.getElementById("categoryTabs") || document.getElementById("productGrid");
       if (el) el.scrollIntoView({ behavior: "smooth" });
