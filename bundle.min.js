@@ -4375,9 +4375,82 @@ if (typeof productOrId === "object") {
       }
       const opt = (sSel.selectedOptions && sSel.selectedOptions[0]) ? sSel.selectedOptions[0] : (sSel.options ? sSel.options[sSel.selectedIndex] : null);
       if (opt && opt.value) {
-        const price = (typeof opt.getAttribute === "function" ? opt.getAttribute("data-price") : 0) || 0;
-        const stock = (typeof opt.getAttribute === "function" ? opt.getAttribute("data-stock") : 0) || 0;
-        info.innerHTML = '<i class="fa-solid fa-circle-info"></i> Giá nhập gốc: <strong>' + formatVND(price) + '</strong> | Tồn kho live nguồn: <strong style="color:#10b981;">' + Number(stock).toLocaleString() + ' acc</strong>';
+        const sId = String(opt.value || "").replace(/^#/, "").trim();
+        const prov = pSel ? pSel.value : "";
+        const curProds = (typeof window.cachedSourceProducts !== "undefined" && Array.isArray(window.cachedSourceProducts))
+          ? window.cachedSourceProducts
+          : ((typeof cachedSourceProducts !== "undefined" && Array.isArray(cachedSourceProducts)) ? cachedSourceProducts : []);
+        const srcItem = curProds.find(s => s && (String(s.id).replace(/^#/, "").trim() === sId || String(s.id) === sId) && (!prov || !s.provider || s.provider === prov))
+                     || curProds.find(s => s && (String(s.id).replace(/^#/, "").trim() === sId || String(s.id) === sId));
+
+        let displayName = "";
+        if (srcItem && srcItem.name) {
+          const cat = srcItem.category || "";
+          let sName = srcItem.name.trim();
+          if (sName.startsWith("[")) {
+            displayName = sName;
+          } else if (cat) {
+            displayName = "[" + cat + "] #" + srcItem.id + " " + sName;
+          } else {
+            displayName = "#" + srcItem.id + " " + sName;
+          }
+        } else if (opt && opt.text) {
+          displayName = opt.text.replace(/\s*-\s*\d[\d\.\,]*\s*đ.*$/i, "").trim();
+        }
+
+        const costPrice = srcItem ? (Number(srcItem.price) || 0) : (Number(opt.getAttribute("data-price")) || 0);
+        const stock = srcItem ? (Number(srcItem.amount !== undefined ? srcItem.amount : srcItem.accounts) || 0) : (Number(opt.getAttribute("data-stock")) || 0);
+
+        // Lấy giá bán shop hiện tại (từ biến thể đầu tiên hoặc input giá sản phẩm)
+        const varContainer = document.getElementById("admVariantsContainer") || document.getElementById("admVariantRowsContainer");
+        const firstVarPriceInput = varContainer ? varContainer.querySelector(".adm-variant-price") : null;
+        const hiddenPriceInput = document.getElementById("admProdPrice");
+        let sellPrice = 0;
+        if (firstVarPriceInput && !isNaN(Number(firstVarPriceInput.value)) && Number(firstVarPriceInput.value) > 0) {
+          sellPrice = Number(firstVarPriceInput.value);
+        } else if (hiddenPriceInput && !isNaN(Number(hiddenPriceInput.value)) && Number(hiddenPriceInput.value) > 0) {
+          sellPrice = Number(hiddenPriceInput.value);
+        } else if (typeof window !== "undefined" && window._currentEditingProduct && Number(window._currentEditingProduct.price) > 0) {
+          sellPrice = Number(window._currentEditingProduct.price);
+        }
+        if (sellPrice <= 0 && costPrice > 0) {
+          sellPrice = Math.round(costPrice * 1.5 / 1000) * 1000;
+        }
+
+        const profit = sellPrice - costPrice;
+        const profitPct = sellPrice > 0 ? Math.round((profit / sellPrice) * 100) : 0;
+        const profitSign = profit >= 0 ? "+" : "";
+        const profitColor = profit >= 0 ? "#10b981" : "#ef4444";
+        const profitIcon = profit >= 0 ? "📈" : "📉";
+        const profitText = profit >= 0 
+          ? `+${(typeof formatVND === "function" ? formatVND(profit) : profit + "đ")} (${profitPct}%)`
+          : `-${(typeof formatVND === "function" ? formatVND(Math.abs(profit)) : Math.abs(profit) + "đ")} (${profitPct}%) (BÁN LỖ!)`;
+
+        const escName = (typeof escapeHtml === "function") ? escapeHtml(displayName) : displayName;
+
+        info.innerHTML = `
+          <div style="background:#071426; border:1px solid #0284c7; border-radius:8px; padding:9px 12px; margin-top:8px; box-shadow:0 0 10px rgba(2,132,199,0.25);">
+            <div style="display:flex; align-items:center; gap:6px; color:#e2e8f0; font-size:0.82rem; line-height:1.4; overflow:hidden;">
+              <span style="color:#06b6d4; font-size:0.95rem; flex-shrink:0;">🌀</span>
+              <strong style="color:#fff; flex-shrink:0;">SP Nguồn:</strong>
+              <span style="color:#93c5fd; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escName}">${escName}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:6px; font-size:0.8rem; line-height:1.2;">
+              <span style="display:inline-flex; align-items:center; gap:4px; color:#94a3b8;">
+                <span>🏷️</span> Gốc: <strong style="color:#f59e0b; font-weight:800;">${(typeof formatVND === "function" ? formatVND(costPrice) : costPrice + "đ")}</strong>
+              </span>
+              <span style="display:inline-flex; align-items:center; gap:4px; color:#94a3b8;">
+                <span>🏪</span> Bán: <strong style="color:#c084fc; font-weight:800;">${(typeof formatVND === "function" ? formatVND(sellPrice) : sellPrice + "đ")}</strong>
+              </span>
+              <span style="display:inline-flex; align-items:center; gap:4px; color:#94a3b8;">
+                <span>${profitIcon}</span> Lãi: <strong style="color:${profitColor}; font-weight:800;">${profitText}</strong>
+              </span>
+              <span style="display:inline-flex; align-items:center; gap:4px; color:#94a3b8;">
+                <span>📦</span> Tồn: <strong style="color:#38bdf8; font-weight:800;">${Number(stock).toLocaleString("vi-VN")}</strong>
+              </span>
+            </div>
+          </div>
+        `;
       } else {
         info.innerHTML = '<span style="color:#94a3b8;">Vui lòng chọn sản phẩm tương ứng từ nguồn API để khách mua sẽ được tự động cấp tài khoản.</span>';
       }
@@ -4503,6 +4576,7 @@ if (typeof productOrId === "object") {
         return;
       }
       if (document.getElementById("admProdId")) document.getElementById("admProdId").value = p.id;
+      window._currentEditingProduct = p;
       if (document.getElementById("admProdName")) document.getElementById("admProdName").value = p.name;
       
       // Đồng bộ Loại Nguồn Hàng (Kho Nội Bộ vs API)
@@ -8014,6 +8088,9 @@ if (typeof productOrId === "object") {
       const preview = document.getElementById("admCommissionPreview");
       if (preview) {
         preview.innerText = "(~" + formatVND(est) + " / đơn hàng)";
+      }
+      if (typeof handleAdmModalSourceChange === "function") {
+        handleAdmModalSourceChange();
       }
     }
     window.updateCommissionEstimate = updateCommissionEstimate;
