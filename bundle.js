@@ -10750,7 +10750,8 @@ if (typeof productOrId === "object") {
         if (typeof localStorage === "undefined") return;
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && key.startsWith("mmo_notifications_")) {
+          // CHỈ dọn dẹp các kho thông báo người dùng/trang cá nhân, GIỮ LẠI kho thông báo admin
+          if (key && key.startsWith("mmo_notifications_") && key !== "mmo_notifications_admin") {
             const raw = localStorage.getItem(key);
             if (raw && (raw.includes("Chống Bán Lỗ") || raw.includes("PRICE_ADJUST") || raw.includes("bán lỗ") || raw.includes("bảo vệ lợi nhuận") || raw.includes("Nâng Giá") || raw.includes("lợi nhuận shop"))) {
               const arr = JSON.parse(raw);
@@ -10771,17 +10772,17 @@ if (typeof productOrId === "object") {
         cleanUpAntiLossNotifications();
         let email = userEmail;
         if (!email) {
-          if (typeof isAdminUser === "function" && isAdminUser()) {
-            email = "admin";
-          } else {
-            email = (currentUser && currentUser.email) ? currentUser.email : "guest";
-          }
+          email = (currentUser && currentUser.email) ? currentUser.email : "guest";
         }
         const key = getUserNotificationsStorageKey(email);
         const raw = localStorage.getItem(key);
         if (!raw) return [];
         const parsed = JSON.parse(raw);
         const notifs = Array.isArray(parsed) ? parsed : [];
+        if (email === "admin") {
+          return notifs; // Admin xem được toàn bộ thông báo quản trị bao gồm thông báo chống bán lỗ
+        }
+        // Trang cá nhân & khách hàng tuyệt đối KHÔNG hiển thị thông báo chống bán lỗ
         return notifs.filter(n => !isAntiLossNotification(n));
       } catch(e) {
         return [];
@@ -10793,21 +10794,60 @@ if (typeof productOrId === "object") {
       try {
         let email = userEmail;
         if (!email) {
-          if (typeof isAdminUser === "function" && isAdminUser()) {
-            email = "admin";
-          } else {
-            email = (currentUser && currentUser.email) ? currentUser.email : "guest";
-          }
+          email = (currentUser && currentUser.email) ? currentUser.email : "guest";
         }
-        const cleanNotifs = (Array.isArray(notifs) ? notifs : []).filter(n => !isAntiLossNotification(n));
+        const cleanNotifs = (Array.isArray(notifs) ? notifs : []).filter(function(n) {
+          if (email === "admin") return true; // Giữ lại cho admin
+          return !isAntiLossNotification(n); // Lọc sạch cho người dùng cá nhân
+        });
         const key = getUserNotificationsStorageKey(email);
         localStorage.setItem(key, JSON.stringify(cleanNotifs.slice(0, 50)));
       } catch(e) {}
     }
 
+    // THÔNG BÁO DÀNH RIÊNG CHO TRANG ADMIN (KHÔNG LỌT VÀO TRANG CÁ NHÂN)
+    function addAdminNotificationOnly(opts) {
+      if (!opts) return;
+      try {
+        const raw = localStorage.getItem("mmo_notifications_admin");
+        let admNotifs = [];
+        if (raw) {
+          try { admNotifs = JSON.parse(raw); } catch(e) {}
+        }
+        if (!Array.isArray(admNotifs)) admNotifs = [];
+
+        const newNotif = {
+          id: "ADM_NOTIF_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+          title: opts.title || "Thông báo quản trị",
+          message: opts.message || "",
+          type: opts.type || "INFO",
+          forAdmin: true,
+          read: false,
+          time: new Date().toLocaleTimeString("vi-VN") + " " + new Date().toLocaleDateString("vi-VN"),
+          timestamp: Date.now()
+        };
+        admNotifs.unshift(newNotif);
+        localStorage.setItem("mmo_notifications_admin", JSON.stringify(admNotifs.slice(0, 50)));
+
+        if (typeof renderAdminNotifications === "function") {
+          renderAdminNotifications();
+        }
+        if (typeof updateAdminSidebarBadges === "function") {
+          updateAdminSidebarBadges();
+        }
+        return newNotif;
+      } catch(e) {
+        console.warn("addAdminNotificationOnly error:", e);
+      }
+    }
+    window.addAdminNotificationOnly = addAdminNotificationOnly;
+
     function addUserNotification(opts) {
       if (opts && isAntiLossNotification(opts)) {
-        // CẤM hiển thị thông báo chống bán lỗ trên trang người dùng hoặc chuông thông báo
+        // CẤM hiển thị thông báo chống bán lỗ trên trang cá nhân / người dùng thường
+        if (opts.forAdmin) {
+          addAdminNotificationOnly(opts);
+        }
         return;
       }
       try {
@@ -11028,6 +11068,9 @@ if (typeof productOrId === "object") {
           } else if (n.type === 'CANCEL') {
             icon = '<i class="fa-solid fa-ban" style="color:#ef4444;"></i>';
             iconBg = 'rgba(239,68,68,0.15)';
+          } else if (n.type === 'PRICE_ADJUST' || isAntiLossNotification(n)) {
+            icon = '<i class="fa-solid fa-shield-halved" style="color:#10b981;"></i>';
+            iconBg = 'rgba(16,185,129,0.15)';
           }
 
           const unreadDot = !n.read ? '<span style="width:8px; height:8px; border-radius:50%; background:#38bdf8; display:inline-block; flex-shrink:0;"></span>' : '';
@@ -11073,6 +11116,10 @@ if (typeof productOrId === "object") {
           switchAdminTab("tabAdmWithdrawals");
         } else if (notifType === "CHAT" || notifType === "WARRANTY") {
           switchAdminTab("tabAdmChat");
+        } else if (notifType === "PRICE_ADJUST" || notifType === "anti_loss" || (item && isAntiLossNotification(item))) {
+          if (typeof openAutoPriceAdjustModal === "function") {
+            openAutoPriceAdjustModal();
+          }
         }
       } catch(e) {}
     }
@@ -19930,6 +19977,13 @@ function syncAllOpenViewsStock(changedProdId) {
       const btnAll = document.getElementById("btnApplyAllLossBoost");
       if (!container) return;
 
+      // NẾU CHẾ ĐỘ TỰ ĐỘNG BẢO VỆ ĐANG BẬT: TỰ ĐỘNG TĂNG GIÁ NGAY KHÔNG CẦN BẤM TAY!
+      if (typeof isAutoPriceProtectEnabled === "function" && isAutoPriceProtectEnabled()) {
+        try {
+          scanAndAutoAdjustLossProducts("Tự Động Mở Bảng");
+        } catch(eAutoScan) {}
+      }
+
       const alerts = (typeof computeApiSourceAlerts === "function") ? computeApiSourceAlerts(true) : [];
       // CHỈ LẤY CÁC SẢN PHẨM CÓ NGUY CƠ BÁN LỖ (isLoss === true)
       const lossAlerts = alerts.filter(a => a.isLoss && a.product);
@@ -19950,7 +20004,7 @@ function syncAllOpenViewsStock(changedProdId) {
             <div style='font-size:1.8rem; color:#10b981; margin-bottom:6px;'><i class='fa-solid fa-circle-check'></i></div>
             <div style='font-size:0.9rem; font-weight:800; color:#fff;'>Tuyệt vời! Toàn bộ sản phẩm đều an toàn</div>
             <div style='font-size:0.78rem; color:#94a3b8; margin-top:3px;'>
-              Không có sản phẩm nào có giá vốn vượt quá giá bán shop. Hệ thống tự động giám sát 24/7 và nâng giá ngay khi có biến động.
+              Không có sản phẩm nào có giá vốn vượt quá giá bán shop. Hệ thống tự động giám sát 24/7 và tự động tăng giá theo cài đặt (+${getAutoPriceMarginPercent()}%), hoàn toàn không cần bấm tay.
             </div>
           </div>
         `;
@@ -20115,7 +20169,18 @@ function syncAllOpenViewsStock(changedProdId) {
         isAuto: isSilent
       });
 
-      // CẤM hiển thị thông báo/toast chống bán lỗ trên trang người dùng (đã ghi log nội bộ qua addAutoPriceAdjustLog)
+      // Ghi thông báo CHỈ TRÊN TRANG ADMIN (không vào trang cá nhân của người dùng)
+      if (typeof addAdminNotificationOnly === "function") {
+        addAdminNotificationOnly({
+          type: "anti_loss",
+          title: "🛡️ Tự Động Nâng Giá Chống Lỗ",
+          message: `Hệ thống đã nâng giá SP "${prod.name || prod.id}" từ ${(typeof formatVND === "function" ? formatVND(oldPrice) : oldPrice + "đ")} lên ${(typeof formatVND === "function" ? formatVND(newSafePrice) : newSafePrice + "đ")} (Giá vốn: ${(typeof formatVND === "function" ? formatVND(liveCost) : liveCost + "đ")}, +${targetPct}%) để bảo toàn lợi nhuận.`,
+          prodId: prod.id,
+          oldPrice: oldPrice,
+          newPrice: newSafePrice,
+          cost: liveCost
+        });
+      }
 
       // Làm mới giao diện
       if (typeof updateApiSourceAlertsBadge === "function") updateApiSourceAlertsBadge();
@@ -20133,68 +20198,45 @@ function syncAllOpenViewsStock(changedProdId) {
     // =========================================================================
     // HÀM QUÉT VÀ TỰ ĐỘNG ĐIỀU CHỈNH GIÁ BẢO VỆ CHỐNG BÁN LỖ TOÀN DIỆN (CHỦ ĐẠO)
     // QUY TẮC CỐT LÕI THEO YÊU CẦU:
-    // - NẾU GIÁ VỐN NGUỒN >= GIÁ BÁN SHOP (BÁN LỖ): TỰ ĐỘNG NÂNG GIÁ LÊN MỨC AN TOÀN (+MARGIN%)
+    // - NẾU GIÁ VỐN NGUỒN >= GIÁ BÁN SHOP (BÁN LỖ): TỰ ĐỘNG NÂNG GIÁ LÊN MỨC AN TOÀN (+MARGIN%) KHÔNG CẦN BẤM TAY
     // - NẾU GIÁ VỐN NGUỒN < GIÁ BÁN SHOP (KHÔNG BÁN LỖ): TUYỆT ĐỐI KHÔNG ĐIỀU CHỈNH! GIỮ NGUYÊN 100%!
     // =========================================================================
     function scanAndAutoAdjustLossProducts(triggerSource) {
-      if (typeof isAdminUser === "function" && !isAdminUser()) return 0;
       if (!isAutoPriceProtectEnabled()) return 0;
       const configuredPct = getAutoPriceMarginPercent();
       if (configuredPct <= 0) return 0;
 
-      const prods = (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products))
-        ? MOCK_DATA.products
-        : ((typeof window !== "undefined" && window.MOCK_DATA && Array.isArray(window.MOCK_DATA.products))
-            ? window.MOCK_DATA.products
-            : []);
-      if (!prods || prods.length === 0) return 0;
+      // Nguồn sự thật 1: computeApiSourceAlerts(true) - Danh sách các sản phẩm đang có nguy cơ bán lỗ
+      const alerts = (typeof computeApiSourceAlerts === "function") ? computeApiSourceAlerts(true) : [];
+      const lossAlerts = alerts.filter(function(a) {
+        if (!a || !a.isLoss || !a.product) return false;
+        const liveCost = Number(a.liveCost || a.livePrice || a.currentSourcePrice || a.sourcePrice || (typeof resolveProductLiveCost === "function" ? resolveProductLiveCost(a.product) : 0)) || 0;
+        const shopPrice = Number(a.shopPrice || (a.product ? a.product.price : 0)) || 0;
+        return liveCost > 0 && liveCost >= shopPrice;
+      });
 
       const adjustedProds = [];
+      const handledProdIds = new Set();
 
-      prods.forEach(function(prod) {
-        if (!prod || !prod.id) return;
+      // Xử lý toàn bộ lossAlerts
+      lossAlerts.forEach(function(alert) {
+        const prod = alert.product;
+        if (!prod || !prod.id || handledProdIds.has(prod.id)) return;
 
-        // Bỏ qua sản phẩm kho nội bộ không nối API
-        if (prod.isManualPrice || (typeof localStorage !== "undefined" && localStorage.getItem("mmo_manual_price_" + prod.id) === "1")) return;
-        const isLocalOnly = (prod.deliveryType === "local" || prod.delivery_type === "local" || prod.deliveryType === "manual" || prod.delivery_type === "manual");
-        const apiMap = (typeof getApiProductMapping === "function") 
-          ? getApiProductMapping(prod) 
-          : (prod.apiMapping || null);
-        if (!apiMap || !apiMap.sourceProdId) {
-          if (isLocalOnly) return;
-          return;
-        }
+        const liveCost = Number(alert.liveCost || alert.livePrice || alert.currentSourcePrice || alert.sourcePrice || (typeof resolveProductLiveCost === "function" ? resolveProductLiveCost(prod) : 0)) || 0;
+        if (liveCost <= 0) return;
 
-        // Lấy giá vốn live từ cache hoặc apiMap
-        const cleanSrcId = String(apiMap.sourceProdId || "").replace(/^#/, "").trim();
-        let inSrc = (typeof getFastSourceProduct === "function") 
-          ? getFastSourceProduct(apiMap.provider, cleanSrcId) 
-          : null;
-        if (!inSrc && typeof cachedSourceProducts !== "undefined" && Array.isArray(cachedSourceProducts)) {
-          inSrc = cachedSourceProducts.find(s => s && (String(s.id).replace(/^#/, "").trim() === cleanSrcId || String(s.id) === String(apiMap.sourceProdId)) && (!apiMap.provider || s.provider === apiMap.provider))
-               || cachedSourceProducts.find(s => s && (String(s.id).replace(/^#/, "").trim() === cleanSrcId || String(s.id) === String(apiMap.sourceProdId)));
-        }
-
-        const liveCost = (typeof resolveProductLiveCost === "function") 
-          ? resolveProductLiveCost(prod) 
-          : (inSrc ? (Number(inSrc.price) || 0) : (Number(apiMap.sourcePrice) || 0));
-        if (liveCost <= 0) return; // Không có giá vốn live hợp lệ -> Bỏ qua không điều chỉnh
-
-        const shopPrice = Number(prod.price) || 0;
+        const shopPrice = Number(alert.shopPrice || prod.price) || 0;
 
         // KIỂM TRA ĐIỀU KIỆN LỖ:
-        // NẾU KHÔNG LỖ (liveCost < shopPrice và shopPrice > 0): TUYỆT ĐỐI KHÔNG ĐIỀU CHỈNH!
-        if (liveCost < shopPrice && shopPrice > 0) {
-          return; // Sản phẩm an toàn không bị lỗ -> Giữ nguyên 100% không động vào
-        }
+        if (liveCost < shopPrice && shopPrice > 0) return;
 
-        // SẢN PHẨM BỊ BÁN LỖ (liveCost >= shopPrice hoặc shopPrice <= 0): TỰ ĐỘNG ĐIỀU CHỈNH GIÁ AN TOÀN
+        // SẢN PHẨM BỊ BÁN LỖ: TỰ ĐỘNG NÂNG LÊN MỨC AN TOÀN THEO CẤU HÌNH (+configuredPct%) KHÔNG CẦN BẤM TAY
         const newSafePrice = calculateSafePriceForLoss(liveCost, configuredPct);
         if (newSafePrice <= 0 || newSafePrice === shopPrice) return;
 
         const oldPrice = shopPrice;
 
-        // Cập nhật giá sản phẩm trong MOCK_DATA
         prod.price = newSafePrice;
         if (Array.isArray(prod.variants) && prod.variants.length > 0) {
           prod.variants.forEach(function(v) {
@@ -20204,20 +20246,17 @@ function syncAllOpenViewsStock(changedProdId) {
           });
         }
 
-        // Lưu LocalStorage bảo vệ độc lập
         try {
           localStorage.setItem("mmo_custom_price_" + prod.id, String(newSafePrice));
           localStorage.setItem("mmo_custom_variants_" + prod.id, JSON.stringify(prod.variants));
         } catch(e) {}
 
-        // Cập nhật baseline
         try {
           const baselineMap = getApiSourceBaselinePrices();
           baselineMap[prod.id] = liveCost;
           saveApiSourceBaselinePrices(baselineMap);
         } catch(e) {}
 
-        // Ghi log TỰ ĐỘNG
         addAutoPriceAdjustLog({
           prodId: prod.id,
           prodName: prod.name || prod.id,
@@ -20229,6 +20268,86 @@ function syncAllOpenViewsStock(changedProdId) {
           trigger: triggerSource || "Tự Động Quét"
         });
 
+        if (typeof addAdminNotificationOnly === "function") {
+          addAdminNotificationOnly({
+            type: "anti_loss",
+            title: "🛡️ Tự Động Nâng Giá Chống Lỗ",
+            message: `Hệ thống đã tự động nâng giá SP "${prod.name || prod.id}" từ ${(typeof formatVND === "function" ? formatVND(oldPrice) : oldPrice + "đ")} lên ${(typeof formatVND === "function" ? formatVND(newSafePrice) : newSafePrice + "đ")} (Giá vốn: ${(typeof formatVND === "function" ? formatVND(liveCost) : liveCost + "đ")}, +${configuredPct}%) để bảo toàn lợi nhuận.`,
+            prodId: prod.id,
+            oldPrice: oldPrice,
+            newPrice: newSafePrice,
+            cost: liveCost
+          });
+        }
+
+        handledProdIds.add(prod.id);
+        adjustedProds.push(prod);
+      });
+
+      // Nguồn sự thật 2: Quét trực tiếp MOCK_DATA.products phòng hờ sản phẩm chưa lọt vào alerts
+      const prods = (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products))
+        ? MOCK_DATA.products
+        : ((typeof window !== "undefined" && window.MOCK_DATA && Array.isArray(window.MOCK_DATA.products))
+            ? window.MOCK_DATA.products
+            : []);
+
+      prods.forEach(function(prod) {
+        if (!prod || !prod.id || handledProdIds.has(prod.id)) return;
+
+        const liveCost = (typeof resolveProductLiveCost === "function") ? resolveProductLiveCost(prod) : 0;
+        if (liveCost <= 0) return;
+
+        const shopPrice = Number(prod.price) || 0;
+        if (liveCost < shopPrice && shopPrice > 0) return;
+
+        const newSafePrice = calculateSafePriceForLoss(liveCost, configuredPct);
+        if (newSafePrice <= 0 || newSafePrice === shopPrice) return;
+
+        const oldPrice = shopPrice;
+        prod.price = newSafePrice;
+        if (Array.isArray(prod.variants) && prod.variants.length > 0) {
+          prod.variants.forEach(function(v) {
+            if (v && (!v.price || v.price < newSafePrice)) {
+              v.price = newSafePrice;
+            }
+          });
+        }
+
+        try {
+          localStorage.setItem("mmo_custom_price_" + prod.id, String(newSafePrice));
+          localStorage.setItem("mmo_custom_variants_" + prod.id, JSON.stringify(prod.variants));
+        } catch(e) {}
+
+        try {
+          const baselineMap = getApiSourceBaselinePrices();
+          baselineMap[prod.id] = liveCost;
+          saveApiSourceBaselinePrices(baselineMap);
+        } catch(e) {}
+
+        addAutoPriceAdjustLog({
+          prodId: prod.id,
+          prodName: prod.name || prod.id,
+          oldPrice: oldPrice,
+          newPrice: newSafePrice,
+          cost: liveCost,
+          pct: configuredPct,
+          isAuto: true,
+          trigger: triggerSource || "Tự Động Quét"
+        });
+
+        if (typeof addAdminNotificationOnly === "function") {
+          addAdminNotificationOnly({
+            type: "anti_loss",
+            title: "🛡️ Tự Động Nâng Giá Chống Lỗ",
+            message: `Hệ thống đã tự động nâng giá SP "${prod.name || prod.id}" từ ${(typeof formatVND === "function" ? formatVND(oldPrice) : oldPrice + "đ")} lên ${(typeof formatVND === "function" ? formatVND(newSafePrice) : newSafePrice + "đ")} (Giá vốn: ${(typeof formatVND === "function" ? formatVND(liveCost) : liveCost + "đ")}, +${configuredPct}%) để bảo toàn lợi nhuận.`,
+            prodId: prod.id,
+            oldPrice: oldPrice,
+            newPrice: newSafePrice,
+            cost: liveCost
+          });
+        }
+
+        handledProdIds.add(prod.id);
         adjustedProds.push(prod);
       });
 
@@ -20261,7 +20380,7 @@ function syncAllOpenViewsStock(changedProdId) {
         if (typeof renderProductGrid === "function") renderProductGrid();
         if (typeof renderAllProductsPage === "function") renderAllProductsPage();
 
-        // CẤM hiển thị thông báo/toast chống bán lỗ trên trang người dùng (đã ghi log vào Auto Price Logs trong Admin)
+        // CẤM hiển thị thông báo/toast chống bán lỗ trên trang người dùng (đã gửi thông báo riêng đến trang admin)
       }
 
       return adjustedProds.length;
