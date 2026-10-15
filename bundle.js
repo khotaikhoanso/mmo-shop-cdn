@@ -21021,7 +21021,10 @@ function syncAllOpenViewsStock(changedProdId) {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed && typeof parsed === "object") {
-            const merged = Object.assign({}, defaultSettings, parsed);
+            // Làm sạch triệt để tên sàn: Không bao giờ cho phép MUABANTAIKHOANMMO hay MMO SHOP cũ
+            if (!merged.siteName || String(merged.siteName).toUpperCase().includes("MUABANTAIKHOANMMO") || String(merged.siteName).includes("MMO SHOP")) {
+              merged.siteName = defaultSettings.siteName;
+            }
             // Làm sạch các link URL cũ bị lỗi Lookalike workers.dev hoặc icon mặc định flaticon
             if (merged.brandLogo && (merged.brandLogo.includes("3135715.png") || merged.brandLogo.includes("workers.dev"))) {
               merged.brandLogo = defaultSettings.brandLogo;
@@ -21273,11 +21276,12 @@ function syncAllOpenViewsStock(changedProdId) {
         if (!settings) return;
 
         // 1. Tên sàn
-        if (settings.siteName) {
-          const siteNameEl = document.getElementById("headerSiteName");
-          if (siteNameEl) siteNameEl.innerText = settings.siteName;
-          document.title = settings.siteName + " - Kho Tài Khoản Số & Dịch Vụ MMO Uy Tín";
-        }
+        let cleanSiteName = (settings.siteName && !String(settings.siteName).toUpperCase().includes("MUABANTAIKHOANMMO") && !String(settings.siteName).includes("MMO SHOP")) 
+          ? settings.siteName 
+          : "KHO TÀI KHOẢN SỐ";
+        const siteNameEl = document.getElementById("headerSiteName");
+        if (siteNameEl) siteNameEl.innerText = cleanSiteName;
+        document.title = cleanSiteName + " - Kho Tài Khoản Số & Dịch Vụ MMO Uy Tín";
 
         // 2. Logo Header, Footer, Drawer & Toàn Bộ Trang
         const cleanLogo = (settings.brandLogo && settings.brandLogo.trim() && !settings.brandLogo.includes("workers.dev")) 
@@ -33585,16 +33589,27 @@ function changeAdmUsersPage(p) {
           if (rawProds) {
             const parsed = JSON.parse(rawProds);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              MOCK_DATA.products = parsed;
+              MOCK_DATA.products = parsed.filter(function(p) {
+                if (!p || !p.id) return false;
+                const lc = (String(p.name || '') + ' ' + String(p.category || '')).toLowerCase();
+                if (lc.includes("phone farm") || lc.includes("phonefarm") || lc.includes("mod adb") || lc.includes("flash rom") || lc.includes("rom")) return false;
+                return (typeof isProductDeleted !== "function" || !isProductDeleted(p));
+              });
             }
           }
         }
         if (Array.isArray(MOCK_DATA.products)) {
           MOCK_DATA.products = MOCK_DATA.products.filter(function(p) {
-            return p && p.id && (typeof isProductDeleted !== "function" || !isProductDeleted(p));
+            if (!p || !p.id) return false;
+            const lc = (String(p.name || '') + ' ' + String(p.category || '')).toLowerCase();
+            if (lc.includes("phone farm") || lc.includes("phonefarm") || lc.includes("mod adb") || lc.includes("flash rom") || lc.includes("rom")) return false;
+            return (typeof isProductDeleted !== "function" || !isProductDeleted(p));
           });
         }
       } catch(eInitProds) {}
+      if (typeof syncTursoProductsToLocalUI === "function") {
+        syncTursoProductsToLocalUI().catch(function() {});
+      }
       try { if (typeof renderProductGrid === "function") renderProductGrid(); } catch(eGrid) { console.error("renderProductGrid early error:", eGrid); }
       try { if (typeof renderBestSellers === "function") renderBestSellers(); } catch(eBs) { console.error("renderBestSellers early error:", eBs); }
       try { if (typeof renderRecommended === "function") renderRecommended(); } catch(eRec) { console.error("renderRecommended early error:", eRec); }
