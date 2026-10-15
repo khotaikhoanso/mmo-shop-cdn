@@ -22,6 +22,31 @@ try {
 } catch(eCss) {}
 
 // =========================================================================
+// [AUTO-MIGRATION & STORAGE PURGE CHO V4.3.81]:
+// Tự động làm sạch sản phẩm rác, zombie phone farm và khôi phục thương hiệu chuẩn
+// =========================================================================
+try {
+  if (typeof localStorage !== "undefined") {
+    var CURRENT_KTS_VERSION = "v4.3.81";
+    if (localStorage.getItem("kts_app_storage_version") !== CURRENT_KTS_VERSION) {
+      localStorage.removeItem("mmo_products");
+      localStorage.removeItem("mmo_admin_products");
+      localStorage.removeItem("mmo_categories");
+      localStorage.removeItem("mmo_deleted_product_ids");
+      try {
+        var _curSettings = JSON.parse(localStorage.getItem("khotaikhoanso_settings") || "{}");
+        if (_curSettings && typeof _curSettings === "object") {
+          _curSettings.siteName = "KHO TÀI KHOẢN SỐ";
+          localStorage.setItem("khotaikhoanso_settings", JSON.stringify(_curSettings));
+          localStorage.setItem("mmo_system_settings", JSON.stringify(_curSettings));
+        }
+      } catch(_eSt) {}
+      localStorage.setItem("kts_app_storage_version", CURRENT_KTS_VERSION);
+    }
+  }
+} catch(_eMigrate) {}
+
+// =========================================================================
 // [COOKIE BANNER SUPPRESSION]: VÔ HIỆU HÓA HOÀN TOÀN THANH COOKIE BLOGGER/GOOGLE
 // =========================================================================
 try {
@@ -528,7 +553,16 @@ const API_URL = "";
           const cached = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_admin_products") || localStorage.getItem("mmo_products")) : null;
           if (cached) {
             const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed.filter(function(p) {
+                if (!p || !p.id) return false;
+                const cat = String(p.category || "").toLowerCase();
+                const nm = String(p.name || "").toLowerCase();
+                if (cat.includes("phone farm") || cat.includes("rom") || nm.includes("rom") || nm.includes("mod adb")) return false;
+                if (String(p.id).startsWith("SP_") || p.id === "PROD_CODE" || p.id === "zalo-new-2016") return false;
+                return true;
+              });
+            }
           }
         } catch(e) {}
         return [];
@@ -13873,25 +13907,7 @@ if (typeof productOrId === "object") {
         deletedIds = deletedIds.filter(id => !activeServerIdSet.has(String(id).toLowerCase()));
         try { localStorage.setItem("mmo_deleted_product_ids", JSON.stringify(deletedIds)); } catch(eDl) {}
 
-        MOCK_DATA.products = (MOCK_DATA.products || []).filter(p => {
-          if (!p || !p.id) return false;
-          if (deletedIds.includes(p.id) || (typeof isProductDeleted === "function" && isProductDeleted(p))) return false;
-
-          const pIdLower = String(p.id).toLowerCase();
-          const pSlugLower = String(p.slug || '').toLowerCase();
-          const pNameLower = String(p.name || '').trim().toLowerCase();
-          const inServer = serverIds.has(pIdLower) || (pSlugLower && serverSlugs.has(pSlugLower)) || (pNameLower && serverNames.has(pNameLower));
-
-          // Khóa 120 giây bảo vệ tuyệt đối nếu vừa mới bấm lưu/sửa trên tab này
-          const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + p.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(p.id).toUpperCase())) || (p._lastEditedAt || 0);
-          const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 120000));
-
-          if (!inServer && !isLocallyInFlight) {
-            return false;
-          }
-          return true;
-        });
-
+        const validServerProducts = [];
         res.products.forEach(function(tp) {
           if (!tp || !tp.id || tp.id === 'zalo-new-2016' || tp.id === 'PROD_CODE') return;
           if (deletedIds.includes(tp.id)) return;
@@ -13915,19 +13931,13 @@ if (typeof productOrId === "object") {
             });
           }
 
-          const existingIdx = MOCK_DATA.products.findIndex(p => p && (String(p.id).toLowerCase() === String(tp.id).toLowerCase() || (tp.slug && p.slug && String(p.slug).toLowerCase() === String(tp.slug).toLowerCase())));
-          const cur = existingIdx !== -1 ? MOCK_DATA.products[existingIdx] : null;
-          
-          // Khóa 120 giây bảo vệ dữ liệu đang sửa
-          const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + tp.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(tp.id).toUpperCase())) || (cur && cur._lastEditedAt) || 0;
+          // Kiểm tra xem có đang sửa locally trong vòng 120s không
+          const lastEditTs = Number(localStorage.getItem("mmo_last_edited_" + tp.id)) || Number(localStorage.getItem("mmo_last_edited_" + String(tp.id).toUpperCase())) || 0;
           const isLocallyInFlight = (lastEditTs > 0 && (Date.now() - lastEditTs < 120000));
           const localCustomPrice = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_price_" + tp.id) || localStorage.getItem("mmo_custom_price_" + String(tp.id).toUpperCase())) : null;
           const localCustomVars = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_variants_" + tp.id) || localStorage.getItem("mmo_custom_variants_" + String(tp.id).toUpperCase())) : null;
-
-          // [SSOT TURSO CLOUD PRIORITY]:
-          // Chỉ ưu tiên localCustomImg nếu admin VỪA MỚI SỬA trên tab này trong vòng 120s (isLocallyInFlight = true).
-          // Ngoài ra, ảnh Live từ Turso SQLite SSOT luôn là nguồn chuẩn mực cao nhất, không bị đè bởi ảnh cũ!
           const localCustomImg = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_img_" + tp.id) || localStorage.getItem("mmo_custom_img_" + String(tp.id).toUpperCase())) : "";
+
           let targetImage = "";
           if (isLocallyInFlight && localCustomImg && !localCustomImg.includes("img_17914936") && !localCustomImg.includes("nGs8RDv.jpg")) {
             targetImage = localCustomImg;
@@ -13939,135 +13949,105 @@ if (typeof productOrId === "object") {
             targetImage = (typeof resolveProductImage === "function") ? resolveProductImage(tp) : "https://iili.io/nGs8AOJ.png";
           }
 
-          if (existingIdx !== -1 && cur) {
-            if (!isLocallyInFlight) {
-              cur.name = tp.name || cur.name;
-              cur.slug = tp.slug || cur.slug;
-              cur.category = tp.category || cur.category;
-              cur.price = (tp.price !== undefined) ? Number(tp.price) : cur.price;
-              cur.stock = (tp.stock !== undefined) ? Number(tp.stock) : cur.stock;
-              cur.warranty = tp.warranty || cur.warranty;
-              cur.description = (tp.description !== undefined) ? tp.description : cur.description;
-              cur.image = targetImage;
-              cur.image_url = targetImage;
-              cur.imageUrl = targetImage;
-              // BẢO TOÀN DANH SÁCH ACCOUNTS CỦA BIẾN THỂ TỪ RAM HOẶC CACHE LOCALSTORAGE (TRÁNH BỊ WIPE VỀ 0)
-              if (Array.isArray(variants)) {
-                variants.forEach((v, vIdx) => {
-                  const oldV = (Array.isArray(cur.variants) && cur.variants[vIdx]) ? cur.variants[vIdx] : null;
-                  if (oldV && Array.isArray(oldV.accounts) && oldV.accounts.length > 0) {
-                    v.accounts = oldV.accounts;
+          let finalPrice = (tp.price !== undefined) ? Number(tp.price) : 0;
+          let finalVariants = variants;
+          if (isLocallyInFlight) {
+            if (localCustomPrice !== null && !isNaN(Number(localCustomPrice))) finalPrice = Number(localCustomPrice);
+            if (localCustomVars) {
+              try {
+                const parsedCv = JSON.parse(localCustomVars);
+                if (Array.isArray(parsedCv) && parsedCv.length > 0) finalVariants = parsedCv;
+              } catch(eCv) {}
+            }
+          }
+
+          // Bảo toàn accounts của biến thể nếu có
+          if (Array.isArray(finalVariants)) {
+            finalVariants.forEach((v, vIdx) => {
+              try {
+                const cached = localStorage.getItem("mmo_turso_accs_" + tp.id + "_" + vIdx);
+                if (cached) {
+                  const parsedAccs = JSON.parse(cached);
+                  if (Array.isArray(parsedAccs) && parsedAccs.length > 0) {
+                    v.accounts = parsedAccs;
                     if (v.stock < v.accounts.length) v.stock = v.accounts.length;
-                  } else {
-                    try {
-                      const cached = localStorage.getItem("mmo_turso_accs_" + tp.id + "_" + vIdx);
-                      if (cached) {
-                        const parsed = JSON.parse(cached);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                          v.accounts = parsed;
-                          if (v.stock < v.accounts.length) v.stock = v.accounts.length;
-                        }
-                      }
-                    } catch(eC) {}
                   }
-                  if (!v.accounts) v.accounts = [];
+                }
+              } catch(eC) {}
+              if (!v.accounts) v.accounts = [];
+            });
+          }
+
+          const cleanProd = {
+            id: tp.id,
+            name: tp.name,
+            slug: tp.slug || (typeof generateCleanKtsSlug === "function" ? generateCleanKtsSlug(tp.name, tp.id) : ("kts-" + String(tp.id).toLowerCase())),
+            category: tp.category || "Khác",
+            price: finalPrice,
+            stock: (tp.stock !== undefined) ? Number(tp.stock) : 0,
+            sold: Number(tp.sold) || 0,
+            warranty: tp.warranty || "",
+            description: (tp.description !== undefined) ? tp.description : "",
+            image: targetImage,
+            image_url: targetImage,
+            imageUrl: targetImage,
+            variants: finalVariants,
+            deliveryType: tp.delivery_type || tp.deliveryType || "local",
+            delivery_type: tp.delivery_type || tp.deliveryType || "local",
+            apiMapping: tp.apiMapping || null
+          };
+
+          // Cache ảnh để load tức thì
+          if (targetImage && !targetImage.includes("img_17914936")) {
+            try {
+              localStorage.setItem("mmo_custom_img_" + cleanProd.id, targetImage);
+              localStorage.setItem("mmo_custom_img_" + String(cleanProd.id).toUpperCase(), targetImage);
+              if (cleanProd.slug) localStorage.setItem("mmo_custom_img_" + cleanProd.slug, targetImage);
+              if (typeof KTS_PROD_TO_IILI !== "undefined") {
+                KTS_PROD_TO_IILI[cleanProd.id] = targetImage;
+                KTS_PROD_TO_IILI[String(cleanProd.id).toUpperCase()] = targetImage;
+                if (cleanProd.slug) KTS_PROD_TO_IILI[cleanProd.slug] = targetImage;
+              }
+              if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+                KTS_KNOWN_CDN_MAP[cleanProd.id] = targetImage;
+                KTS_KNOWN_CDN_MAP[String(cleanProd.id).toUpperCase()] = targetImage;
+                if (cleanProd.slug) KTS_KNOWN_CDN_MAP[cleanProd.slug] = targetImage;
+              }
+            } catch(eCacheImg) {}
+          }
+
+          // Cập nhật ngay các thẻ img hiển thị trong DOM nếu cần
+          if (targetImage) {
+            try {
+              var sel = 'img[data-id="' + cleanProd.id + '"], img[data-id="' + String(cleanProd.id).toUpperCase() + '"]' + (cleanProd.slug ? ', img[data-slug="' + cleanProd.slug + '"]' : '');
+              var matchingImgs = document.querySelectorAll(sel);
+              if (matchingImgs && matchingImgs.forEach) {
+                matchingImgs.forEach(function(imgEl) {
+                  if (imgEl && imgEl.src !== targetImage) imgEl.src = targetImage;
                 });
               }
-              cur.variants = variants;
-              cur.deliveryType = tp.delivery_type || tp.deliveryType || cur.deliveryType || "local";
-              cur.delivery_type = cur.deliveryType;
-              if (tp.apiMapping) cur.apiMapping = tp.apiMapping;
+            } catch(eDomImg) {}
+          }
 
-              // Đồng bộ vào localStorage để luôn khớp dữ liệu Turso SSOT
-              try {
-                localStorage.setItem("mmo_custom_name_" + tp.id, cur.name);
-                localStorage.setItem("mmo_custom_price_" + tp.id, String(cur.price));
-                if (cur.category) localStorage.setItem("mmo_custom_category_" + tp.id, cur.category);
-                if (cur.warranty) localStorage.setItem("mmo_custom_warranty_" + tp.id, cur.warranty);
-                if (cur.description) localStorage.setItem("mmo_custom_desc_" + tp.id, cur.description);
-                if (Array.isArray(cur.variants)) localStorage.setItem("mmo_custom_variants_" + tp.id, JSON.stringify(cur.variants));
-                if (targetImage && !targetImage.includes("img_17914936")) {
-                  localStorage.setItem("mmo_custom_img_" + tp.id, targetImage);
-                  localStorage.setItem("mmo_custom_img_" + String(tp.id).toUpperCase(), targetImage);
-                  if (cur.slug) localStorage.setItem("mmo_custom_img_" + cur.slug, targetImage);
-                  if (typeof KTS_PROD_TO_IILI !== "undefined") {
-                    KTS_PROD_TO_IILI[tp.id] = targetImage;
-                    KTS_PROD_TO_IILI[String(tp.id).toUpperCase()] = targetImage;
-                    if (cur.slug) KTS_PROD_TO_IILI[cur.slug] = targetImage;
-                  }
-                  if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
-                    KTS_KNOWN_CDN_MAP[tp.id] = targetImage;
-                    KTS_KNOWN_CDN_MAP[String(tp.id).toUpperCase()] = targetImage;
-                    if (cur.slug) KTS_KNOWN_CDN_MAP[cur.slug] = targetImage;
-                  }
-                }
-              } catch(eSyncLs) {}
-            } else {
-              // Bảo toàn giá và biến thể vừa sửa khi isLocallyInFlight
-              if (localCustomPrice !== null && !isNaN(Number(localCustomPrice))) {
-                cur.price = Number(localCustomPrice);
-              }
-              if (localCustomVars) {
-                try {
-                  const parsedCustomVars = JSON.parse(localCustomVars);
-                  if (Array.isArray(parsedCustomVars) && parsedCustomVars.length > 0) {
-                    cur.variants = parsedCustomVars;
-                  }
-                } catch(eParsCv) {}
-              }
-              cur.stock = (tp.stock !== undefined) ? Number(tp.stock) : cur.stock;
-              if (targetImage) {
-                cur.image = targetImage;
-                cur.image_url = targetImage;
-                cur.imageUrl = targetImage;
-              }
-            }
+          validServerProducts.push(cleanProd);
+        });
 
-              // Cập nhật ngay lập tức các thẻ img hiển thị trong DOM
-              if (targetImage) {
-                try {
-                  var sel = 'img[data-id="' + tp.id + '"], img[data-id="' + String(tp.id).toUpperCase() + '"]' + (cur.slug ? ', img[data-slug="' + cur.slug + '"]' : '');
-                  var matchingImgs = document.querySelectorAll(sel);
-                  if (matchingImgs && matchingImgs.forEach) {
-                    matchingImgs.forEach(function(imgEl) {
-                      if (imgEl && imgEl.src !== targetImage) imgEl.src = targetImage;
-                    });
-                  }
-                } catch(eDomImg) {}
-              }
-          } else {
-            // Sản phẩm mới
-            const newProd = Object.assign({}, tp, {
-              slug: tp.slug || (typeof generateCleanKtsSlug === "function" ? generateCleanKtsSlug(tp.name, tp.id) : ("kts-" + String(tp.id).toLowerCase())),
-              variants: variants,
-              image: targetImage,
-              image_url: targetImage,
-              imageUrl: targetImage,
-              price: Number(tp.price) || 0,
-              stock: (tp.stock !== undefined) ? Number(tp.stock) : 0,
-              deliveryType: tp.delivery_type || tp.deliveryType || "local",
-              delivery_type: tp.delivery_type || tp.deliveryType || "local"
-            });
-            if (targetImage && !targetImage.includes("img_17914936")) {
-              try {
-                localStorage.setItem("mmo_custom_img_" + newProd.id, targetImage);
-                localStorage.setItem("mmo_custom_img_" + String(newProd.id).toUpperCase(), targetImage);
-                if (newProd.slug) localStorage.setItem("mmo_custom_img_" + newProd.slug, targetImage);
-                if (typeof KTS_PROD_TO_IILI !== "undefined") {
-                  KTS_PROD_TO_IILI[newProd.id] = targetImage;
-                  KTS_PROD_TO_IILI[String(newProd.id).toUpperCase()] = targetImage;
-                  if (newProd.slug) KTS_PROD_TO_IILI[newProd.slug] = targetImage;
-                }
-                if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
-                  KTS_KNOWN_CDN_MAP[newProd.id] = targetImage;
-                  KTS_KNOWN_CDN_MAP[String(newProd.id).toUpperCase()] = targetImage;
-                  if (newProd.slug) KTS_KNOWN_CDN_MAP[newProd.slug] = targetImage;
-                }
-              } catch(eNewImg) {}
+        // GÁN THẲNG VÀO MOCK_DATA.products BẰNG TOÀN BỘ SẢN PHẨM TỪ TURSO SSOT
+        MOCK_DATA.products = validServerProducts;
+
+        // Tự động đồng bộ danh mục hợp lệ (loại bỏ vĩnh viễn Phone Farm & Rom)
+        const validCats = new Set(["Tất cả"]);
+        validServerProducts.forEach(p => {
+          if (p.category && typeof p.category === "string" && p.category.trim()) {
+            const lcCat = p.category.trim().toLowerCase();
+            if (!lcCat.includes("phone farm") && !lcCat.includes("rom")) {
+              validCats.add(p.category.trim());
             }
-            MOCK_DATA.products.unshift(newProd);
           }
         });
+        ["Gmail", "HOT MAIL", "TikTok", "AI & Video", "Chatgpt", "VPN Proxy", "Intagram", "YOUTUBE", "Capcut", "Canva", "Tài Khoản Khác", "Khác"].forEach(c => validCats.add(c));
+        MOCK_DATA.categories = Array.from(validCats);
+        try { localStorage.setItem("mmo_categories", JSON.stringify(MOCK_DATA.categories)); } catch(eCat) {}
 
         try {
           const prodsJson = JSON.stringify(MOCK_DATA.products);
@@ -14102,6 +14082,7 @@ if (typeof productOrId === "object") {
         if (typeof renderAdminProductsTable === "function") renderAdminProductsTable();
         if (typeof renderAdminDashboard === "function") renderAdminDashboard();
         if (typeof renderAllProductsPage === "function") renderAllProductsPage();
+        if (typeof renderCategories === "function") renderCategories();
       } catch(e) {
         console.warn("syncTursoProductsToLocalUI error:", e);
       }
@@ -33604,11 +33585,14 @@ function changeAdmUsersPage(p) {
           if (rawProds) {
             const parsed = JSON.parse(rawProds);
             if (Array.isArray(parsed) && parsed.length > 0) {
-              MOCK_DATA.products = parsed.filter(function(p) {
-                return p && p.id && (typeof isProductDeleted !== "function" || !isProductDeleted(p));
-              });
+              MOCK_DATA.products = parsed;
             }
           }
+        }
+        if (Array.isArray(MOCK_DATA.products)) {
+          MOCK_DATA.products = MOCK_DATA.products.filter(function(p) {
+            return p && p.id && (typeof isProductDeleted !== "function" || !isProductDeleted(p));
+          });
         }
       } catch(eInitProds) {}
       try { if (typeof renderProductGrid === "function") renderProductGrid(); } catch(eGrid) { console.error("renderProductGrid early error:", eGrid); }
