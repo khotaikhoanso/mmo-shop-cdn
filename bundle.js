@@ -3854,6 +3854,12 @@ if (typeof productOrId === "object") {
 
         if (strictMatched.length > 0) {
           filtered = strictMatched;
+          filtered.sort(function(a, b) {
+            const stockA = Number(a.amount || 0) > 0 ? 1 : 0;
+            const stockB = Number(b.amount || 0) > 0 ? 1 : 0;
+            if (stockA !== stockB) return stockB - stockA;
+            return (a.name || "").localeCompare(b.name || "");
+          });
         } else {
           // 2. Scored fuzzy match
           const scored = [];
@@ -3881,11 +3887,12 @@ if (typeof productOrId === "object") {
         }
       }
 
-      // Cập nhật nhãn số lượng sản phẩm
+      // Cập nhật nhãn số lượng sản phẩm & tình trạng kho
+      const inStockTotal = filtered.filter(s => Number(s.amount || 0) > 0).length;
       if (countSpan) {
         if (rawKw) {
           if (filtered.length > 0) {
-            countSpan.innerHTML = '<span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-check"></i> ' + filtered.length + '/' + totalInProvider + ' SP</span>';
+            countSpan.innerHTML = '<span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-boxes-stacked"></i> ' + inStockTotal + '/' + filtered.length + ' SP còn hàng</span>';
           } else if (crossProviderMatches.length > 0) {
             const topProv = crossProviderMatches[0].provider;
             const topProvCfg = (typeof API_SOURCES !== "undefined" && API_SOURCES[topProv]) ? API_SOURCES[topProv] : { name: topProv };
@@ -3894,7 +3901,7 @@ if (typeof productOrId === "object") {
             countSpan.innerHTML = '<span style="color:#f87171;"><i class="fa-solid fa-triangle-exclamation"></i> 0/' + totalInProvider + ' SP</span>';
           }
         } else {
-          countSpan.innerHTML = '<span style="color:#94a3b8;">' + totalInProvider + ' SP</span>';
+          countSpan.innerHTML = '<span style="color:#38bdf8; font-weight:700;"><i class="fa-solid fa-boxes-stacked"></i> ' + inStockTotal + '/' + totalInProvider + ' SP còn hàng</span>';
         }
       }
 
@@ -3939,7 +3946,7 @@ if (typeof productOrId === "object") {
           optionsHtml = '<option value="">-- Không tìm thấy SP nào khớp "' + escFn(rawKw) + '" --</option>';
         }
       } else {
-        optionsHtml = '<option value="">-- ' + (rawKw ? ('Tìm thấy ' + filtered.length + ' SP (Bấm để chọn)') : ('Chọn sản phẩm nguồn (' + filtered.length + ' SP)')) + ' --</option>';
+        optionsHtml = '<option value="">-- ' + (rawKw ? ('Tìm thấy ' + filtered.length + ' SP (' + inStockTotal + ' còn hàng) - Bấm để chọn') : ('Chọn sản phẩm nguồn (' + inStockTotal + '/' + filtered.length + ' SP còn hàng)')) + ' --</option>';
       }
 
       // Nếu ID cũ bị web nguồn xoá hoặc hết, giữ lại một lựa chọn để không bị mất liên kết nếu admin chưa muốn đổi
@@ -3951,17 +3958,31 @@ if (typeof productOrId === "object") {
         optionsHtml += '<option value="' + currentVal + '"' + isOldSel + ' data-stock="0">[Đang liên kết cũ: #' + currentVal + ' - ' + delName + '] (Kho: 0 - Đã hết/xoá)</option>';
       }
 
-      optionsHtml += filtered.map(s => {
+      const renderProductOption = function(s) {
         const isSel = String(s.id) === String(autoSelectedId) ? ' selected="selected"' : '';
         const pPrice = Number(s.price || 0);
         const pStock = Number(s.amount || 0);
         const priceStr = (typeof formatVND === "function") ? formatVND(pPrice) : (pPrice.toLocaleString("vi-VN") + " đ");
-        const stockBadge = pStock > 0 ? (' (Tồn: ' + pStock.toLocaleString() + ')') : ' (HẾT HÀNG - Kho: 0)';
+        const stockBadge = pStock > 0 ? (' (Tồn: ' + pStock.toLocaleString() + ')') : ' (Web nguồn HẾT HÀNG - Kho: 0)';
         const recBadge = (String(s.id) === "32428" && isGemini18M) ? ' ⭐ [KHUYÊN DÙNG LIVE: 900+ ACC]' : '';
         return '<option value="' + s.id + '" data-price="' + pPrice + '" data-stock="' + pStock + '"' + isSel + '>' +
           '[' + (s.category || provider) + '] #' + s.id + ' ' + s.name + ' - ' + priceStr + stockBadge + recBadge +
         '</option>';
-      }).join("");
+      };
+
+      const inStockList = filtered.filter(s => Number(s.amount || 0) > 0);
+      const outOfStockList = filtered.filter(s => Number(s.amount || 0) <= 0);
+
+      if (inStockList.length > 0 && outOfStockList.length > 0) {
+        optionsHtml += '<optgroup label="🟢 CÒN HÀNG TRÊN NGUỒN (' + inStockList.length + ' SP CÓ TỒN KHO)">';
+        optionsHtml += inStockList.map(renderProductOption).join("");
+        optionsHtml += '</optgroup>';
+        optionsHtml += '<optgroup label="🔴 TẠM HẾT HÀNG TRÊN NGUỒN (' + outOfStockList.length + ' SP - KHO: 0)">';
+        optionsHtml += outOfStockList.map(renderProductOption).join("");
+        optionsHtml += '</optgroup>';
+      } else {
+        optionsHtml += filtered.map(renderProductOption).join("");
+      }
 
       sSel.innerHTML = optionsHtml;
       if (autoSelectedId) {
@@ -4189,7 +4210,9 @@ if (typeof productOrId === "object") {
           }
 
           if (isManual && typeof showToast === "function") {
-            showToast("Đã quét thành công " + freshProds.length + " sản phẩm từ " + pCfg.name + "!", "success");
+            const liveIn = freshProds.filter(p => Number(p.amount) > 0).length;
+            const liveOut = freshProds.length - liveIn;
+            showToast("✅ Đã quét xong " + freshProds.length.toLocaleString() + " SP từ " + pCfg.name + " (" + liveIn.toLocaleString() + " SP còn hàng, " + liveOut.toLocaleString() + " SP hết hàng)!", "success");
           }
           return freshProds;
         } else {
@@ -4247,8 +4270,10 @@ if (typeof productOrId === "object") {
         window._provFetchedAt[prov] = 0;
         const prods = await fetchSingleSourceProducts(prov, true);
         if (prods && prods.length > 0) {
+          const liveInStock = prods.filter(p => Number(p.amount) > 0).length;
+          const liveOutOfStock = prods.length - liveInStock;
           if (typeof showToast === "function") {
-            showToast("✅ Đã cập nhật xong " + prods.length.toLocaleString() + " sản phẩm từ " + provName + "!", "success");
+            showToast("✅ Đã cập nhật xong " + prods.length.toLocaleString() + " SP từ " + provName + " (" + liveInStock.toLocaleString() + " còn hàng, " + liveOutOfStock.toLocaleString() + " hết hàng)!", "success");
           }
         }
       } catch(err) {
@@ -4446,9 +4471,15 @@ if (typeof productOrId === "object") {
                 <span>${profitIcon}</span> Lãi: <strong style="color:${profitColor}; font-weight:800;">${profitText}</strong>
               </span>
               <span style="display:inline-flex; align-items:center; gap:4px; color:#94a3b8;">
-                <span>📦</span> Tồn: <strong style="color:#38bdf8; font-weight:800;">${Number(stock).toLocaleString("vi-VN")}</strong>
+                <span>📦</span> Tồn: <strong style="color:${stock > 0 ? '#38bdf8' : '#ef4444'}; font-weight:800;">${stock > 0 ? (Number(stock).toLocaleString("vi-VN") + ' acc') : '0 (Web nguồn HẾT HÀNG)'}</strong>
               </span>
             </div>
+            ${stock <= 0 ? `
+              <div style="margin-top:8px; padding:6px 10px; background:rgba(239,68,68,0.12); border:1px dashed #ef4444; border-radius:6px; font-size:0.75rem; color:#fca5a5; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                <span>⚠️ Web nguồn <strong>${escName.split(']')[0] ? escName.split(']')[0].replace('[','') : 'API'}</strong> hiện đang <strong>hết hàng (tồn 0)</strong> mã này. Hãy chọn mã nguồn khác hoặc đổi nhà cung cấp còn hàng.</span>
+                <button type="button" onclick="if(typeof openCompareModalFromCurrentEdit==='function')openCompareModalFromCurrentEdit();" style="background:#f59e0b; color:#000; font-weight:700; border:none; padding:3px 9px; border-radius:4px; cursor:pointer; font-size:0.72rem; flex-shrink:0;">Tìm nguồn khác</button>
+              </div>
+            ` : ''}
           </div>
         `;
       } else {
