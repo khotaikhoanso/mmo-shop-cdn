@@ -33544,7 +33544,8 @@ function changeAdmUsersPage(p) {
 
     function broadcastPreOrderEvent(payload) {
       if (!payload) return;
-      // 1. Same-origin BroadcastChannel (persistent, never closed)
+      // Chỉ phát sóng nội bộ giữa các tab trên cùng domain khotaikhoanso.net (BroadcastChannel cục bộ)
+      // TUYỆT ĐỐI CẤM phát sóng ra ntfy.sh hay bất kỳ máy chủ trung gian nào để bảo đảm độc lập 100%!
       try {
         const poBc = getMmoPreOrdersBc();
         if (poBc) poBc.postMessage(payload);
@@ -33552,15 +33553,6 @@ function changeAdmUsersPage(p) {
       try {
         const mmoBc = getMmoGlobalBc();
         if (mmoBc) mmoBc.postMessage(payload);
-      } catch(e) {}
-
-      // 2. Cross-profile & cross-incognito Realtime SSE Hub (0ms latency)
-      try {
-        fetch("https://ntfy.sh/mmo_preorders_realtime_stream/publish", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }).catch(function() {});
       } catch(e) {}
     }
     window.broadcastPreOrderEvent = broadcastPreOrderEvent;
@@ -37794,20 +37786,63 @@ function getProductSchemaReviews(p, idx) {
         }
 
         // 1. Trừ tiền ví khách hàng chuẩn hóa đa nguồn
-        user.balance = Math.max(0, userBalance - finalTotal);
+        const newBal = Math.max(0, userBalance - finalTotal);
+        user.balance = newBal;
         currentUser = user;
+        const cleanUEmail = (user.email || "").toLowerCase().trim();
+
         try {
           localStorage.setItem("mmo_user", JSON.stringify(user));
-          const cleanUEmail = (user.email || "").toLowerCase().trim();
+          localStorage.setItem("mmo_last_balance_change_time", String(Date.now()));
+          localStorage.setItem("mmo_expected_balance_" + cleanUEmail, String(newBal));
           const allUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : JSON.parse(localStorage.getItem("mmo_registered_users") || "[]");
           const uIdx = allUsers.findIndex(function(u) { return (u.id && u.id === user.id) || ((u.email || "").toLowerCase().trim() === cleanUEmail); });
           if (uIdx !== -1) {
-            allUsers[uIdx].balance = user.balance;
+            allUsers[uIdx].balance = newBal;
             if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
             else localStorage.setItem("mmo_registered_users", JSON.stringify(allUsers));
           }
           localStorage.setItem("mmo_users", JSON.stringify(allUsers));
         } catch(e) {}
+
+        // Cập nhật DOM số dư hiển thị ngay lập tức trên mọi vị trí (bao gồm thẻ Số Dư Khả Dụng trên trang Profile)
+        try {
+          const balFmt = (typeof formatVND === "function") ? formatVND(newBal) : newBal.toLocaleString("vi-VN") + " đ";
+          const balEls = [
+            document.getElementById("profDisplayBalance"),
+            document.getElementById("profBalanceDisplay"),
+            document.getElementById("headerWalletBalance"),
+            document.getElementById("navUserBalance"),
+            document.getElementById("headerUserBalance"),
+            document.getElementById("mobDrawerBalance"),
+            document.getElementById("poModalUserBalance"),
+            document.getElementById("withdrawModalCurrentBal")
+          ];
+          balEls.forEach(function(el) {
+            if (el) el.innerText = balFmt;
+          });
+        } catch(eDomBal) {}
+
+        // Đồng bộ trừ tiền tức thì lên Cloudflare Worker Turso Database độc lập
+        try {
+          if (typeof syncUserBalanceToCloud === "function") {
+            syncUserBalanceToCloud(user.email, finalTotal, "sub", "Thanh toán đặt hàng trước #" + orderCode, orderCode, newBal);
+          }
+        } catch(eSyncCloud) {}
+
+        try {
+          if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+            const sTok = (typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) 
+              ? MMO_WORKER_API.getAdminSecret() 
+              : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+            fetch(MMO_WORKER_API.getApiUrl() + "/api/user/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+              body: JSON.stringify({ email: cleanUEmail, balance: newBal }),
+              keepalive: true
+            }).catch(function() {});
+          }
+        } catch(eSyncWorker) {}
 
         // 2. Ghi nhật ký giao dịch chuẩn hệ thống (mmo_transaction_history & mmo_balance_logs)
         try {
@@ -37956,6 +37991,8 @@ function getProductSchemaReviews(p, idx) {
         // Cập nhật các thành phần giao diện một cách an toàn (mỗi hàm độc lập trong try/catch)
         try { if (typeof updateUserUI === "function") updateUserUI(); } catch(e) {}
         try { if (typeof updateWalletUI === "function") updateWalletUI(); } catch(e) {}
+        try { if (typeof renderUserBalanceLogs === "function") renderUserBalanceLogs(); } catch(e) {}
+        try { if (typeof renderUserWalletTransactions === "function") renderUserWalletTransactions(); } catch(e) {}
         try { if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge(); } catch(e) {}
         try { if (typeof renderProfileOrders === "function") renderProfileOrders(); } catch(e) {}
         try { if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable(); } catch(e) {}
@@ -38360,89 +38397,12 @@ function getProductSchemaReviews(p, idx) {
     window.executePodAdminCancel = executePodAdminCancel;
 
     // Khách hàng bấm Hủy đơn (khi đang chờ xác nhận)
-    function customerCancelPreOrder() {
-      const order = window._currentViewingPreOrder;
-      if (!order || (order.status !== "WAITING_CONFIRM" && order.status !== "PENDING")) {
-        if (typeof showToast === "function") showToast("Đơn hàng này không thể hủy!", "warning");
-        return;
+    function customerCancelPreOrder(oid) {
+      if (!oid) {
+        const cur = window._currentViewingPreOrder;
+        oid = cur ? (cur.orderCode || cur.id) : (document.getElementById("podCode") ? document.getElementById("podCode").innerText : "");
       }
-
-      if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng đặt trước này và nhận lại 100% số tiền vào ví?")) {
-        return;
-      }
-
-      let user = null;
-      try {
-        user = JSON.parse(localStorage.getItem("mmo_user") || "null");
-      } catch(e) {}
-      if (!user && typeof currentUser !== "undefined") user = currentUser;
-
-      if (user) {
-        const refAmt = Number(order.total || order.totalPrice || 0);
-        const cleanUE = (user.email || (currentUser ? currentUser.email : "") || "").toLowerCase().trim();
-        const allUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
-        const uIdx = allUsers.findIndex(u => (u.id && u.id === user.id) || ((u.email || "").toLowerCase().trim() === cleanUE));
-        let finalBal = 0;
-        if (uIdx !== -1) {
-          allUsers[uIdx].balance = (Number(allUsers[uIdx].balance) || 0) + refAmt;
-          finalBal = allUsers[uIdx].balance;
-        } else {
-          finalBal = (Number(user.balance) || 0) + refAmt;
-        }
-
-        if (currentUser && ((currentUser.id && currentUser.id === user.id) || (currentUser.email && currentUser.email.toLowerCase().trim() === cleanUE))) {
-          currentUser.balance = finalBal;
-          localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-        }
-
-        if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
-
-        // Ghi nhật ký hoàn tiền chuẩn hệ thống
-        try {
-          if (typeof recordTransaction === "function") {
-            recordTransaction(cleanUE || user.email, user.username || user.fullname || user.email.split("@")[0], "Hoàn tiền khách hủy đơn đặt trước", +refAmt, finalBal, "Hoàn 100% tiền khách hủy đơn đặt trước #" + (order.orderCode || order.id) + " (" + (order.productName || "Sản phẩm đặt trước") + ")");
-          }
-          if (typeof callGasApi === "function" && refAmt > 0) {
-            callGasApi("adminUpdateBalance", {
-              adminEmail: "", // Leave empty to bypass the GAS isUserAdmin check
-              targetEmail: cleanUE || user.email,
-              amount: refAmt,
-              reason: "Hoàn 100% tiền khách hủy đơn đặt trước #" + (order.orderCode || order.id)
-            }).catch(function(err){ console.warn("Lỗi đồng bộ hoàn tiền hủy đơn lên GAS:", err); });
-          }
-        } catch(e) {}
-      }
-
-      // Cập nhật trạng thái đơn
-      order.status = "CANCELLED";
-      order.statusText = "Khách Đã Hủy / Hoàn Tiền";
-      order.isCancelled = true;
-      order.isRefunded = true;
-      order.cancelledBy = "CUSTOMER";
-      order.refundedAt = new Date().toLocaleString("vi-VN");
-
-      const cleanCode = String(order.orderCode || order.id || "").replace("#", "").trim();
-      const preOrders = getPreOrders(true);
-      const pIdx = preOrders.findIndex(o => String(o.id || o.orderCode).replace("#", "").trim() === cleanCode);
-      if (pIdx !== -1) {
-        preOrders[pIdx] = Object.assign({}, preOrders[pIdx], order);
-        savePreOrders(preOrders);
-        if (typeof cancelAffiliateCommissionForOrder === "function") {
-          cancelAffiliateCommissionForOrder(cleanCode, "Khách hàng hủy đơn đặt trước và hoàn tiền 100%");
-        }
-      }
-
-      if (typeof updateWalletUI === "function") updateWalletUI();
-      if (typeof updateUserUI === "function") updateUserUI();
-      if (typeof renderProfileOrders === "function") renderProfileOrders();
-      if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
-      if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
-      if (typeof renderSystemOverview === "function") renderSystemOverview();
-      if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
-      broadcastPreOrderEvent({ type: "ORDER_STATUS_CHANGED", orderId: cleanCode, status: "CANCELLED", statusText: "Khách Đã Hủy / Hoàn Tiền" });
-      if (typeof showToast === "function") showToast("✅ Đã hủy đơn hàng và hoàn tiền " + (typeof formatVND === "function" ? formatVND(order.total) : order.total.toLocaleString("vi-VN") + " đ") + " vào ví thành công!", "success");
-
-      openPreOrderDetailView(order.id);
+      return cancelUserPreOrder(oid);
     }
     window.customerCancelPreOrder = customerCancelPreOrder;
 
@@ -38923,7 +38883,34 @@ function getProductSchemaReviews(p, idx) {
       try {
         localStorage.setItem("mmo_user", JSON.stringify(user));
         localStorage.setItem("mmo_users", JSON.stringify(allUsers));
+        localStorage.setItem("mmo_last_balance_change_time", String(Date.now()));
+        localStorage.setItem("mmo_expected_balance_" + cleanUE, String(finalBal));
       } catch(e) {}
+
+      // Cập nhật DOM số dư hiển thị ngay lập tức
+      try {
+        const balFmt = (typeof formatVND === "function") ? formatVND(finalBal) : finalBal.toLocaleString("vi-VN") + " đ";
+        const balEls = [
+          document.getElementById("profDisplayBalance"),
+          document.getElementById("profBalanceDisplay"),
+          document.getElementById("headerWalletBalance"),
+          document.getElementById("navUserBalance"),
+          document.getElementById("headerUserBalance"),
+          document.getElementById("mobDrawerBalance"),
+          document.getElementById("poModalUserBalance"),
+          document.getElementById("withdrawModalCurrentBal")
+        ];
+        balEls.forEach(function(el) {
+          if (el) el.innerText = balFmt;
+        });
+      } catch(eDomBal) {}
+
+      // Đồng bộ hoàn tiền lên Cloudflare Worker Turso SSOT
+      try {
+        if (typeof syncUserBalanceToCloud === "function") {
+          syncUserBalanceToCloud(cleanUE, refAmt, "add", "Hoàn tiền hủy đơn đặt trước #" + cleanId, "REF_" + cleanId, finalBal);
+        }
+      } catch(eSyncCloud) {}
 
       // 2. Ghi nhật ký biến động số dư & giao dịch
       try {
@@ -38965,6 +38952,9 @@ function getProductSchemaReviews(p, idx) {
       if (foundPoIdx !== -1) {
         poList[foundPoIdx] = Object.assign({}, poList[foundPoIdx], order);
         savePreOrders(poList);
+        if (typeof cancelAffiliateCommissionForOrder === "function") {
+          cancelAffiliateCommissionForOrder(cleanId, "Khách hàng hủy đơn đặt trước và hoàn tiền 100%");
+        }
       }
 
       // Cập nhật vào tất cả các kho lưu trữ cục bộ
@@ -39020,6 +39010,8 @@ function getProductSchemaReviews(p, idx) {
       if (typeof renderProfileOrders === "function") renderProfileOrders();
       if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
       if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+      if (typeof renderUserBalanceLogs === "function") renderUserBalanceLogs();
+      if (typeof renderUserWalletTransactions === "function") renderUserWalletTransactions();
 
       // Nếu đang mở trang chi tiết đơn đặt trước -> refresh view sang CANCELLED
       try {
