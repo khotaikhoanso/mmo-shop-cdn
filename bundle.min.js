@@ -2615,6 +2615,7 @@ if (typeof productOrId === "object") {
 
           const ADM_PRODS_PER_PAGE = 99999;
           const page = 1;
+          const safePage = 1;
           const totalPages = 1;
           if (typeof paginationState !== "undefined") paginationState.admProd = 1;
 
@@ -6117,6 +6118,7 @@ if (typeof productOrId === "object") {
       const result = (typeof getUserComprehensiveTransactions === "function") 
         ? getUserComprehensiveTransactions(cleanEmail) 
         : { transactions: [], currentBalance: (u.balance || 0) };
+      const allTx = (result && Array.isArray(result.transactions)) ? result.transactions : [];
       
       let accurateBalance = (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined && !isNaN(Number(currentUser.balance)))
         ? Number(currentUser.balance)
@@ -10705,6 +10707,11 @@ if (typeof productOrId === "object") {
 
     function switchProfileTab(tabId) {
       if (!tabId) tabId = "tabProfWallet";
+      if (tabId === "history" || tabId === "wallet" || tabId === "tabHistory" || tabId === "tabWallet") tabId = "tabProfWallet";
+      if (tabId === "orders" || tabId === "myOrders" || tabId === "tabOrders") tabId = "tabProfOrders";
+      if (tabId === "profile" || tabId === "info" || tabId === "user" || tabId === "tabInfo") tabId = "tabProfInfo";
+      if (tabId === "bank" || tabId === "tabBank") tabId = "tabProfBank";
+      if (tabId === "affiliate" || tabId === "tabAffiliate") tabId = "tabProfAffiliate";
       localStorage.setItem("mmo_profile_tab", tabId);
 
       const sections = ["tabProfWallet", "tabProfOrders", "tabProfInfo", "tabProfBank", "tabProfAffiliate", "tabProfNotify", "tabProfWishlist", "tabProfApi"];
