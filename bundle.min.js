@@ -22558,6 +22558,22 @@ function syncAllOpenViewsStock(changedProdId) {
     window.getBackendApiUrl = getBackendApiUrl;
 
     async function callGasApi(action, params = {}) {
+      // BỨC TƯỜNG LỬA BẢO VỆ ĐỘC LẬP: CẤM 100% ĐỒNG BỘ ĐƠN ĐẶT TRƯỚC SANG GOOGLE APPS SCRIPT HOẶC WEB KHÁC
+      const isPreOrderRelated = action === "savePreOrder" || action === "adminSavePreOrders" ||
+        (params && (
+          (params.orderId && String(params.orderId).startsWith("PRE")) ||
+          (params.id && String(params.id).startsWith("PRE")) ||
+          params.isPreOrder ||
+          params.orderType === "preorder" ||
+          (params.prodName && /đặt trước|pre-order/i.test(params.prodName)) ||
+          (params.customNotes && /đặt trước|pre-order/i.test(params.customNotes))
+        ));
+
+      if (isPreOrderRelated) {
+        console.warn("[KHOTAIKHOANSO FIREWALL] CẤM ĐỒNG BỘ ĐƠN ĐẶT TRƯỚC SANG GOOGLE APPS SCRIPT HOẶC WEB KHÁC! Hệ thống hoạt động 100% độc lập.", action, params);
+        return { success: true, message: "Blocked pre-order GAS sync - Independent Turso exclusive" };
+      }
+
       // BỨC TƯỜNG LỬA BẢO VỆ ĐỘC LẬP: CẤM 100% ĐỒNG BỘ SẢN PHẨM VÀ KHO SANG GOOGLE APPS SCRIPT 
       if ([
         "adminSaveProduct", "adminDeleteProduct", "deleteProduct",
@@ -37423,10 +37439,8 @@ function getProductSchemaReviews(p, idx) {
             }).catch(function(err) { console.warn("Worker orders sync notice:", err); });
           }
         } catch(eWorker) {}
-
-        if (typeof callGasApi === "function") {
-          callGasApi("adminSavePreOrders", { orders: orders }).catch(function(){});
-        }
+        // Đơn đặt trước chỉ lưu trữ cục bộ và đồng bộ lên Cloudflare Worker Turso Database độc lập của khotaikhoanso.net
+        // Tuyệt đối không gửi sang Google Apps Script của web khác
       } catch(e) {}
     }
     window.savePreOrders = savePreOrders;
@@ -37957,43 +37971,28 @@ function getProductSchemaReviews(p, idx) {
           }
         } catch(eAff) {}
 
-        // Đồng bộ lên Google Sheets trung tâm (async, không chặn)
-        try {
-          if (typeof callGasApi === "function") {
-            callGasApi("payOrderByWallet", {
-              email: (user.email || "").trim(),
-              prodId: prodId,
-              prodName: "Đặt trước: " + fullProdTitle,
-              variantName: "Đặt trước (" + maxDays + " ngày)",
-              quantity: qty,
-              orderId: orderCode,
-              amount: finalTotal,
-              currentBalance: user.balance,
-              accounts: "",
-              customNotes: "Đơn đặt trước - Hạn xử lý: " + maxDays + " ngày" + (customNotes ? (" - Ghi chú: " + customNotes) : "")
-            }).catch(function(err) {
-              console.warn("Cloud pre-order sync notice:", err);
-            });
-          }
-        } catch(eGas) {}
+        // BẢO VỆ ĐỘC LẬP: TUYỆT ĐỐI CẤM ĐỒNG BỘ ĐƠN ĐẶT TRƯỚC SANG WEB KHÁC HOẶC GOOGLE APPS SCRIPT!
+        // KHOTAIKHOANSO.NET HOẠT ĐỘNG 100% ĐỘC LẬP QUA CLOUDFLARE WORKER & TURSO DATABASE
 
-        // Đồng bộ Turso Worker và BroadcastChannel Realtime 0ms
+        // Đồng bộ trực tiếp lên Cloudflare Worker Turso Database của khotaikhoanso.net
         try {
-          if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-            const sTok = (typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
-            fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-admin-token": sTok },
-              body: JSON.stringify({ orders: [newPreOrder] }),
-              keepalive: true
-            }).catch(function(err) { console.warn("Turso pre-order sync notice:", err); });
-            fetch(MMO_WORKER_API.getApiUrl() + "/api/user/sync", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-admin-token": sTok },
-              body: JSON.stringify({ email: user.email, balance: user.balance }),
-              keepalive: true
-            }).catch(function() {});
-          }
+          const workerApiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+            ? MMO_WORKER_API.getApiUrl()
+            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
+            ? MMO_WORKER_API.getAdminSecret() 
+            : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+
+          fetch(workerApiUrl + "/api/orders/sync", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json", 
+              "x-admin-token": sTok,
+              "Authorization": "Bearer " + sTok
+            },
+            body: JSON.stringify({ orders: [newPreOrder] }),
+            keepalive: true
+          }).catch(function(err) { console.warn("Turso pre-order sync notice:", err); });
         } catch(eTurso) {}
 
         try { broadcastPreOrderEvent({ type: "NEW_PREORDER", order: newPreOrder }); } catch(eBc) {}
@@ -39282,7 +39281,7 @@ function executeAdminFulfillPreOrder() {
           let preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
           let hasNewOrChanged = false;
 
-          // Lần đầu tải trang: Nạp toàn bộ đơn cũ vào tập đã biết, KHÔNG rung chuông hay bắn thông báo spam!
+          // Lần đầu tải trang: Đánh dấu các đơn cũ để không phát chuông spam, nhưng VẪN NẠP VÀO BẢNG ADMIN BÌNH THƯỜNG!
           if (_isFirstAdminPreOrderPoll) {
             _isFirstAdminPreOrderPoll = false;
             preOrders.forEach(p => {
@@ -39293,7 +39292,6 @@ function executeAdminFulfillPreOrder() {
               const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim().toLowerCase();
               if (cId) _notifiedAdminPreOrderIds.add(cId);
             });
-            return;
           }
 
           cloudPreList.forEach(function(cp) {
