@@ -23269,7 +23269,7 @@ function syncAllOpenViewsStock(changedProdId) {
 
         const fetchUrls = isAdm 
           ? [apiUrl + "/api/admin/orders?limit=300", apiUrl + "/api/admin/preorders?limit=300"]
-          : [apiUrl + "/api/preorders?limit=100"];
+          : (cleanUserMail ? [apiUrl + "/api/preorders?email=" + encodeURIComponent(cleanUserMail) + "&limit=100"] : [apiUrl + "/api/preorders?limit=100"]);
         for (const u of fetchUrls) {
           try {
             const res = await fetch(u, { headers: admHeaders, cache: "no-store" });
@@ -23734,8 +23734,16 @@ function syncAllOpenViewsStock(changedProdId) {
 
           if (uIdx !== -1) {
             userOrders[uIdx].type = "PRE_ORDER";
-            userOrders[uIdx].status = po.status;
-            userOrders[uIdx].statusText = po.statusText;
+            const curSt = String(userOrders[uIdx].status || "").toUpperCase();
+            const poSt = String(po.status || "").toUpperCase();
+            const isCurAdvanced = (curSt === "COMPLETED" || curSt === "DELIVERED" || curSt === "PROCESSING");
+            const isPoBackwards = (poSt === "WAITING_CONFIRM" || poSt === "PENDING");
+            if (isCurAdvanced && isPoBackwards) {
+              // Tuyệt đối không hạ cấp đơn COMPLETED/PROCESSING về WAITING_CONFIRM
+            } else if (po.status) {
+              userOrders[uIdx].status = po.status;
+              userOrders[uIdx].statusText = po.statusText;
+            }
             if (po.isCancelled || po.isRefunded || po.status === "CANCELLED" || po.status === "REFUNDED") {
               userOrders[uIdx].isCancelled = true;
               userOrders[uIdx].isRefunded = true;
@@ -24603,10 +24611,15 @@ function syncAllOpenViewsStock(changedProdId) {
                   let effectiveStatus = "WAITING_CONFIRM";
                   if (isCancelled) {
                     effectiveStatus = "CANCELLED";
-                  } else if (freshSt) {
-                    effectiveStatus = freshSt;
-                  } else if (rawSt) {
-                    effectiveStatus = rawSt;
+                  } else {
+                    const candidates = [rawSt, freshSt].map(function(s) { return String(s || "").toUpperCase().trim(); });
+                    if (candidates.includes("COMPLETED") || candidates.includes("DELIVERED") || rawStTxt.includes("đã giao") || rawStTxt.includes("hoàn thành") || freshStTxt.includes("đã giao") || freshStTxt.includes("hoàn thành")) {
+                      effectiveStatus = "COMPLETED";
+                    } else if (candidates.includes("PROCESSING") || rawStTxt.includes("gom") || freshStTxt.includes("gom")) {
+                      effectiveStatus = "PROCESSING";
+                    } else {
+                      effectiveStatus = freshSt || rawSt || "WAITING_CONFIRM";
+                    }
                   }
 
                   const effectiveDelivered = (!isCancelled && freshPO && freshPO.deliveredAccounts && freshPO.deliveredAccounts.length > 0) ? freshPO.deliveredAccounts : (!isCancelled && order.deliveredAccounts ? order.deliveredAccounts : (!isCancelled && rawCreds ? [rawCreds] : []));
