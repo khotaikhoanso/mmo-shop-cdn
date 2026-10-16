@@ -139,11 +139,11 @@ function isForbiddenLegacyOrder(o) {
   if (!o) return true;
   var rawId = String(o.id || o.orderId || o.orderCode || "").trim();
   var cleanId = rawId.toUpperCase().replace(/^#/, "").trim();
-  if (cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD")) return true;
+  if (cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD") || cleanId.startsWith("TX_PO_") || cleanId.startsWith("TX_") || cleanId.startsWith("TEST_PO_") || cleanId === "PRE_TEST_LIVE_01" || cleanId.includes("[REALTIME TEST]") || cleanId.includes("TEST_LIVE")) return true;
   var em = String(o.userEmail || o.email || o.buyerEmail || o.customerEmail || "").toLowerCase().trim();
   if (em === "khachhang@gmail.com" || em.includes("demo@") || em.includes("sample@")) return true;
   var pName = String(o.productName || o.prodName || "").toLowerCase();
-  if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu")) return true;
+  if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu") || pName.includes("[realtime test]")) return true;
   return false;
 }
 if (typeof window !== "undefined") {
@@ -11415,11 +11415,21 @@ if (typeof productOrId === "object") {
         if (badgeOrders) {
           let preOrders = [];
           try { preOrders = JSON.parse(localStorage.getItem("mmo_pre_orders") || "[]"); } catch(e) {}
-          const pendingPreOrders = Array.isArray(preOrders) ? preOrders.filter(o => o && (o.status === "WAITING_CONFIRM" || o.status === "PROCESSING")).length : 0;
+          if (!Array.isArray(preOrders)) preOrders = [];
+          preOrders = preOrders.filter(o => o && (typeof isForbiddenLegacyOrder === "function" ? !isForbiddenLegacyOrder(o) : true));
+          const pendingPreOrders = preOrders.filter(o => o && (o.status === "WAITING_CONFIRM" || o.status === "PENDING" || o.status === "PROCESSING")).length;
           
           let allOrders = [];
           try { allOrders = JSON.parse(localStorage.getItem("mmo_all_orders") || "[]"); } catch(e) {}
-          const pendingOrders = Array.isArray(allOrders) ? allOrders.filter(o => o && (o.status === "PENDING" || o.status === "WAITING_CONFIRM")).length : 0;
+          if (!Array.isArray(allOrders)) allOrders = [];
+          allOrders = allOrders.filter(o => o && (typeof isForbiddenLegacyOrder === "function" ? !isForbiddenLegacyOrder(o) : true));
+          const pendingOrders = allOrders.filter(o => {
+            if (!o) return false;
+            const oId = String(o.id || o.orderId || o.orderCode || "").replace(/^#/, "").trim();
+            const isPre = o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.includes("PO_") || (o.statusText && o.statusText.includes("đặt trước"));
+            if (isPre) return false;
+            return o.status === "PENDING" || o.status === "WAITING_CONFIRM" || o.status === "PROCESSING";
+          }).length;
 
           const totalPending = pendingPreOrders + pendingOrders;
           if (totalPending > 0) {
@@ -23134,11 +23144,11 @@ function syncAllOpenViewsStock(changedProdId) {
       if (!o) return true;
       const rawId = String(o.id || o.orderId || o.orderCode || "").trim();
       const cleanId = rawId.toUpperCase().replace(/^#/, "").trim();
-      if (cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD")) return true;
+      if (cleanId === "MMO888999" || cleanId.includes("SAMPLE") || cleanId.includes("DEMO_ORD") || cleanId.startsWith("TX_PO_") || cleanId.startsWith("TX_") || cleanId.startsWith("TEST_PO_") || cleanId === "PRE_TEST_LIVE_01" || cleanId.includes("[REALTIME TEST]") || cleanId.includes("TEST_LIVE")) return true;
       const em = String(o.userEmail || o.email || o.buyerEmail || o.customerEmail || "").toLowerCase().trim();
       if (em === "khachhang@gmail.com" || em.includes("demo@") || em.includes("sample@")) return true;
       const pName = String(o.productName || o.prodName || "").toLowerCase();
-      if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu")) return true;
+      if (pName.includes("mẫu demo") || pName.includes("demo order") || pName.includes("sản phẩm mẫu") || pName.includes("[realtime test]")) return true;
       return false;
     }
     window.isForbiddenLegacyOrder = isForbiddenLegacyOrder;
@@ -23380,9 +23390,15 @@ function syncAllOpenViewsStock(changedProdId) {
                 changed = true;
               }
             } else if (normOrder.status && normOrder.status !== targetItem.status) {
-              targetItem.status = normOrder.status;
-              targetItem.statusText = normOrder.statusText || targetItem.statusText;
-              changed = true;
+              const isLocalAdvanced = (targetItem.status === "PROCESSING" || targetItem.status === "COMPLETED" || targetItem.status === "DELIVERED" || targetItem.status === "CANCELLED");
+              const isCloudBackwards = (normOrder.status === "WAITING_CONFIRM" || normOrder.status === "PENDING");
+              if (isLocalAdvanced && isCloudBackwards) {
+                // Giữ nguyên trạng thái tiến bộ hơn của Local, chống rollback
+              } else {
+                targetItem.status = normOrder.status;
+                targetItem.statusText = normOrder.statusText || targetItem.statusText;
+                changed = true;
+              }
             }
             return changed;
           }
@@ -23435,11 +23451,20 @@ function syncAllOpenViewsStock(changedProdId) {
               preOrders.unshift(normOrder);
               preOrdersModified = true;
             } else {
-              if (preOrders[pIdx].status !== normOrder.status || (!preOrders[pIdx].credentials && normOrder.credentials)) {
-                preOrders[pIdx].status = normOrder.status;
-                preOrders[pIdx].statusText = normOrder.statusText;
-                if (normOrder.credentials) preOrders[pIdx].credentials = normOrder.credentials;
-                if (normOrder.deliveredAccounts && normOrder.deliveredAccounts.length > 0) preOrders[pIdx].deliveredAccounts = normOrder.deliveredAccounts;
+              const curPre = preOrders[pIdx];
+              const isPreAdvanced = (curPre.status === "PROCESSING" || curPre.status === "COMPLETED" || curPre.status === "DELIVERED" || curPre.status === "CANCELLED");
+              const isCloudPreBackwards = (normOrder.status === "WAITING_CONFIRM" || normOrder.status === "PENDING");
+              if (isPreAdvanced && isCloudPreBackwards) {
+                // Giữ nguyên trạng thái tiến bộ hơn của Local, chống rollback
+                if (!curPre.credentials && normOrder.credentials) {
+                  curPre.credentials = normOrder.credentials;
+                  preOrdersModified = true;
+                }
+              } else if (curPre.status !== normOrder.status || (!curPre.credentials && normOrder.credentials)) {
+                curPre.status = normOrder.status;
+                curPre.statusText = normOrder.statusText;
+                if (normOrder.credentials) curPre.credentials = normOrder.credentials;
+                if (normOrder.deliveredAccounts && normOrder.deliveredAccounts.length > 0) curPre.deliveredAccounts = normOrder.deliveredAccounts;
                 preOrdersModified = true;
               }
             }
@@ -24445,7 +24470,11 @@ function syncAllOpenViewsStock(changedProdId) {
 
       // Đếm số lượng đơn theo phân loại
       const countAll = orders.length;
-      const countPre = orders.filter(isPreOrderCheck).length;
+      const countPre = orders.filter(function(o) {
+        if (!isPreOrderCheck(o)) return false;
+        const st = String(o.status || "").toUpperCase();
+        return st !== "CANCELLED" && st !== "REFUNDED";
+      }).length;
       const countExchanged = orders.filter(function(o) {
         if (isPreOrderCheck(o)) return false;
         return isOrderWarrantyOrExchange(o);
@@ -38699,8 +38728,12 @@ function getProductSchemaReviews(p, idx) {
       if (!tbody) return;
 
       const preOrders = (getPreOrders(true) || []).filter(function(o) { return typeof isForbiddenLegacyOrder === "function" ? !isForbiddenLegacyOrder(o) : true; });
+      const waitingCount = preOrders.filter(function(o) {
+        const st = String(o.status || "").toUpperCase();
+        return st === "WAITING_CONFIRM" || st === "PENDING" || st === "PROCESSING";
+      }).length;
       const countBadge = document.getElementById("admPreOrdersCountBadge");
-      if (countBadge) countBadge.innerText = preOrders.length;
+      if (countBadge) countBadge.innerText = waitingCount;
 
       const searchInput = document.getElementById("admPreOrdersSearchInput");
       const kw = searchInput ? (searchInput.value || "").trim().toLowerCase() : "";
@@ -38942,10 +38975,16 @@ function getProductSchemaReviews(p, idx) {
       // 6. Đồng bộ Turso Worker Database
       try {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
+            ? MMO_WORKER_API.getAdminSecret() 
+            : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+            headers: { 
+              "Content-Type": "application/json", 
+              "x-admin-token": sTok,
+              "Authorization": "Bearer " + sTok
+            },
             body: JSON.stringify({ orders: [order] }),
             keepalive: true
           }).catch(function(e) { console.warn("Turso sync confirm error:", e); });
@@ -39692,10 +39731,26 @@ function executeAdminFulfillPreOrder() {
                     keepalive: true
                   }).catch(function() {});
                 }
+              } else if (localOrder.status === "PROCESSING" && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
+                // [CHỐNG ROLLBACK TUYỆT ĐỐI]: Local admin đã duyệt sang PROCESSING (Đang gom hàng),
+                // nếu Cloud vẫn còn giữ WAITING_CONFIRM thì TUYỆT ĐỐI KHÔNG HẠ CẤP LOCAL VỀ WAITING_CONFIRM!
+                // Đồng thời đẩy sync lại PROCESSING lên Cloud Worker
+                if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+                  fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "x-admin-token": sTok, "Authorization": "Bearer " + sTok },
+                    body: JSON.stringify({ orders: [localOrder] }),
+                    keepalive: true
+                  }).catch(function() {});
+                }
+              } else if (localOrder.status === "CANCELLED" && (cp.status === "WAITING_CONFIRM" || cp.status === "PROCESSING")) {
+                // Đơn đã hủy tại local, không nhận lại chờ duyệt hoặc đang xử lý
               } else if (cp.status && localOrder.status !== cp.status) {
                 // CHỐNG NHIỄM: Nếu cloud báo COMPLETED nhưng không có tài khoản thì không nhận COMPLETED
                 if ((cp.status === "COMPLETED" || cp.status === "DELIVERED") && !cloudHasAccs) {
                   // Giữ nguyên trạng thái hiện tại (WAITING_CONFIRM / PROCESSING)
+                } else if ((localOrder.status === "PROCESSING" || localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED" || localOrder.status === "CANCELLED") && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
+                  // Giữ nguyên trạng thái tiến bộ hơn của local!
                 } else {
                   localOrder.status = cp.status;
                   localOrder.statusText = cp.statusText || localOrder.statusText;
@@ -39804,11 +39859,13 @@ function executeAdminFulfillPreOrder() {
 
     function updateAdminPreOrdersBadge() {
       try {
-        const preOrders = (typeof getPreOrders === "function") ? getPreOrders() : [];
-        const waitingCount = preOrders.filter(o => o.status === "WAITING_CONFIRM" || o.status === "PROCESSING").length;
+        const preOrders = ((typeof getPreOrders === "function") ? getPreOrders() : []).filter(function(o) {
+          return typeof isForbiddenLegacyOrder === "function" ? !isForbiddenLegacyOrder(o) : true;
+        });
+        const waitingCount = preOrders.filter(o => o && (o.status === "WAITING_CONFIRM" || o.status === "PENDING" || o.status === "PROCESSING")).length;
         const countBadge = document.getElementById("admPreOrdersCountBadge");
         if (countBadge) {
-          countBadge.innerText = preOrders.length;
+          countBadge.innerText = waitingCount;
           countBadge.style.background = waitingCount > 0 ? "#f59e0b" : "#1e293b";
           countBadge.style.color = waitingCount > 0 ? "#0b111e" : "#cbd5e1";
         }
