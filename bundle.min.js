@@ -8082,9 +8082,6 @@ if (typeof productOrId === "object") {
                 if (pillsContainer && Array.isArray(curP.variants) && curP.variants.length > 0) {
                   pillsContainer.innerHTML = curP.variants.map((v, idx) => {
                     let vStock = (typeof getVariantStockCount === "function") ? getVariantStockCount(curP, idx) : (Number(v.stock) || 0);
-                    if (vStock <= 0 && (curP.deliveryType === "api" || curP.delivery_type === "api" || curP.is_api_product === 1 || (typeof isProductApi === "function" && isProductApi(curP))) && Number(curP.stock) > 0) {
-                      vStock = Number(curP.stock);
-                    }
                     v.stock = vStock;
                     const stockBadge = vStock > 0 
                       ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>' 
@@ -8644,11 +8641,8 @@ if (typeof productOrId === "object") {
             if (pillsContainer && Array.isArray(p.variants) && p.variants.length > 0) {
               pillsContainer.innerHTML = p.variants.map(function(v, idx) {
                 var vStock = isApiProd
-                  ? ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (Number(p.stock) || Number(v.stock) || 0))
+                  ? ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (Number(v.stock) || 0))
                   : ((typeof v.stock === "number") ? v.stock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (p.stock || 0)));
-                if (isApiProd && vStock <= 0 && Number(p.stock) > 0) {
-                  vStock = Number(p.stock);
-                }
                 v.stock = vStock;
                 var stockBadge = vStock > 0
                   ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
@@ -15186,9 +15180,8 @@ if (typeof productOrId === "object") {
         const isCurApiProd = (curP.deliveryType === "api" || curP.delivery_type === "api" || (typeof isProductApi === "function" && isProductApi(curP)));
         pillsContainer.innerHTML = curP.variants.map((v, idx) => {
           let vStock = isCurApiProd
-            ? (effectiveStock > 0 ? effectiveStock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (Number(curP.stock) || Number(v.stock) || 0)))
+            ? (effectiveStock !== null && effectiveStock !== undefined ? Number(effectiveStock) : ((typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (Number(v.stock) || 0)))
             : ((typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (v.stock || 0));
-          if (isCurApiProd && vStock <= 0 && effectiveStock > 0) vStock = effectiveStock;
           v.stock = vStock;
           const stockBadge = vStock > 0
             ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
@@ -15280,6 +15273,19 @@ if (typeof productOrId === "object") {
             setTimeout(() => bc.close(), 1000);
           }
         } catch(e) {}
+
+        // Đồng bộ tức thì về Cloud Turso DB để mọi khách hàng khác cũng thấy 0 acc
+        try {
+          const syncUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+            ? (MMO_WORKER_API.getApiUrl() + "/api/admin/products")
+            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/admin/products";
+          const sec = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" ? MMO_WORKER_API.getAdminSecret() : "") || "MMO_ADMIN_SECURE_TOKEN_2026";
+          fetch(syncUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + sec, "x-admin-token": sec },
+            body: JSON.stringify(prod)
+          }).catch(() => {});
+        } catch(eSync) {}
       } catch(e) {
         console.warn("markApiProductOutOfStock error:", e);
       }
@@ -16867,7 +16873,7 @@ function syncAllOpenViewsStock(changedProdId) {
       "PROD_MU2A2S732Y": { enabled: true, provider: "ultrammo", sourceProdId: "25265", baseUrl: "https://ultrammo.com" },
       "PROD_MU1G6LJX": { enabled: true, provider: "ultrammo", sourceProdId: "32035", baseUrl: "https://ultrammo.com" },
       "PROD_MTQX7SIK": { enabled: true, provider: "ultrammo", sourceProdId: "34752", baseUrl: "https://ultrammo.com" },
-      "PROD_MTQX465U": { enabled: true, provider: "ultrammo", sourceProdId: "39788", baseUrl: "https://ultrammo.com", sourcePrice: 148.5, sourceProdName: "[Gmail Edu] #39788 12h plus - ramdom trùng" }
+      "PROD_MTQX465U": { enabled: true, provider: "ultrammo", sourceProdId: "39178", baseUrl: "https://ultrammo.com", sourcePrice: 88.5, sourceProdName: "[ultrammo] #39178 10 phút - 1h ramdom trùng" }
     };
     const defaultMappings = DEFAULT_API_PRODUCT_MAPPINGS;
     window.defaultMappings = defaultMappings;
@@ -25187,7 +25193,6 @@ function syncAllOpenViewsStock(changedProdId) {
         if (pillsContainer && Array.isArray(curP.variants) && curP.variants.length > 0) {
           pillsContainer.innerHTML = curP.variants.map((v, idx) => {
             let vStock = (freshAmount !== null) ? freshAmount : ((typeof getShopVariantStock === "function") ? getShopVariantStock(curP, idx) : (v.stock || 0));
-            if (vStock <= 0 && Number(curP.stock) > 0) vStock = Number(curP.stock);
             v.stock = vStock;
             const stockBadge = vStock > 0
               ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
@@ -25932,9 +25937,8 @@ function syncAllOpenViewsStock(changedProdId) {
       if (pillsContainer && Array.isArray(p.variants) && p.variants.length > 0) {
         pillsContainer.innerHTML = p.variants.map((v, idx) => {
           let vStock = isProdApi
-            ? (initialVariantStock > 0 ? initialVariantStock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (Number(p.stock) || Number(v.stock) || 0)))
+            ? (initialVariantStock !== null && initialVariantStock !== undefined ? initialVariantStock : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (typeof v.stock !== "undefined" ? Number(v.stock) : 0)))
             : ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (v.stock || 0));
-          if (isProdApi && vStock <= 0 && Number(p.stock) > 0) vStock = Number(p.stock);
           v.stock = vStock;
           const stockBadge = vStock > 0
             ? '<small style="color:#10b981; font-weight:700; margin-left:6px; font-size:0.75rem;">(' + Number(vStock).toLocaleString("vi-VN") + ' acc)</small>'
