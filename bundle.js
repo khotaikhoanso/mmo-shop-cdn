@@ -2660,7 +2660,7 @@ if (typeof productOrId === "object") {
                 srcProdName = String(p.apiMapping.sourceProdName).trim();
               }
 
-              // 2. Giá vốn gốc web nguồn
+              // 2. Giá vốn gốc web nguồn & biến thể
               let srcCost = 0;
               if (inSrc && Number(inSrc.price) > 0) {
                 srcCost = Number(inSrc.price);
@@ -2671,6 +2671,28 @@ if (typeof productOrId === "object") {
               } else if (p.apiMapping && Number(p.apiMapping.sourcePrice) > 0) {
                 srcCost = Number(p.apiMapping.sourcePrice);
               }
+
+              // Quét các biến thể nếu sản phẩm chưa có giá vốn
+              if (!srcCost && Array.isArray(p.variants) && p.variants.length > 0) {
+                for (let v of p.variants) {
+                  if (v) {
+                    let vc = 0;
+                    if (v.apiMapping && v.apiMapping.sourceProdId) {
+                      const vClean = String(v.apiMapping.sourceProdId).replace(/^#/, "").trim();
+                      const vProv = v.apiMapping.provider || prov;
+                      const vSrc = (typeof getFastSourceProduct === "function") ? getFastSourceProduct(vProv, vClean) : null;
+                      if (vSrc && Number(vSrc.price) > 0) vc = Number(vSrc.price);
+                      else if (Number(v.apiMapping.sourcePrice) > 0) vc = Number(v.apiMapping.sourcePrice);
+                    }
+                    if (!vc && Number(v.costPrice) > 0) vc = Number(v.costPrice);
+                    if (!vc && Number(v.originalPrice) > 0) vc = Number(v.originalPrice);
+                    if (vc > 0) { srcCost = vc; break; }
+                  }
+                }
+              }
+
+              if (!srcCost && Number(p.costPrice) > 0) srcCost = Number(p.costPrice);
+              if (!srcCost && Number(p.originalPrice) > 0) srcCost = Number(p.originalPrice);
 
               // 3. Tồn kho thực tế web nguồn
               let srcStock = null;
@@ -2774,19 +2796,31 @@ if (typeof productOrId === "object") {
                   variantMappingsHtml +
                 '</div>';
               } else {
-                sourceInfoHtml = '<div style="margin-top:4px; display:inline-flex; align-items:center; gap:5px;">' +
-                  '<span style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:3px; font-weight:700; display:inline-flex; align-items:center; gap:3px;">' +
-                    '<i class="fa-solid fa-box"></i> Kho Nội Bộ' +
-                  '</span>' +
-                  '<button type="button" onclick="openSourceCompareModal(\'' + p.id + '\')" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.35); font-size:0.68rem; padding:1px 5px; border-radius:3px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="So sánh giá các nguồn API"><i class="fa-solid fa-scale-balanced"></i> Đổi nguồn</button>' +
-                  '<span style="font-size:0.68rem; color:#94a3b8;">' + vCount + ' gói</span>' +
+                sourceInfoHtml = '<div style="margin-top:4px; display:inline-flex; flex-direction:column; gap:3px; max-width:480px;">' +
+                  '<div style="display:inline-flex; align-items:center; gap:5px;">' +
+                    '<span style="font-size:0.68rem; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:3px; font-weight:700; display:inline-flex; align-items:center; gap:3px;">' +
+                      '<i class="fa-solid fa-box"></i> Kho Nội Bộ' +
+                    '</span>' +
+                    '<button type="button" onclick="openSourceCompareModal(\'' + p.id + '\')" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.35); font-size:0.68rem; padding:1px 5px; border-radius:3px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:2px;" title="So sánh giá các nguồn API"><i class="fa-solid fa-scale-balanced"></i> Đổi nguồn</button>' +
+                    '<span style="font-size:0.68rem; color:#94a3b8;">' + vCount + ' gói</span>' +
+                  '</div>' +
+                  (srcCost > 0 ? (
+                    '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:0.7rem; color:#cbd5e1;">' +
+                      '<span>Vốn: <strong style="color:#f59e0b;">' + formatVND(srcCost) + '</strong></span>' +
+                      '<span style="color:#64748b;">|</span>' +
+                      '<span>Bán: <strong style="color:#10b981;">' + formatVND(shopPrice) + '</strong></span>' +
+                      '<span style="color:#64748b;">|</span>' +
+                      profitBadge +
+                    '</div>'
+                  ) : '') +
+                  variantMappingsHtml +
                 '</div>';
               }
 
               // Cột giá
               let priceColHtml = '<td style="font-weight:700;">' +
                 '<span style="color:#10b981; font-size:0.92rem;">' + formatVND(shopPrice) + '</span>';
-              if (isApi && srcCost > 0) {
+              if (srcCost > 0) {
                 const pDiff = shopPrice - srcCost;
                 if (pDiff < 0) {
                   priceColHtml = '<td style="font-weight:700; background:rgba(239,68,68,0.08);">' +
@@ -4637,34 +4671,219 @@ if (typeof productOrId === "object") {
       openEditProductModal(pId, isApi);
     }
     window.openCurrentDetailProductEditModal = openCurrentDetailProductEditModal;
+    // [BẢO MẬT ADMIN TUYỆT ĐỐI]: CHỈ EMAIL ADMIN HỢP LỆ MỚI ĐƯỢC XEM THÔNG TIN GIÁ VỐN & LÃI LỖ
+    function isStrictAdminUser(user) {
+      try {
+        if (!user) {
+          user = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
+        }
+        if (!user && typeof getEffectiveUser === "function") {
+          try { user = getEffectiveUser(); } catch(eU) {}
+        }
+        if (!user) {
+          try {
+            const raw = localStorage.getItem("mmo_user");
+            if (raw) user = JSON.parse(raw);
+          } catch(e) {}
+        }
+        if (!user) {
+          try {
+            const raw2 = localStorage.getItem("mmo_current_user");
+            if (raw2) user = JSON.parse(raw2);
+          } catch(e) {}
+        }
+        if (!user || !user.email) return false;
+        const email = String(user.email).toLowerCase().trim();
+        if (!email) return false;
+
+        // Chặn tuyệt đối tài khoản khách
+        if (email === "hoangtuananh0968@gmail.com") return false;
+
+        const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" && ROOT_ADMIN_EMAIL ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
+        if (email === rootEmail || email === "khotaikhoanso.net@gmail.com" || email === "admin@khotaikhoanso.net") return true;
+        if (email.startsWith("khotaikhoanso")) return true;
+
+        let adminList = [rootEmail, "khotaikhoanso.net@gmail.com", "admin@khotaikhoanso.net"];
+        if (typeof getAdminEmails === "function") {
+          try {
+            const list = getAdminEmails();
+            if (Array.isArray(list)) {
+              adminList = adminList.concat(list.map(e => (e || "").toLowerCase().trim()));
+            }
+          } catch(eList) {}
+        }
+        return adminList.includes(email);
+      } catch(err) {
+        return false;
+      }
+    }
+    window.isStrictAdminUser = isStrictAdminUser;
+
+    // [GIAO DIỆN XEM CHI TIẾT SẢN PHẨM]: HIỂN THỊ KHỐI ĐỔI KHO API, GIÁ VỐN & TÍNH TOÁN LÃI LỖ CHỈ CHO EMAIL ADMIN
+    function renderDetailAdminProfitLossBanner() {
+      const wrap = document.getElementById("dtlAdminQuickStockWrap");
+      if (!wrap) return;
+
+      const isStrict = isStrictAdminUser();
+      if (!isStrict) {
+        // Người dùng bình thường / khách vãng lai: ẨN TRIỆT ĐỂ 100%, XÓA SẠCH NỘI DUNG DOM
+        wrap.innerHTML = "";
+        wrap.style.display = "none";
+        wrap.style.setProperty("display", "none", "important");
+        return;
+      }
+
+      const p = window.currentSelectedProduct || window._currentActiveDetailProduct;
+      if (!p) {
+        wrap.innerHTML = "";
+        wrap.style.display = "none";
+        wrap.style.setProperty("display", "none", "important");
+        return;
+      }
+
+      const curVIdx = (typeof currentSelectedVariantIndex === "number") ? currentSelectedVariantIndex : 0;
+      const targetVar = (Array.isArray(p.variants) && p.variants[curVIdx]) ? p.variants[curVIdx] : null;
+      const shopPrice = Number((targetVar && targetVar.price) || window.currentSelectedPrice || p.price || 0);
+
+      // Tìm thông tin nguồn API
+      let apiMap = (targetVar && targetVar.apiMapping && targetVar.apiMapping.sourceProdId) ? targetVar.apiMapping : null;
+      if (!apiMap && typeof getApiProductMapping === "function") {
+        if (targetVar && targetVar.name) apiMap = getApiProductMapping(targetVar.name);
+        if (!apiMap && p.id) apiMap = getApiProductMapping(p.id + "_" + curVIdx);
+        if (!apiMap) apiMap = getApiProductMapping(p);
+      }
+      if (!apiMap && p.apiMapping && p.apiMapping.sourceProdId) {
+        apiMap = p.apiMapping;
+      }
+
+      const isApi = (p.deliveryType === "api" || p.delivery_type === "api") || (typeof isProductApi === "function" && isProductApi(p)) || !!(apiMap && apiMap.enabled && apiMap.sourceProdId);
+
+      let prov = (apiMap && apiMap.provider) || "selltainguyenmmo";
+      let cleanSrcId = apiMap && apiMap.sourceProdId ? String(apiMap.sourceProdId).replace(/^#/, "").trim() : "";
+      let srcProdName = (apiMap && (apiMap.sourceProdName || apiMap.name)) || "";
+
+      // Dữ liệu live web nguồn
+      let inSrc = null;
+      if (cleanSrcId && typeof getFastSourceProduct === "function") {
+        inSrc = getFastSourceProduct(prov, cleanSrcId);
+      }
+      if (inSrc && inSrc.name && !srcProdName) srcProdName = inSrc.name;
+
+      // Giá vốn
+      let srcCost = 0;
+      if (inSrc && Number(inSrc.price) > 0) {
+        srcCost = Number(inSrc.price);
+      } else if (apiMap && Number(apiMap.sourcePrice) > 0) {
+        srcCost = Number(apiMap.sourcePrice);
+      } else if (targetVar && Number(targetVar.costPrice) > 0) {
+        srcCost = Number(targetVar.costPrice);
+      } else if (targetVar && Number(targetVar.originalPrice) > 0) {
+        srcCost = Number(targetVar.originalPrice);
+      } else if (typeof resolveProductLiveCost === "function") {
+        srcCost = resolveProductLiveCost(p);
+      } else if (Number(p.costPrice) > 0) {
+        srcCost = Number(p.costPrice);
+      } else if (Number(p.originalPrice) > 0) {
+        srcCost = Number(p.originalPrice);
+      }
+
+      // Tồn kho
+      let srcStockText = "--";
+      let liveStockNum = null;
+      if (inSrc && typeof inSrc.amount === "number") {
+        liveStockNum = inSrc.amount;
+      } else if (apiMap && typeof apiMap.sourceStock === "number") {
+        liveStockNum = apiMap.sourceStock;
+      } else if (targetVar && typeof targetVar.stock === "number") {
+        liveStockNum = targetVar.stock;
+      } else if (typeof p.stock === "number") {
+        liveStockNum = p.stock;
+      }
+
+      if (liveStockNum !== null) {
+        srcStockText = liveStockNum.toLocaleString("vi-VN");
+      }
+
+      // Tính lãi lỗ
+      let profitBadge = "";
+      if (srcCost > 0) {
+        const profit = shopPrice - srcCost;
+        const isLoss = profit < 0;
+        const profitPct = Math.round((profit / srcCost) * 100);
+        if (isLoss) {
+          profitBadge = '<span style="color:#ef4444; font-weight:800;" title="Shop đang bán rẻ hơn giá vốn web nguồn!"><i class="fa-solid fa-triangle-exclamation"></i> Lỗ: -' + formatVND(Math.abs(profit)) + ' (' + profitPct + '%)</span>';
+        } else {
+          profitBadge = '<span style="color:#34d399; font-weight:700;"><i class="fa-solid fa-arrow-trend-up"></i> Lãi: +' + formatVND(profit) + ' (' + profitPct + '%)</span>';
+        }
+      } else {
+        profitBadge = '<span style="color:#94a3b8; font-size:0.75rem;">(Chưa có giá vốn)</span>';
+      }
+
+      // Tên miền nguồn
+      let provDomain = prov;
+      if (prov === "selltainguyenmmo") provDomain = "selltainguyenmmo.com";
+      else if (prov === "ultrammo") provDomain = "ultrammo.com";
+      else if (prov === "nguyenlieummo") provDomain = "nguyenlieummo.com.vn";
+      else if (prov === "shop1989nd") provDomain = "shop1989nd.com";
+      else if (typeof API_SOURCES !== "undefined" && API_SOURCES[prov] && API_SOURCES[prov].baseUrl) {
+        try {
+          provDomain = new URL(API_SOURCES[prov].baseUrl).hostname;
+        } catch(eU) { provDomain = prov; }
+      }
+
+      const esc = (typeof escapeHtml === "function") ? escapeHtml : function(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+
+      let headerTitle = isApi ? "Đổi Kho API / Sửa Nguồn Hàng" : "Quản Lý Kho / Sửa Sản Phẩm Này";
+      let btnIcon = isApi ? "fa-cloud" : "fa-boxes-stacked";
+
+      let sourceRowHtml = "";
+      if (isApi) {
+        sourceRowHtml = '<div style="margin-bottom:6px; color:#38bdf8; font-weight:700; font-size:0.82rem; display:flex; align-items:center; gap:6px; overflow:hidden;">' +
+          '<i class="fa-solid fa-link" style="color:#38bdf8; flex-shrink:0;"></i>' +
+          '<span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:inline-block;" title="' + esc(provDomain) + ' #' + esc(cleanSrcId) + ': ' + esc(srcProdName) + '">' +
+            '[' + esc(provDomain) + ' #' + esc(cleanSrcId || '?') + ']: ' + esc(srcProdName || 'Chưa liên kết tên nguồn') +
+          '</span>' +
+        '</div>';
+      } else {
+        sourceRowHtml = '<div style="margin-bottom:6px; color:#10b981; font-weight:700; font-size:0.82rem; display:flex; align-items:center; gap:6px;">' +
+          '<i class="fa-solid fa-box" style="color:#10b981; flex-shrink:0;"></i>' +
+          '<span>[Kho Nội Bộ]: Quản lý tài khoản và giao hàng nội bộ shop</span>' +
+        '</div>';
+      }
+
+      wrap.innerHTML = '<div style="margin-bottom:8px;">' +
+        '<button type="button" onclick="openCurrentDetailProductEditModal(' + (isApi ? 'true' : 'false') + ')" style="width:100%; height:38px; background:rgba(6,182,212,0.15); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); border-radius:8px; font-size:0.84rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all 0.2s ease;" onmouseover="this.style.background=\'rgba(6,182,212,0.25)\'" onmouseout="this.style.background=\'rgba(6,182,212,0.15)\'">' +
+          '<i class="fa-solid ' + btnIcon + '"></i> <span>[Quản trị viên] ' + headerTitle + '</span>' +
+        '</button>' +
+      '</div>' +
+      '<div style="padding:10px 14px; background:rgba(15,23,42,0.92); border:1px solid rgba(56,189,248,0.3); border-left:4px solid #06b6d4; border-radius:8px; margin-bottom:12px; box-sizing:border-box; box-shadow:0 4px 15px rgba(0,0,0,0.3);">' +
+        sourceRowHtml +
+        '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; font-size:0.8rem; color:#cbd5e1;">' +
+          '<span><i class="fa-solid fa-tag" style="color:#f59e0b;"></i> Gốc: <strong style="color:#f59e0b;">' + (srcCost > 0 ? formatVND(srcCost) : '--') + '</strong></span>' +
+          '<span style="color:#64748b;">|</span>' +
+          '<span><i class="fa-solid fa-basket-shopping" style="color:#c084fc;"></i> Bán: <strong style="color:#c084fc;">' + formatVND(shopPrice) + '</strong></span>' +
+          '<span style="color:#64748b;">|</span>' +
+          profitBadge +
+          '<span style="color:#64748b;">|</span>' +
+          '<span><i class="fa-solid fa-boxes-stacked" style="color:#38bdf8;"></i> Tồn: <strong style="color:#38bdf8;">' + srcStockText + '</strong></span>' +
+        '</div>' +
+      '</div>';
+      wrap.style.display = "block";
+      wrap.style.setProperty("display", "block", "important");
+    }
+    window.renderDetailAdminProfitLossBanner = renderDetailAdminProfitLossBanner;
+
     function checkAndShowAdminQuickWrap() {
       const wrap = document.getElementById("dtlAdminQuickStockWrap");
       if (!wrap) return;
-      let isAdm = false;
-      try {
-        if (typeof isAdminUser === "function") isAdm = isAdminUser();
-        if (!isAdm) {
-          const ss = sessionStorage.getItem("mmo_is_admin") === "1" || sessionStorage.getItem("mmo_user_role") === "ADMIN";
-          const ls = localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_user_role") === "ADMIN";
-          const cu = (typeof currentUser !== "undefined" && currentUser) ? currentUser : JSON.parse(localStorage.getItem("mmo_current_user") || "{}");
-          if (ss || ls || (cu && cu.role === "ADMIN") || (cu && cu.email && cu.email.toLowerCase() === "admin@khotaikhoanso.net")) {
-            isAdm = true;
-          }
-        }
-      } catch(eAdm) {}
-      wrap.style.display = isAdm ? "block" : "none";
-      wrap.style.setProperty("display", isAdm ? "block" : "none", "important");
-      if (isAdm) {
-        try { document.body.classList.add("is-admin"); } catch(e) {}
-        const btnEdit = document.getElementById("btnDtlAdminEditProd");
-        if (btnEdit) {
-          btnEdit.innerHTML = "<i class='fa-solid fa-pen-to-square'></i> <span>[Admin] Sửa Sản Phẩm Này</span>";
-          btnEdit.style.background = "rgba(16,185,129,0.15)";
-          btnEdit.style.color = "#10b981";
-          btnEdit.style.borderColor = "rgba(16,185,129,0.4)";
-          btnEdit.onclick = function() { openCurrentDetailProductEditModal(false); };
-        }
+      const isStrict = (typeof isStrictAdminUser === "function") && isStrictAdminUser();
+      if (!isStrict) {
+        wrap.innerHTML = "";
+        wrap.style.display = "none";
+        wrap.style.setProperty("display", "none", "important");
+        return;
       }
+      renderDetailAdminProfitLossBanner();
     }
     window.checkAndShowAdminQuickWrap = checkAndShowAdminQuickWrap;
 
@@ -10819,7 +11038,7 @@ if (typeof productOrId === "object") {
         // Kiểm tra trạng thái khóa từ Cloud định kỳ qua _mmoLockedUserPollTimer
 
         const balStr = formatVND(currentUser.balance || 0);
-        const isAdmin = (typeof isAdminUser === "function") && isAdminUser(currentUser);
+        const isAdmin = (typeof isStrictAdminUser === "function") ? isStrictAdminUser(currentUser) : ((typeof isAdminUser === "function") && isAdminUser(currentUser));
 
         // Quản lý class body và hiển thị Admin
         if (document.body) {
@@ -10828,6 +11047,9 @@ if (typeof productOrId === "object") {
           } else {
             document.body.classList.remove("is-admin");
           }
+        }
+        if (typeof renderDetailAdminProfitLossBanner === "function") {
+          renderDetailAdminProfitLossBanner();
         }
 
         if (headerWalletBalance) headerWalletBalance.innerText = balStr;
@@ -10904,14 +11126,15 @@ if (typeof productOrId === "object") {
         if (admAvatarEl) admAvatarEl.src = currentUser.avatar || ("https://api.dicebear.com/7.x/bottts/svg?seed=" + encodeURIComponent(currentUser.email));
 
       } else {
-        const isSessionAdm = (typeof isAdminUser === "function") && isAdminUser();
+        // Khách vãng lai chưa đăng nhập: Tuyệt đối không gắn class is-admin, xóa sạch khối lãi lỗ
         if (document.body) {
-          if (isSessionAdm) document.body.classList.add("is-admin");
-          else document.body.classList.remove("is-admin");
+          document.body.classList.remove("is-admin");
         }
         if (document.documentElement) {
-          if (isSessionAdm) document.documentElement.classList.add("is-admin");
-          else document.documentElement.classList.remove("is-admin");
+          document.documentElement.classList.remove("is-admin");
+        }
+        if (typeof renderDetailAdminProfitLossBanner === "function") {
+          renderDetailAdminProfitLossBanner();
         }
         if (headerWalletBalance) headerWalletBalance.innerText = "0 đ";
         const mobBalOut = document.getElementById("mobDrawerBalance");
@@ -25750,33 +25973,10 @@ function syncAllOpenViewsStock(changedProdId) {
 
       const quickStockWrap = document.getElementById("dtlAdminQuickStockWrap");
       if (quickStockWrap) {
-        const isAdm = (typeof isAdminUser === "function" && (isAdminUser() || (typeof currentUser !== "undefined" && isAdminUser(currentUser))));
-        quickStockWrap.style.display = isAdm ? "block" : "none";
-        if (typeof checkAndShowAdminQuickWrap === "function") checkAndShowAdminQuickWrap();
-        if (isAdm) {
-          const existingMap = (typeof getApiProductMapping === "function") ? getApiProductMapping(p.id) : (p.apiMapping || null);
-          const isApi = (p.deliveryType === "api" || p.delivery_type === "api") || (typeof isProductApi === "function" && isProductApi(p)) || !!(existingMap && existingMap.enabled && existingMap.sourceProdId);
-          const btnEdit = document.getElementById("btnDtlAdminEditProd") || quickStockWrap.querySelector("button");
-          const btnStock = document.getElementById("btnDtlAdminQuickStock");
-          if (btnEdit) {
-            btnEdit.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> <span>[Admin] Sửa Sản Phẩm Này</span>';
-            btnEdit.style.background = 'rgba(16,185,129,0.15)';
-            btnEdit.style.color = '#10b981';
-            btnEdit.style.borderColor = 'rgba(16,185,129,0.4)';
-            btnEdit.title = 'Sửa thông tin sản phẩm này (Tên, Giá, Biến thể, Ảnh, Mô tả, Nguồn API...)';
-            btnEdit.onclick = function() { openCurrentDetailProductEditModal(false); };
-          }
-          if (btnStock) {
-            if (isApi) {
-              btnStock.innerHTML = '<i class="fa-solid fa-sliders"></i> <span>Cấu Hình Nguồn API</span>';
-              btnStock.title = 'Chuyển đến phần quản lý nguồn API';
-              btnStock.onclick = function() { quickOpenAdminStockForCurrentProduct(); };
-            } else {
-              btnStock.innerHTML = '<i class="fa-solid fa-boxes-stacked"></i> <span>Nạp Kho Nhanh</span>';
-              btnStock.title = 'Chuyển đến Quản Lý Kho Hàng để nạp tài khoản';
-              btnStock.onclick = function() { quickOpenAdminStockForCurrentProduct(); };
-            }
-          }
+        if (typeof renderDetailAdminProfitLossBanner === "function") {
+          renderDetailAdminProfitLossBanner();
+        } else if (typeof checkAndShowAdminQuickWrap === "function") {
+          checkAndShowAdminQuickWrap();
         }
       }
 
@@ -26241,6 +26441,11 @@ function syncAllOpenViewsStock(changedProdId) {
         const commFooterEl = document.getElementById("dtlCommissionFooterText");
         if (commFooterEl) {
           commFooterEl.innerText = "$ Hoa hồng: " + commRate + "% (~" + formatVND(commVal) + ")";
+        }
+
+        // Cập nhật realtime khối tính lãi lỗ của admin cho biến thể vừa chọn
+        if (typeof renderDetailAdminProfitLossBanner === "function") {
+          renderDetailAdminProfitLossBanner();
         }
       }
     }
