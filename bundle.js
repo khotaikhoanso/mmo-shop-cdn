@@ -23364,30 +23364,26 @@ function syncAllOpenViewsStock(changedProdId) {
             validAccs = String(normOrder.credentials).split("\n").map(function(s) { return s.trim(); }).filter(function(a) { return typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(a) : Boolean(a && String(a).trim()); });
           }
           const hasDeliveredAccounts = validAccs.length > 0;
-          const isCloudCompleted = isPreOrderType ? hasDeliveredAccounts : (normOrder.status === "COMPLETED" || normOrder.status === "DELIVERED" || hasDeliveredAccounts);
+          const isCloudCompleted = (normOrder.status === "COMPLETED" || normOrder.status === "DELIVERED" || String(normOrder.statusText || "").toLowerCase().includes("đã giao") || String(normOrder.statusText || "").toLowerCase().includes("hoàn thành") || hasDeliveredAccounts);
 
-          if (isPreOrderType && !hasDeliveredAccounts && (normOrder.status === "COMPLETED" || normOrder.status === "DELIVERED")) {
-            normOrder.status = "WAITING_CONFIRM";
-            normOrder.statusText = "Chờ xác nhận";
+          if (isCloudCompleted) {
+            normOrder.status = "COMPLETED";
+            normOrder.statusText = "Đã giao hàng";
           }
 
           // Helper cập nhật dữ liệu đồng bộ cho 1 đối tượng đơn hàng trong mảng
           function applySyncToTarget(targetItem) {
             let changed = false;
             if (isCloudCompleted) {
-              if (targetItem.status !== "COMPLETED") {
-                targetItem.status = "COMPLETED";
-                targetItem.statusText = "Đã giao hàng";
-                changed = true;
-              }
+              targetItem.status = "COMPLETED";
+              targetItem.statusText = "Đã giao hàng";
+              changed = true;
               if (normOrder.credentials && (!targetItem.credentials || targetItem.credentials.includes("đặt trước") || targetItem.credentials.includes("pre-order"))) {
                 targetItem.credentials = normOrder.credentials;
-                changed = true;
               }
               if (normOrder.deliveredAccounts && normOrder.deliveredAccounts.length > 0) {
                 targetItem.deliveredAccounts = normOrder.deliveredAccounts;
                 targetItem.accounts = normOrder.deliveredAccounts;
-                changed = true;
               }
             } else if (normOrder.status && normOrder.status !== targetItem.status) {
               const isLocalAdvanced = (targetItem.status === "PROCESSING" || targetItem.status === "COMPLETED" || targetItem.status === "DELIVERED" || targetItem.status === "CANCELLED");
@@ -23460,7 +23456,7 @@ function syncAllOpenViewsStock(changedProdId) {
                   curPre.credentials = normOrder.credentials;
                   preOrdersModified = true;
                 }
-              } else if (curPre.status !== normOrder.status || (!curPre.credentials && normOrder.credentials)) {
+              } else if (curPre.status !== normOrder.status || (!curPre.credentials && normOrder.credentials) || (normOrder.deliveredAccounts && normOrder.deliveredAccounts.length > 0)) {
                 curPre.status = normOrder.status;
                 curPre.statusText = normOrder.statusText;
                 if (normOrder.credentials) curPre.credentials = normOrder.credentials;
@@ -24629,7 +24625,7 @@ function syncAllOpenViewsStock(changedProdId) {
                   const hasValidDelivered = (!isCancelled && effectiveDelivered && effectiveDelivered.length > 0 && effectiveDelivered.some(function(item) {
                     return typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(item) : Boolean(item);
                   }));
-                  const isDonePreOrder = !isCancelled && hasValidDelivered && (effectiveStatus === "COMPLETED" || effectiveStatus === "DELIVERED");
+                  const isDonePreOrder = !isCancelled && (effectiveStatus === "COMPLETED" || effectiveStatus === "DELIVERED" || rawStTxt.includes("đã giao") || rawStTxt.includes("hoàn thành") || hasValidDelivered);
 
                   // TRANG CÁ NHÂN: 100% GIAO DIỆN NGƯỜI DÙNG - CẤM TUYỆT ĐỐI NÚT GIAO & CHI TIẾT
                   if (isDonePreOrder) {
@@ -39365,7 +39361,11 @@ function executeAdminFulfillPreOrder() {
             : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "x-admin-token": sTok },
+            headers: { 
+              "Content-Type": "application/json", 
+              "x-admin-token": sTok,
+              "Authorization": "Bearer " + sTok
+            },
             body: JSON.stringify({ orders: [order] }),
             keepalive: true
           }).catch(function(e) { console.warn("Turso sync fulfill error:", e); });
@@ -39746,10 +39746,7 @@ function executeAdminFulfillPreOrder() {
               } else if (localOrder.status === "CANCELLED" && (cp.status === "WAITING_CONFIRM" || cp.status === "PROCESSING")) {
                 // Đơn đã hủy tại local, không nhận lại chờ duyệt hoặc đang xử lý
               } else if (cp.status && localOrder.status !== cp.status) {
-                // CHỐNG NHIỄM: Nếu cloud báo COMPLETED nhưng không có tài khoản thì không nhận COMPLETED
-                if ((cp.status === "COMPLETED" || cp.status === "DELIVERED") && !cloudHasAccs) {
-                  // Giữ nguyên trạng thái hiện tại (WAITING_CONFIRM / PROCESSING)
-                } else if ((localOrder.status === "PROCESSING" || localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED" || localOrder.status === "CANCELLED") && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
+                if ((localOrder.status === "PROCESSING" || localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED" || localOrder.status === "CANCELLED") && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
                   // Giữ nguyên trạng thái tiến bộ hơn của local!
                 } else {
                   localOrder.status = cp.status;
