@@ -16873,7 +16873,8 @@ function syncAllOpenViewsStock(changedProdId) {
       "PROD_MU2A2S732Y": { enabled: true, provider: "ultrammo", sourceProdId: "25265", baseUrl: "https://ultrammo.com" },
       "PROD_MU1G6LJX": { enabled: true, provider: "ultrammo", sourceProdId: "32035", baseUrl: "https://ultrammo.com" },
       "PROD_MTQX7SIK": { enabled: true, provider: "ultrammo", sourceProdId: "34752", baseUrl: "https://ultrammo.com" },
-      "PROD_MTQX465U": { enabled: true, provider: "ultrammo", sourceProdId: "39178", baseUrl: "https://ultrammo.com", sourcePrice: 88.5, sourceProdName: "[ultrammo] #39178 10 phút - 1h ramdom trùng" }
+      "PROD_MTQX465U": { enabled: true, provider: "ultrammo", sourceProdId: "39178", baseUrl: "https://ultrammo.com", sourcePrice: 88.5, sourceProdName: "[ultrammo] #39178 10 phút - 1h ramdom trùng" },
+      "PROD_MTQZT2Y1": { enabled: true, provider: "ultrammo", sourceProdId: "18867", baseUrl: "https://ultrammo.com", sourcePrice: 234, sourceProdName: "[ultrammo] #18867 Hotmail Trusted - OAuth2 [ Graph ] Skip 7 Days" }
     };
     const defaultMappings = DEFAULT_API_PRODUCT_MAPPINGS;
     window.defaultMappings = defaultMappings;
