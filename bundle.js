@@ -2613,13 +2613,16 @@ if (typeof productOrId === "object") {
             });
           }
 
-          const ADM_PRODS_PER_PAGE = 99999;
-          const page = 1;
-          const safePage = 1;
-          const totalPages = 1;
-          if (typeof paginationState !== "undefined") paginationState.admProd = 1;
+          const ADM_PRODS_PER_PAGE = 10;
+          const totalPages = Math.ceil(prods.length / ADM_PRODS_PER_PAGE) || 1;
+          const curState = (typeof paginationState !== "undefined" ? paginationState : (window.paginationState = window.paginationState || { admProd: 1 }));
+          let safePage = Number(curState.admProd) || 1;
+          if (safePage < 1) safePage = 1;
+          if (safePage > totalPages) safePage = totalPages;
+          curState.admProd = safePage;
 
-          const pageProds = prods;
+          const startIndex = (safePage - 1) * ADM_PRODS_PER_PAGE;
+          const pageProds = prods.slice(startIndex, startIndex + ADM_PRODS_PER_PAGE);
 
           if (prods.length === 0) {
             const emptyMsg = admProductSearchQuery
@@ -2871,8 +2874,17 @@ if (typeof productOrId === "object") {
             }).join("");
           }
 
-          if (typeof renderPaginationUI === "function") {
-            renderPaginationUI("admProdPagination", safePage, prods.length, "changeAdmProdPage", ADM_PRODS_PER_PAGE);
+          let pagContainer = document.getElementById("admProdPagination") || document.getElementById("admProductsPagination");
+          if (!pagContainer) {
+            const tableEl = document.getElementById("admProductsTable");
+            if (tableEl && tableEl.parentElement) {
+              pagContainer = document.createElement("div");
+              pagContainer.id = "admProdPagination";
+              tableEl.parentElement.after(pagContainer);
+            }
+          }
+          if (pagContainer && typeof renderPaginationUI === "function") {
+            renderPaginationUI(pagContainer.id, safePage, prods.length, "changeAdmProdPage", ADM_PRODS_PER_PAGE);
           }
         }
 
@@ -33554,6 +33566,7 @@ function syncAllOpenViewsStock(changedProdId) {
       profBalanceLogs: 1,
       blogPage: 1
     };
+    window.paginationState = paginationState;
 
     function renderPaginationUI(containerId, currentPage, totalItems, onPageChangeName, customPageSize) {
       const container = document.getElementById(containerId);
@@ -33650,9 +33663,14 @@ function changeAdmUsersPage(p) {
     }
 
     function changeAdmProdPage(p) {
-      paginationState.admProd = p;
-      renderAdminDashboard();
+      if (typeof paginationState !== "undefined") paginationState.admProd = p;
+      if (typeof window !== "undefined" && window.paginationState) window.paginationState.admProd = p;
+      if (typeof renderAdminDashboard === "function") renderAdminDashboard();
+      const el = document.getElementById("admProductsTable");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+    window.changeAdmProdPage = changeAdmProdPage;
+    window.changeAdmProductsPage = changeAdmProdPage;
 
     function changeApiMappingsPage(p) {
       if (typeof paginationState !== "undefined") {
