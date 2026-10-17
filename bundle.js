@@ -2101,6 +2101,28 @@ if (typeof productOrId === "object") {
     }
     window.isAdminUser = isAdminUser;
 
+    function isCurrentAdminSession() {
+      try {
+        const curUser = (typeof currentUser !== 'undefined' && currentUser) ? currentUser : null;
+        if (typeof isAdminUser === 'function' && isAdminUser(curUser)) return true;
+        if (typeof localStorage !== 'undefined') {
+          if (localStorage.getItem('mmo_admin_secret')) return true;
+          const lr = localStorage.getItem('mmo_user_role');
+          if (lr === 'ADMIN' || localStorage.getItem('mmo_admin_authenticated') === 'true' || localStorage.getItem('mmo_is_admin') === '1' || localStorage.getItem('mmo_is_admin') === 'true') return true;
+        }
+        if (typeof sessionStorage !== 'undefined') {
+          const sr = sessionStorage.getItem('mmo_user_role');
+          if (sr === 'ADMIN' || sessionStorage.getItem('mmo_admin_authenticated') === 'true' || sessionStorage.getItem('mmo_is_admin') === '1' || sessionStorage.getItem('mmo_is_admin') === 'true') return true;
+        }
+        if (typeof document !== 'undefined') {
+          if (document.getElementById('admPreOrdersTableBody') || document.getElementById('admOrdersTableBody') || document.getElementById('adminView')) return true;
+        }
+        if (typeof window !== 'undefined' && window._ktsAdminForceUnlocked) return true;
+      } catch(e) {}
+      return false;
+    }
+    window.isCurrentAdminSession = isCurrentAdminSession;
+
     function handleAddAdminEmail() {
       const input = document.getElementById("newAdminEmailInput");
       const email = (input?.value || "").trim().toLowerCase();
@@ -23984,6 +24006,7 @@ function syncAllOpenViewsStock(changedProdId) {
           _cachedPreOrdersList = null;
           _lastPreOrdersFetchTime = 0;
           if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+          if (typeof updateAdminSidebarBadges === "function") updateAdminSidebarBadges();
           if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
         }
 
@@ -34711,6 +34734,7 @@ function changeAdmUsersPage(p) {
 
         // 3. Rerender toàn bộ UI Admin và UI Người dùng trong 0ms
         if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+        if (typeof updateAdminSidebarBadges === "function") updateAdminSidebarBadges();
         if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
         if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
         if (typeof renderProfileOrders === "function") renderProfileOrders();
@@ -34725,7 +34749,7 @@ function changeAdmUsersPage(p) {
         } catch(eBcView) {}
 
         // 4. Phát âm thanh chuông và hiển thị thông báo toast nếu là Admin
-        if (typeof isAdminUser === "function" && isAdminUser()) {
+        if (typeof isCurrentAdminSession === "function" ? isCurrentAdminSession() : (typeof isAdminUser === "function" && isAdminUser())) {
           if (typeof playNotificationSound === "function") playNotificationSound();
           if (typeof showToast === "function") showToast("🔔 Có đơn đặt hàng trước mới #" + (newOrd.orderCode || newOrd.id) + " - " + (newOrd.productName || "Sản phẩm"), "info");
           if (typeof addUserNotification === "function") {
@@ -38603,9 +38627,27 @@ function getProductSchemaReviews(p, idx) {
         _lastPreOrdersFetchTime = 0;
         if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
         if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
+        if (typeof updateAdminSidebarBadges === "function") updateAdminSidebarBadges();
         if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
         if (typeof renderProfileOrders === "function") renderProfileOrders();
+        if (typeof renderSystemOverview === "function") renderSystemOverview();
         if (typeof updateUserUI === "function") updateUserUI();
+
+        if (e.key === "mmo_new_preorder_event") {
+          const isAdm = (typeof isCurrentAdminSession === "function" ? isCurrentAdminSession() : (typeof isAdminUser === "function" && isAdminUser()));
+          if (isAdm) {
+            try {
+              if (typeof playNotificationSound === "function") playNotificationSound();
+              let parsed = null;
+              try { parsed = JSON.parse(e.newValue); } catch(ep) {}
+              const ordCode = parsed && parsed.orderId ? parsed.orderId : "";
+              if (typeof showToast === "function") showToast("🔔 Có đơn đặt hàng trước mới #" + (ordCode || "") + " vừa được tạo!", "info");
+            } catch(ea) {}
+            if (typeof pollAdminPreOrdersNow === "function") {
+              pollAdminPreOrdersNow(true);
+            }
+          }
+        }
         if (typeof updateWalletUI === "function") updateWalletUI();
       }
     });
@@ -39265,6 +39307,7 @@ function getProductSchemaReviews(p, idx) {
         try { if (typeof renderUserBalanceLogs === "function") renderUserBalanceLogs(); } catch(e) {}
         try { if (typeof renderUserWalletTransactions === "function") renderUserWalletTransactions(); } catch(e) {}
         try { if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge(); } catch(e) {}
+        try { if (typeof updateAdminSidebarBadges === "function") updateAdminSidebarBadges(); } catch(e) {}
         try { if (typeof renderProfileOrders === "function") renderProfileOrders(); } catch(e) {}
         try { if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable(); } catch(e) {}
         try { if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable(); } catch(e) {}
@@ -41100,181 +41143,258 @@ function executeAdminFulfillPreOrder() {
     var _adminPreOrdersPollingInterval = null;
     var _notifiedAdminPreOrderIds = new Set();
     var _isFirstAdminPreOrderPoll = true;
+    var _isPollingAdminPreOrders = false;
+    var _lastAdminPreOrderPollTime = 0;
+
+    async function pollAdminPreOrdersNow(force) {
+      force = Boolean(force);
+      const now = Date.now();
+      if (!force && _isPollingAdminPreOrders) return;
+      if (!force && (now - _lastAdminPreOrderPollTime < 1500)) return;
+
+      const isAdm = (typeof isCurrentAdminSession === "function" ? isCurrentAdminSession() : (typeof isAdminUser === "function" && isAdminUser()));
+      if (!isAdm) return;
+
+      _isPollingAdminPreOrders = true;
+      _lastAdminPreOrderPollTime = now;
+
+      try {
+        const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+          ? MMO_WORKER_API.getApiUrl()
+          : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        const adminTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
+          ? MMO_WORKER_API.getAdminSecret() 
+          : (localStorage.getItem("mmo_admin_secret") || "");
+
+        const sTok = adminTok || "MMO_ADMIN_SECURE_TOKEN_2026";
+        const r = await fetch(apiUrl + "/api/admin/preorders?limit=50", {
+          headers: {
+            "x-admin-token": sTok,
+            "Authorization": "Bearer " + sTok
+          },
+          cache: "no-store"
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        const cloudPreList = Array.isArray(data) ? data : (data.orders || data.preOrders || []);
+        if (!Array.isArray(cloudPreList) || cloudPreList.length === 0) return;
+
+        let preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
+        let hasNewOrChanged = false;
+        let newOrdersToAlert = [];
+
+        // Lần đầu tải trang: Đánh dấu các đơn cũ quá 10 phút để không spam chuông
+        if (_isFirstAdminPreOrderPoll) {
+          _isFirstAdminPreOrderPoll = false;
+          preOrders.forEach(p => {
+            const pCode = String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase();
+            if (pCode) _notifiedAdminPreOrderIds.add(pCode);
+          });
+          cloudPreList.forEach(cp => {
+            const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim().toLowerCase();
+            const orderTs = Number(cp.createdTimestamp) || (typeof getOrderTimestamp === "function" ? getOrderTimestamp(cp) : 0);
+            const isVeryRecent = orderTs && (Date.now() - orderTs < 5 * 60 * 1000);
+            if (!isVeryRecent && cId) {
+              _notifiedAdminPreOrderIds.add(cId);
+            }
+          });
+        }
+
+        cloudPreList.forEach(function(cp) {
+          if (!cp || isForbiddenLegacyOrder(cp)) return;
+          const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim();
+          if (!cId) return;
+
+          // LOẠI BỎ TRIỆT ĐỂ BẢN GHI TX_PO_ VÀ TX_ (ĐÂY LÀ NHẬT KÝ BIẾN ĐỘNG SỐ DƯ, KHÔNG PHẢI ĐƠN HÀNG)
+          if (cId.startsWith("TX_PO_") || cId.startsWith("TX_") || cId.startsWith("SAMPLE") || cId.startsWith("DEMO")) return;
+
+          const cIdLower = cId.toLowerCase();
+          const existingIdx = preOrders.findIndex(function(p) {
+            return String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase() === cIdLower;
+          });
+
+          if (existingIdx === -1) {
+            hasNewOrChanged = true;
+            const formattedDate = cp.createdAt || cp.date || new Date().toLocaleString("vi-VN");
+            const newPre = {
+              id: cId,
+              orderId: cId,
+              orderCode: cId,
+              productId: cp.productId || cp.product_id || "",
+              productName: cp.productName || cp.product_name || "Sản phẩm đặt trước",
+              variant: cp.variantName || cp.variant || "Mặc định",
+              variantName: cp.variantName || cp.variant || "Mặc định",
+              quantity: cp.quantity || cp.qty || 1,
+              qty: cp.quantity || cp.qty || 1,
+              price: Number(cp.price) || 0,
+              total: Number(cp.total || cp.totalPrice || cp.totalAmount || cp.amount || 0),
+              totalPrice: Number(cp.total || cp.totalPrice || cp.totalAmount || cp.amount || 0),
+              date: formattedDate,
+              createdAt: formattedDate,
+              createdTimestamp: cp.createdTimestamp || Date.now(),
+              status: cp.status || "WAITING_CONFIRM",
+              statusText: cp.statusText || "Chờ xác nhận",
+              type: "PRE_ORDER",
+              credentials: cp.credentials || cp.accounts || "",
+              deliveredAccounts: cp.deliveredAccounts || [],
+              email: cp.email || cp.userEmail || cp.customerEmail || "",
+              userEmail: cp.userEmail || cp.email || cp.customerEmail || "",
+              buyerEmail: cp.buyerEmail || cp.customerEmail || cp.email || cp.userEmail || "",
+              userName: cp.userName || cp.username || cp.customerName || "Khách",
+              buyerUsername: cp.buyerUsername || cp.customerName || cp.userName || "Khách",
+              maxDays: cp.maxDays || 7,
+              customNotes: cp.customNotes || ""
+            };
+            preOrders.unshift(newPre);
+
+            // Báo chuông & thông báo cho đơn đặt hàng mới
+            if (!_notifiedAdminPreOrderIds.has(cIdLower)) {
+              _notifiedAdminPreOrderIds.add(cIdLower);
+              newOrdersToAlert.push(newPre);
+            }
+          } else {
+            const localOrder = preOrders[existingIdx];
+            const localIsDone = (localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED") && (localOrder.deliveredAccounts && localOrder.deliveredAccounts.length > 0);
+            const cloudHasAccs = Array.isArray(cp.deliveredAccounts) && cp.deliveredAccounts.length > 0;
+            const cloudIsDone = (cp.status === "COMPLETED" || cp.status === "DELIVERED") && cloudHasAccs;
+
+            if (localIsDone && !cloudIsDone) {
+              if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+                fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-admin-token": sTok, "Authorization": "Bearer " + sTok },
+                  body: JSON.stringify({ orders: [localOrder] }),
+                  keepalive: true
+                }).catch(function() {});
+              }
+            } else if (localOrder.status === "PROCESSING" && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
+              if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+                fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-admin-token": sTok, "Authorization": "Bearer " + sTok },
+                  body: JSON.stringify({ orders: [localOrder] }),
+                  keepalive: true
+                }).catch(function() {});
+              }
+            } else if (localOrder.status === "CANCELLED" && (cp.status === "WAITING_CONFIRM" || cp.status === "PROCESSING")) {
+              // Đơn đã hủy tại local, không nhận lại chờ duyệt hoặc đang xử lý
+            } else if (cp.status && localOrder.status !== cp.status) {
+              if ((localOrder.status === "PROCESSING" || localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED" || localOrder.status === "CANCELLED") && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
+                // Giữ nguyên trạng thái tiến bộ hơn của local!
+              } else {
+                localOrder.status = cp.status;
+                localOrder.statusText = cp.statusText || localOrder.statusText;
+                if (cloudHasAccs) {
+                  localOrder.deliveredAccounts = cp.deliveredAccounts;
+                  localOrder.credentials = Array.isArray(cp.deliveredAccounts) ? cp.deliveredAccounts.join("\n") : cp.deliveredAccounts;
+                }
+                hasNewOrChanged = true;
+              }
+            }
+          }
+        });
+
+        if (hasNewOrChanged) {
+          _cachedPreOrdersList = null;
+          _lastPreOrdersFetchTime = 0;
+          if (typeof savePreOrders === "function") savePreOrders(preOrders);
+          else localStorage.setItem("mmo_pre_orders", JSON.stringify(preOrders));
+
+          // ĐỒNG BỘ CẢ VÀO mmo_all_orders & mmo_orders
+          ["mmo_all_orders", "mmo_orders"].forEach(function(k) {
+            try {
+              const raw = localStorage.getItem(k);
+              let list = raw ? JSON.parse(raw) : [];
+              if (!Array.isArray(list)) list = [];
+              let mod = false;
+              preOrders.forEach(po => {
+                const pCode = String(po.orderCode || po.id || po.orderId || "").replace("#","").trim().toLowerCase();
+                const idx = list.findIndex(item => String(item.orderCode || item.id || item.orderId || "").replace("#","").trim().toLowerCase() === pCode);
+                if (idx === -1) {
+                  list.unshift(po);
+                  mod = true;
+                } else if (list[idx].status !== po.status) {
+                  list[idx].status = po.status;
+                  list[idx].statusText = po.statusText;
+                  mod = true;
+                }
+              });
+              if (mod) {
+                if (typeof sortOrdersNewestFirst === "function") sortOrdersNewestFirst(list);
+                localStorage.setItem(k, JSON.stringify(list.slice(0, 300)));
+              }
+            } catch(e) {}
+          });
+
+          // RENDER TOÀN BỘ UI ADMIN VÀ BADGES NGAY LẬP TỨC
+          if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
+          if (typeof updateAdminSidebarBadges === "function") updateAdminSidebarBadges();
+          if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
+          if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
+          if (typeof renderSystemOverview === "function") renderSystemOverview();
+          if (typeof renderProfileOrders === "function") renderProfileOrders();
+        }
+
+        // BÁO CHUÔNG VÀ TOAST CHO CÁC ĐƠN ĐẶT HÀNG MỚI
+        if (newOrdersToAlert.length > 0) {
+          try {
+            if (typeof playNotificationSound === "function") playNotificationSound();
+            newOrdersToAlert.forEach(function(ord) {
+              const cId = ord.id || ord.orderCode;
+              if (typeof showToast === "function") {
+                showToast("🔔 Có đơn đặt hàng trước mới #" + cId + " (" + (ord.productName || "Sản phẩm") + ")!", "info");
+              }
+              if (typeof addUserNotification === "function") {
+                addUserNotification({
+                  title: "⏳ Đơn đặt trước mới #" + cId,
+                  message: "Khách [" + (ord.buyerEmail || "Khách") + "] vừa đặt trước " + ord.quantity + "x " + ord.productName + ".",
+                  type: "PRE_ORDER",
+                  orderId: cId,
+                  forAdmin: true,
+                  playSound: false
+                });
+              }
+            });
+          } catch(eAlert) {}
+        }
+      } catch(ePoll) {
+      } finally {
+        _isPollingAdminPreOrders = false;
+      }
+    }
+    window.pollAdminPreOrdersNow = pollAdminPreOrdersNow;
 
     function startAdminPreOrdersRealtimePolling() {
       if (_adminPreOrdersPollingInterval) return;
-      _adminPreOrdersPollingInterval = setInterval(async function() {
-        try {
-          const curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
-          const isAdm = (typeof isAdminUser === "function" && isAdminUser(curUser));
-          if (!isAdm) return;
 
-          const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
-            ? MMO_WORKER_API.getApiUrl()
-            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
-          const adminTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
-            ? MMO_WORKER_API.getAdminSecret() 
-            : (localStorage.getItem("mmo_admin_secret") || "");
+      // Thực hiện poll lần đầu tiên ngay lập tức sau 500ms
+      setTimeout(function() {
+        pollAdminPreOrdersNow(true);
+      }, 500);
 
-          const sTok = adminTok || "MMO_ADMIN_SECURE_TOKEN_2026";
-          const r = await fetch(apiUrl + "/api/admin/preorders?limit=50", {
-            headers: {
-              "x-admin-token": sTok,
-              "Authorization": "Bearer " + sTok
-            },
-            cache: "no-store"
-          });
-          if (!r.ok) return;
-          const data = await r.json();
-          const cloudPreList = Array.isArray(data) ? data : (data.orders || data.preOrders || []);
-          if (!Array.isArray(cloudPreList) || cloudPreList.length === 0) return;
+      // Chu kỳ polling siêu tốc 2.5s (2500ms) để Admin nhận đơn tức thì
+      _adminPreOrdersPollingInterval = setInterval(function() {
+        if (!document.hidden) {
+          pollAdminPreOrdersNow();
+        }
+      }, 2500);
 
-          let preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
-          let hasNewOrChanged = false;
-
-          // Lần đầu tải trang: Đánh dấu các đơn cũ để không phát chuông spam, nhưng VẪN NẠP VÀO BẢNG ADMIN BÌNH THƯỜNG!
-          if (_isFirstAdminPreOrderPoll) {
-            _isFirstAdminPreOrderPoll = false;
-            preOrders.forEach(p => {
-              const pCode = String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase();
-              if (pCode) _notifiedAdminPreOrderIds.add(pCode);
-            });
-            cloudPreList.forEach(cp => {
-              const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim().toLowerCase();
-              if (cId) _notifiedAdminPreOrderIds.add(cId);
-            });
+      // Kích hoạt ngay khi người dùng quay lại tab hoặc tab nhận focus
+      if (typeof window !== "undefined") {
+        window.addEventListener("focus", function() {
+          pollAdminPreOrdersNow(true);
+        });
+      }
+      if (typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", function() {
+          if (!document.hidden) {
+            pollAdminPreOrdersNow(true);
           }
-
-          cloudPreList.forEach(function(cp) {
-            if (!cp || isForbiddenLegacyOrder(cp)) return;
-            const cId = String(cp.orderId || cp.id || cp.orderCode || "").replace("#","").trim();
-            if (!cId) return;
-
-            // LOẠI BỎ TRIỆT ĐỂ BẢN GHI TX_PO_ VÀ TX_ (ĐÂY LÀ NHẬT KÝ BIẾN ĐỘNG SỐ DƯ, KHÔNG PHẢI ĐƠN HÀNG)
-            if (cId.startsWith("TX_PO_") || cId.startsWith("TX_") || cId.startsWith("SAMPLE") || cId.startsWith("DEMO")) return;
-
-            const cIdLower = cId.toLowerCase();
-            const existingIdx = preOrders.findIndex(function(p) {
-              return String(p.orderCode || p.id || p.orderId || "").replace("#","").trim().toLowerCase() === cIdLower;
-            });
-
-            if (existingIdx === -1) {
-              hasNewOrChanged = true;
-              const formattedDate = cp.createdAt || cp.date || new Date().toLocaleString("vi-VN");
-              const newPre = {
-                id: cId,
-                orderId: cId,
-                orderCode: cId,
-                productId: cp.productId || cp.product_id || "",
-                productName: cp.productName || cp.product_name || "Sản phẩm đặt trước",
-                variant: cp.variantName || cp.variant || "Mặc định",
-                variantName: cp.variantName || cp.variant || "Mặc định",
-                quantity: cp.quantity || cp.qty || 1,
-                qty: cp.quantity || cp.qty || 1,
-                price: Number(cp.price) || 0,
-                total: Number(cp.total || cp.totalPrice || cp.totalAmount || cp.amount || 0),
-                totalPrice: Number(cp.total || cp.totalPrice || cp.totalAmount || cp.amount || 0),
-                date: formattedDate,
-                createdAt: formattedDate,
-                createdTimestamp: cp.createdTimestamp || Date.now(),
-                status: cp.status || "WAITING_CONFIRM",
-                statusText: cp.statusText || "Chờ xác nhận",
-                type: "PRE_ORDER",
-                credentials: cp.credentials || cp.accounts || "",
-                deliveredAccounts: cp.deliveredAccounts || [],
-                email: cp.email || cp.userEmail || cp.customerEmail || "",
-                userEmail: cp.userEmail || cp.email || cp.customerEmail || "",
-                buyerEmail: cp.buyerEmail || cp.customerEmail || cp.email || cp.userEmail || "",
-                userName: cp.userName || cp.username || cp.customerName || "Khách",
-                buyerUsername: cp.buyerUsername || cp.customerName || cp.userName || "Khách",
-                maxDays: cp.maxDays || 7,
-                customNotes: cp.customNotes || ""
-              };
-              preOrders.unshift(newPre);
-
-              // CHỈ THÔNG BÁO 1 LẦN DUY NHẤT CHO ĐƠN ĐẶT HÀNG THỰC SỰ MỚI
-              if (!_notifiedAdminPreOrderIds.has(cIdLower)) {
-                _notifiedAdminPreOrderIds.add(cIdLower);
-                const orderTs = Number(cp.createdTimestamp) || (typeof getOrderTimestamp === "function" ? getOrderTimestamp(cp) : 0);
-                const isVeryRecent = (Date.now() - orderTs < 10 * 60 * 1000); // Trong vòng 10 phút
-                if (isVeryRecent || !orderTs) {
-                  try {
-                    if (typeof playNotificationSound === "function") playNotificationSound();
-                    if (typeof showToast === "function") {
-                      showToast("🔔 Đơn đặt hàng trước mới #" + cId + " (" + (newPre.productName || "Sản phẩm") + ")!", "info");
-                    }
-                    if (typeof addUserNotification === "function") {
-                      addUserNotification({
-                        title: "⏳ Đơn đặt trước mới #" + cId,
-                        message: "Khách [" + (newPre.buyerEmail || "Khách") + "] vừa đặt trước " + newPre.quantity + "x " + newPre.productName + ".",
-                        type: "PRE_ORDER",
-                        orderId: cId,
-                        forAdmin: true,
-                        playSound: false
-                      });
-                    }
-                  } catch(eAlert) {}
-                }
-              }
-            } else {
-              const localOrder = preOrders[existingIdx];
-              const localIsDone = (localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED") && (localOrder.deliveredAccounts && localOrder.deliveredAccounts.length > 0);
-              const cloudHasAccs = Array.isArray(cp.deliveredAccounts) && cp.deliveredAccounts.length > 0;
-              const cloudIsDone = (cp.status === "COMPLETED" || cp.status === "DELIVERED") && cloudHasAccs;
-
-              if (localIsDone && !cloudIsDone) {
-                // Đơn đã giao thành công tại local, đồng bộ lại lên cloud thay vì bị ghi đè thành chờ xác nhận
-                if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-                  fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "x-admin-token": sTok, "Authorization": "Bearer " + sTok },
-                    body: JSON.stringify({ orders: [localOrder] }),
-                    keepalive: true
-                  }).catch(function() {});
-                }
-              } else if (localOrder.status === "PROCESSING" && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
-                // [CHỐNG ROLLBACK TUYỆT ĐỐI]: Local admin đã duyệt sang PROCESSING (Đang gom hàng),
-                // nếu Cloud vẫn còn giữ WAITING_CONFIRM thì TUYỆT ĐỐI KHÔNG HẠ CẤP LOCAL VỀ WAITING_CONFIRM!
-                // Đồng thời đẩy sync lại PROCESSING lên Cloud Worker
-                if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-                  fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "x-admin-token": sTok, "Authorization": "Bearer " + sTok },
-                    body: JSON.stringify({ orders: [localOrder] }),
-                    keepalive: true
-                  }).catch(function() {});
-                }
-              } else if (localOrder.status === "CANCELLED" && (cp.status === "WAITING_CONFIRM" || cp.status === "PROCESSING")) {
-                // Đơn đã hủy tại local, không nhận lại chờ duyệt hoặc đang xử lý
-              } else if (cp.status && localOrder.status !== cp.status) {
-                if ((localOrder.status === "PROCESSING" || localOrder.status === "COMPLETED" || localOrder.status === "DELIVERED" || localOrder.status === "CANCELLED") && (cp.status === "WAITING_CONFIRM" || cp.status === "PENDING")) {
-                  // Giữ nguyên trạng thái tiến bộ hơn của local!
-                } else {
-                  localOrder.status = cp.status;
-                  localOrder.statusText = cp.statusText || localOrder.statusText;
-                  if (cloudHasAccs) {
-                    localOrder.deliveredAccounts = cp.deliveredAccounts;
-                    localOrder.credentials = Array.isArray(cp.deliveredAccounts) ? cp.deliveredAccounts.join("\n") : cp.deliveredAccounts;
-                  }
-                  hasNewOrChanged = true;
-                }
-              }
-            }
-          });
-
-          if (hasNewOrChanged) {
-            _cachedPreOrdersList = null;
-            _lastPreOrdersFetchTime = 0;
-            if (typeof savePreOrders === "function") savePreOrders(preOrders);
-            else localStorage.setItem("mmo_pre_orders", JSON.stringify(preOrders));
-            if (typeof updateAdminPreOrdersBadge === "function") updateAdminPreOrdersBadge();
-            if (typeof renderAdminPreOrdersTable === "function") renderAdminPreOrdersTable();
-          }
-        } catch(ePoll) {}
-      }, 4000);
+        });
+      }
     }
     window.startAdminPreOrdersRealtimePolling = startAdminPreOrdersRealtimePolling;
-    try { setTimeout(startAdminPreOrdersRealtimePolling, 3000); } catch(eStartPoll) {}
+    try { startAdminPreOrdersRealtimePolling(); } catch(eStartPoll) {}
   
     function switchAdmTxSubTab(subTab) {
       const ordersSub = document.getElementById("admOrdersSubView");
@@ -41324,6 +41444,7 @@ function executeAdminFulfillPreOrder() {
         _cachedPreOrdersList = null;
         _lastPreOrdersFetchTime = 0;
         renderAdminPreOrdersTable();
+        if (typeof pollAdminPreOrdersNow === "function") pollAdminPreOrdersNow(true);
         if (typeof syncCloudOrdersToLocalUI === "function") {
           syncCloudOrdersToLocalUI(true).then(function() {
             renderAdminPreOrdersTable();
@@ -41373,6 +41494,9 @@ function executeAdminFulfillPreOrder() {
           countBadge.innerText = waitingCount;
           countBadge.style.background = waitingCount > 0 ? "#f59e0b" : "#1e293b";
           countBadge.style.color = waitingCount > 0 ? "#0b111e" : "#cbd5e1";
+        }
+        if (typeof updateAdminSidebarBadges === "function") {
+          updateAdminSidebarBadges();
         }
       } catch(e) {}
     }
