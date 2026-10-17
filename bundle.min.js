@@ -452,6 +452,30 @@ if (typeof window !== "undefined") {
     window.adminOrdersSearchQuery = "";
     var adminOrdersStatusFilter = "ALL";
     window.adminOrdersStatusFilter = "ALL";
+
+    function isPreOrderCheck(o) {
+      if (!o) return false;
+      const oId = String(o.orderId || o.id || o.orderCode || "").replace(/#/g, "").trim();
+      const pId = String(o.productId || o.product_id || o.prodId || "").toUpperCase();
+      const pName = String(o.productName || o.product_name || o.prodName || "").toLowerCase();
+      const vName = String(o.variantName || o.variant_name || o.variant || "").toLowerCase();
+      const nLow = String(o.note || o.customNotes || "").toLowerCase();
+      const tLow = String(o.typeText || o.type || "").toLowerCase();
+
+      if (pId === "WALLET_DEPOSIT" || pName.includes("nạp tiền") || pName.includes("nạp ví") || vName.includes("nạp tiền") || vName.includes("nap tiền") || oId.startsWith("NAP") || oId.startsWith("DEP") || oId.startsWith("ADM") || o.type === "WALLET_DEPOSIT") {
+        return false;
+      }
+
+      const hasPreCode = oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_");
+      const hasPreText = pName.includes("đặt trước") || vName.includes("đặt trước") || nLow.includes("đặt trước") || tLow.includes("đặt trước") || pName.includes("pre-order") || vName.includes("pre-order");
+
+      if (Boolean(oId.match(/^DH\d+$/i)) && !hasPreCode && !hasPreText) {
+        return false;
+      }
+
+      return hasPreCode || hasPreText || o.type === "PRE_ORDER" || o.order_status === "PRE_ORDER" || Boolean(o.isPreOrder);
+    }
+    window.isPreOrderCheck = isPreOrderCheck;
   
 
 const API_URL = "";
@@ -11734,7 +11758,11 @@ if (typeof productOrId === "object") {
           try { preOrders = JSON.parse(localStorage.getItem("mmo_pre_orders") || "[]"); } catch(e) {}
           if (!Array.isArray(preOrders)) preOrders = [];
           preOrders = preOrders.filter(o => o && (typeof isForbiddenLegacyOrder === "function" ? !isForbiddenLegacyOrder(o) : true));
-          const pendingPreOrders = preOrders.filter(o => o && (o.status === "WAITING_CONFIRM" || o.status === "PENDING" || o.status === "PROCESSING")).length;
+          const pendingPreOrders = preOrders.filter(o => {
+            if (!o) return false;
+            const st = String(o.status || "").toUpperCase();
+            return st === "WAITING_CONFIRM" || st === "PENDING" || st === "PROCESSING";
+          }).length;
           
           let allOrders = [];
           try { allOrders = JSON.parse(localStorage.getItem("mmo_all_orders") || "[]"); } catch(e) {}
@@ -11743,12 +11771,20 @@ if (typeof productOrId === "object") {
           const pendingOrders = allOrders.filter(o => {
             if (!o) return false;
             const oId = String(o.id || o.orderId || o.orderCode || "").replace(/^#/, "").trim();
-            const isPre = o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.includes("PO_") || (o.statusText && o.statusText.includes("đặt trước"));
+            const isPre = typeof isPreOrderCheck === "function" ? isPreOrderCheck(o) : (o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("DH_PRE"));
             if (isPre) return false;
-            return o.status === "PENDING" || o.status === "WAITING_CONFIRM" || o.status === "PROCESSING";
+            const st = String(o.status || o.statusText || "").toUpperCase();
+            return st === "PENDING" || st === "WAITING_CONFIRM" || st.includes("CHỜ DUYỆT") || st.includes("CHỜ XÁC NHẬN");
           }).length;
 
-          const totalPending = pendingPreOrders + pendingOrders;
+          const pendingWarranty = allOrders.filter(o => {
+            if (!o) return false;
+            const oId = String(o.id || o.orderId || o.orderCode || "").replace(/^#/, "").trim();
+            if (localStorage.getItem("mmo_warranty_rejected_" + oId) === "true" || o.warrantyStatus === "REJECTED") return false;
+            return o.hasComplaint || (typeof isOrderWarrantyOrExchange === "function" && isOrderWarrantyOrExchange(o));
+          }).length;
+
+          const totalPending = pendingPreOrders + pendingOrders + pendingWarranty;
           if (totalPending > 0) {
             badgeOrders.style.display = "inline-block";
             badgeOrders.innerText = totalPending > 99 ? "99+" : totalPending;
@@ -24837,7 +24873,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }
 
       // Helper xác định đơn hàng đặt trước chuẩn xác 100%
-      const isPreOrderCheck = function(o) {
+      const isPreOrderCheck = (typeof window.isPreOrderCheck === "function") ? window.isPreOrderCheck : function(o) {
         if (!o) return false;
         const oId = String(o.orderId || o.id || o.orderCode || "").replace(/#/g, "").trim();
         const pId = String(o.productId || o.product_id || o.prodId || "").toUpperCase();
@@ -24846,14 +24882,18 @@ function syncAllOpenViewsStock(changedProdId) {
         const nLow = String(o.note || o.customNotes || "").toLowerCase();
         const tLow = String(o.typeText || o.type || "").toLowerCase();
 
-        // TUYỆT ĐỐI KHÔNG PHẢI ĐƠN NẠP TIỀN VÍ
-        if (pId === "WALLET_DEPOSIT" || pName.includes("nạp tiền") || pName.includes("nạp ví") || vName.includes("nạp tiền") || vName.includes("nap tiền") || oId.startsWith("NAP") || oId.startsWith("DEP") || oId.startsWith("ADM") || oId.match(/^DH\d{10}$/) || o.type === "WALLET_DEPOSIT") {
+        if (pId === "WALLET_DEPOSIT" || pName.includes("nạp tiền") || pName.includes("nạp ví") || vName.includes("nạp tiền") || vName.includes("nap tiền") || oId.startsWith("NAP") || oId.startsWith("DEP") || oId.startsWith("ADM") || o.type === "WALLET_DEPOSIT") {
           return false;
         }
 
         const hasPreCode = oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_");
-        const hasPreText = pName.includes("đặt trước") || vName.includes("đặt trước") || nLow.includes("đặt trước") || tLow.includes("đặt trước");
-        return hasPreCode || hasPreText || o.type === "PRE_ORDER" || o.order_status === "PRE_ORDER" || o.status === "WAITING_CONFIRM" || o.status === "PROCESSING";
+        const hasPreText = pName.includes("đặt trước") || vName.includes("đặt trước") || nLow.includes("đặt trước") || tLow.includes("đặt trước") || pName.includes("pre-order") || vName.includes("pre-order");
+
+        if (Boolean(oId.match(/^DH\d+$/i)) && !hasPreCode && !hasPreText) {
+          return false;
+        }
+
+        return hasPreCode || hasPreText || o.type === "PRE_ORDER" || o.order_status === "PRE_ORDER" || Boolean(o.isPreOrder);
       };
 
       // Đếm số lượng đơn theo phân loại
@@ -37720,7 +37760,7 @@ function getProductSchemaReviews(p, idx) {
     window.adminOrdersStatusFilter = "ALL";
 
     
-    // Helper kiểm tra đơn hàng có thuộc diện Khiếu nại / Bảo hành / Đổi trả / Hoàn tiền
+    // Helper kiểm tra đơn hàng có thuộc diện Khiếu nại / Bảo hành / Đổi trả THỰC SỰ
     function isOrderWarrantyOrExchange(o) {
       if (!o) return false;
       const oId = String(o.orderId || o.id || o.orderCode || "").replace(/#/g, "").trim();
@@ -37732,23 +37772,24 @@ function getProductSchemaReviews(p, idx) {
         oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_") ||
         pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước") ||
         (typeof isPreOrderCheck === "function" && isPreOrderCheck(o));
-      if (isPre && !o.hasComplaint && !o.complaint && localStorage.getItem("mmo_complaint_" + oId) !== "true") {
+      if (isPre && !o.hasComplaint && !o.complaint) {
         return false;
       }
 
-      if (o.hasComplaint || o.isWarranty || o.isExchanged || (o.isRefunded && !isPre) || o.replacementAccount || o.replacedCredentials) return true;
       const st = String(o.status || o.statusText || "").toLowerCase();
+      // Các đơn hủy thường của admin không phải bảo hành
+      if (st.includes("admin hủy") || st.includes("hủy & hoàn")) return false;
+
+      // Đơn có khiếu nại thật sự từ khách hàng hoặc yêu cầu bảo hành
+      if (o.hasComplaint || o.complaint || o.isWarranty || o.replacementAccount || o.replacedCredentials) return true;
       const cred = String(o.credentials || o.accounts || "").toLowerCase();
       const type = String(o.type || "").toLowerCase();
 
       return st.includes("khiếu nại") || st.includes("khieu nai") ||
              st.includes("bảo hành") || st.includes("bao hanh") ||
              st.includes("đổi trả") || st.includes("doi tra") ||
-             st.includes("1-đổi-1") || st.includes("1-doi-1") || st.includes("đổi 1-1") || st.includes("doi 1-1") ||
-             ((st.includes("hoàn tiền") || st.includes("hoan tien")) && !isPre) ||
-             st.includes("đã bảo hành") || st.includes("đang bảo hành") ||
-             st.includes("warranty") || st.includes("exchange") || ((st.includes("refund") || st.includes("cancelled")) && !isPre) || st.includes("complain") ||
-             cred.includes("đổi trả") || cred.includes("doi tra") || cred.includes("tài khoản mới đổi trả") ||
+             st.includes("1-đổi-1") || st.includes("1-doi-1") ||
+             cred.includes("tài khoản mới đổi trả") ||
              type.includes("warranty") || type.includes("exchange");
     }
     window.isOrderWarrantyOrExchange = isOrderWarrantyOrExchange;
@@ -37950,65 +37991,12 @@ function getProductSchemaReviews(p, idx) {
     // ============================================================
     // [AUTO-EXPIRY & REFUND] TỰ ĐỘNG HỦY ĐƠN VÀ HOÀN TIỀN KHI QUÁ HẠN
     // ============================================================
+    // ============================================================
+    // [AUTO-EXPIRY & REFUND] VÔ HIỆU HÓA HỦY TỰ ĐỘNG ĐỂ BẢO VỆ ĐƠN ĐẶT TRƯỚC
+    // ============================================================
     function checkAndAutoCancelExpiredPreOrders(preOrdersList) {
-      try {
-        if (!Array.isArray(preOrdersList) || preOrdersList.length === 0) return false;
-        const now = Date.now();
-        let modified = false;
-        let regUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
-
-        preOrdersList.forEach(function(order) {
-          if (!order) return;
-          const rawSt = String(order.status || "").toUpperCase();
-          const rawStTxt = String(order.statusText || "").toLowerCase();
-          const isAlreadyDone = rawSt === "COMPLETED" || rawSt === "CANCELLED" || rawSt === "REFUNDED" || rawStTxt.includes("hủy") || rawStTxt.includes("giao");
-
-          if (!isAlreadyDone) {
-            let createdTs = Number(order.createdTimestamp) || (typeof getOrderTimestamp === "function" ? getOrderTimestamp(order) : 0);
-            const maxDays = Math.max(1, parseInt(order.maxDays, 10) || 7);
-            const maxDurationMs = maxDays * 24 * 60 * 60 * 1000;
-
-            if (createdTs > 0 && (now - createdTs > maxDurationMs)) {
-              const refundAmt = Number(order.total || order.totalPrice || 0);
-              const buyerEmail = (order.buyerEmail || order.email || order.userEmail || "").toLowerCase().trim();
-
-              if (refundAmt > 0 && buyerEmail) {
-                let uIdx = regUsers.findIndex(u => (u.email || "").toLowerCase().trim() === buyerEmail || (order.buyerId && u.id === order.buyerId));
-                if (uIdx !== -1) {
-                  regUsers[uIdx].balance = (Number(regUsers[uIdx].balance) || 0) + refundAmt;
-                }
-
-                if (typeof currentUser !== "undefined" && currentUser && currentUser.email && currentUser.email.toLowerCase().trim() === buyerEmail) {
-                  currentUser.balance = (Number(currentUser.balance) || 0) + refundAmt;
-                  localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-                }
-
-                if (typeof recordTransaction === "function") {
-                  const uName = (uIdx !== -1 && regUsers[uIdx].name) ? regUsers[uIdx].name : (buyerEmail.split("@")[0]);
-                  recordTransaction(buyerEmail, uName, "Hoàn tiền đơn đặt trước quá hạn", +refundAmt, (uIdx !== -1 ? regUsers[uIdx].balance : refundAmt), "Tự động hủy & hoàn tiền đơn đặt trước quá hạn #" + (order.orderCode || order.id) + " (" + (order.productName || "Sản phẩm") + ")");
-                }
-              }
-
-              order.status = "CANCELLED";
-              order.statusText = "Quá hạn gom hàng (Tự động hoàn tiền 100%)";
-              order.isCancelled = true;
-              order.isRefunded = true;
-              order.cancelledReason = "EXPIRED";
-              order.cancelledBy = "SYSTEM";
-              order.refundedAt = new Date().toLocaleString("vi-VN");
-              modified = true;
-            }
-          }
-        });
-
-        if (modified) {
-          if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(regUsers);
-        }
-        return modified;
-      } catch(err) {
-        console.warn("checkAndAutoCancelExpiredPreOrders error:", err);
-        return false;
-      }
+      // Tuyệt đối không tự động hủy ngầm đơn đặt trước sau lưng Admin để tránh làm ẩn mất đơn hàng
+      return false;
     }
     window.checkAndAutoCancelExpiredPreOrders = checkAndAutoCancelExpiredPreOrders;
 
@@ -38082,13 +38070,16 @@ function getProductSchemaReviews(p, idx) {
                   const pIdUp = String(p.productId || p.product_id || p.prodId || "").toUpperCase();
                   const pNameLow = String(p.productName || p.product_name || p.prodName || "").toLowerCase();
                   const vNameLow = String(p.variantName || p.variant || "").toLowerCase();
-                  const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cId.startsWith("NAP") || cId.startsWith("DEP") || cId.startsWith("ADM") || p.type === "WALLET_DEPOSIT" || Boolean(cId.match(/^DH\d{10}$/));
+                  const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cId.startsWith("NAP") || cId.startsWith("DEP") || cId.startsWith("ADM") || p.type === "WALLET_DEPOSIT";
                   if (isDeposit) return;
 
                   const isExplicitPreCode = cId.startsWith("PRE") || cId.startsWith("DH_PRE") || cId.startsWith("POD_");
                   const isExplicitPreText = pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước") || String(p.statusText || "").toLowerCase().includes("đặt trước") || String(p.note || "").toLowerCase().includes("đặt trước");
-                  const isWaitOrPre = p.type === "PRE_ORDER" || p.status === "WAITING_CONFIRM" || p.status === "PROCESSING" || String(p.statusText || "").toLowerCase().includes("chờ xác nhận") || String(p.statusText || "").toLowerCase().includes("gom hàng");
-                  const isRealPre = isExplicitPreCode || isExplicitPreText || isWaitOrPre;
+                  
+                  // Đơn mua hàng thông thường (#DH...) tuyệt đối KHÔNG phải đơn đặt trước trừ khi ghi rõ đặt trước
+                  if (Boolean(cId.match(/^DH\d+$/i)) && !cId.startsWith("DH_PRE") && !isExplicitPreText) return;
+
+                  const isRealPre = isExplicitPreCode || isExplicitPreText || p.type === "PRE_ORDER" || Boolean(p.isPreOrder);
                   if (!isRealPre) return;
                   // Lọc bỏ ghi chú giả mạo tài khoản
                   let pAccs = [];
@@ -38101,7 +38092,19 @@ function getProductSchemaReviews(p, idx) {
                   p.credentials = pAccs.join("\n");
                   
                   const pSt = String(p.status || "").toUpperCase();
-                  const pIsCancel = pSt === "CANCELLED" || pSt === "REFUNDED" || Boolean(p.isCancelled) || Boolean(p.isRefunded);
+                  const pStTxt = String(p.statusText || "").toLowerCase();
+                  const isSystemOrAutoCancelled = p.cancelledReason === "EXPIRED" || p.cancelledBy === "SYSTEM" ||
+                    pStTxt.includes("quá hạn") ||
+                    (!p.cancelledBy && (pSt === "CANCELLED" || pStTxt.includes("hủy / hoàn tiền")));
+                  if (isSystemOrAutoCancelled && p.cancelledBy !== "ADMIN" && p.cancelledBy !== "CUSTOMER") {
+                    p.status = "WAITING_CONFIRM";
+                    p.statusText = "Chờ xác nhận";
+                    p.isCancelled = false;
+                    p.isRefunded = false;
+                    p.cancelledReason = "";
+                    p.cancelledBy = "";
+                  }
+                  const pIsCancel = p.status === "CANCELLED" || p.status === "REFUNDED" || Boolean(p.isCancelled) || Boolean(p.isRefunded);
                   if (pAccs.length > 0) {
                     p.status = "COMPLETED";
                     p.statusText = "Đã giao hàng";
@@ -38148,13 +38151,16 @@ function getProductSchemaReviews(p, idx) {
               const pIdUp = String(o.productId || o.product_id || o.prodId || "").toUpperCase();
               const pNameLow = String(o.productName || o.product_name || o.prodName || "").toLowerCase();
               const vNameLow = String(o.variantName || o.variant || "").toLowerCase();
-              const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanCode.startsWith("NAP") || cleanCode.startsWith("DEP") || cleanCode.startsWith("ADM") || o.type === "WALLET_DEPOSIT" || Boolean(cleanCode.match(/^DH\d{10}$/));
+              const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanCode.startsWith("NAP") || cleanCode.startsWith("DEP") || cleanCode.startsWith("ADM") || o.type === "WALLET_DEPOSIT";
               if (isDeposit) return;
 
               const isExplicitPreCode = cleanCode.startsWith("PRE") || cleanCode.startsWith("DH_PRE") || cleanCode.startsWith("POD_");
               const isExplicitPreText = pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước") || String(o.statusText || "").toLowerCase().includes("đặt trước") || String(o.note || "").toLowerCase().includes("đặt trước") || String(o.typeText || "").toLowerCase().includes("đặt trước");
-              const isWaitOrPre = o.type === "PRE_ORDER" || o.status === "WAITING_CONFIRM" || o.status === "PROCESSING" || String(o.statusText || "").toLowerCase().includes("chờ xác nhận") || String(o.statusText || "").toLowerCase().includes("gom hàng");
-              const isPre = isExplicitPreCode || isExplicitPreText || isWaitOrPre;
+              
+              // Đơn mua hàng thông thường (#DH...) tuyệt đối KHÔNG phải đơn đặt trước trừ khi ghi rõ đặt trước
+              if (Boolean(cleanCode.match(/^DH\d+$/i)) && !cleanCode.startsWith("DH_PRE") && !isExplicitPreText) return;
+
+              const isPre = isExplicitPreCode || isExplicitPreText || o.type === "PRE_ORDER" || Boolean(o.isPreOrder);
               if (!isPre) return;
 
               if (cleanCode) {
@@ -38176,14 +38182,25 @@ function getProductSchemaReviews(p, idx) {
                   validDelivered = String(o.credentials).split("\n").map(s => s.trim()).filter(isRealDeliveredAccount);
                 }
 
+                const isSystemOrAutoCancelled = o.cancelledReason === "EXPIRED" || o.cancelledBy === "SYSTEM" ||
+                  oStTxt.includes("quá hạn") ||
+                  (!o.cancelledBy && (oSt === "CANCELLED" || oStTxt.includes("hủy / hoàn tiền")));
+
                 if (exIdx !== -1) {
                   // Cập nhật thông tin đồng bộ
-                  if (oIsCancel) {
+                  if (isSystemOrAutoCancelled && o.cancelledBy !== "ADMIN" && o.cancelledBy !== "CUSTOMER") {
+                    poList[exIdx].status = "WAITING_CONFIRM";
+                    poList[exIdx].statusText = "Chờ xác nhận";
+                    poList[exIdx].isCancelled = false;
+                    poList[exIdx].isRefunded = false;
+                    poList[exIdx].cancelledReason = "";
+                    poList[exIdx].cancelledBy = "";
+                  } else if (oIsCancel && (o.cancelledBy === "CUSTOMER" || o.cancelledBy === "ADMIN")) {
                     poList[exIdx].status = "CANCELLED";
-                    poList[exIdx].statusText = o.statusText || (o.cancelledBy === "CUSTOMER" ? "Khách Hủy / Đã Hoàn Tiền" : "Đã Hủy & Hoàn Tiền");
+                    poList[exIdx].statusText = o.statusText || (o.cancelledBy === "CUSTOMER" ? "Khách Hủy / Đã Hoàn Tiền" : "Admin Hủy & Hoàn");
                     poList[exIdx].isCancelled = true;
                     poList[exIdx].isRefunded = true;
-                    if (o.cancelledBy) poList[exIdx].cancelledBy = o.cancelledBy;
+                    poList[exIdx].cancelledBy = o.cancelledBy;
                   } else if ((oSt === "COMPLETED" || oSt === "DELIVERED") && validDelivered.length > 0) {
                     poList[exIdx].status = "COMPLETED";
                     poList[exIdx].statusText = o.statusText || "Đã giao hàng";
@@ -38201,9 +38218,12 @@ function getProductSchemaReviews(p, idx) {
 
                   let inferredStatus = o.status || "WAITING_CONFIRM";
                   let inferredStatusText = o.statusText || "Chờ xác nhận";
-                  if (oIsCancel || cleanCode.includes("REFUND") || String(o.typeText || "").includes("Hoàn tiền")) {
+                  if (isSystemOrAutoCancelled && o.cancelledBy !== "ADMIN" && o.cancelledBy !== "CUSTOMER") {
+                    inferredStatus = "WAITING_CONFIRM";
+                    inferredStatusText = "Chờ xác nhận";
+                  } else if (oIsCancel && (o.cancelledBy === "CUSTOMER" || o.cancelledBy === "ADMIN")) {
                     inferredStatus = "CANCELLED";
-                    inferredStatusText = o.statusText || "Đã hủy / Hoàn tiền";
+                    inferredStatusText = o.statusText || (o.cancelledBy === "CUSTOMER" ? "Khách Hủy / Đã Hoàn" : "Admin Hủy & Hoàn");
                   } else if ((inferredStatus === "COMPLETED" || inferredStatus === "DELIVERED") && validDelivered.length === 0) {
                     inferredStatus = "WAITING_CONFIRM";
                     inferredStatusText = "Chờ xác nhận";
@@ -38230,9 +38250,9 @@ function getProductSchemaReviews(p, idx) {
                     buyerEmail: o.buyerEmail || o.email || o.userEmail || (typeof currentUser !== "undefined" && currentUser ? currentUser.email : ""),
                     status: inferredStatus,
                     statusText: inferredStatusText,
-                    isCancelled: oIsCancel,
-                    isRefunded: oIsCancel || Boolean(o.isRefunded),
-                    cancelledBy: o.cancelledBy || (oIsCancel ? "CUSTOMER" : ""),
+                    isCancelled: (inferredStatus === "CANCELLED"),
+                    isRefunded: (inferredStatus === "CANCELLED" || Boolean(o.isRefunded)),
+                    cancelledBy: o.cancelledBy || ((inferredStatus === "CANCELLED") ? "CUSTOMER" : ""),
                     unitPrice: Number(o.unitPrice || (o.total && o.quantity ? Math.round(o.total / o.quantity) : o.total) || 0) || 0,
                     qty: Number(o.quantity || o.qty || 1) || 1,
                     discountAmount: Number(o.discountAmount || 0) || 0,
@@ -38257,12 +38277,18 @@ function getProductSchemaReviews(p, idx) {
         // Kiểm tra và tự động hủy hoàn tiền các đơn quá hạn
         const hadExpired = checkAndAutoCancelExpiredPreOrders(poList);
         
-        // LỌC BỎ 100% ĐƠN TÀN DƯ TỪ WEB CŨ KHỎI POLIST
-        poList = poList.filter(function(p) { return !isForbiddenLegacyOrder(p); });
+        // LỌC BỎ 100% ĐƠN TÀN DƯ VÀ ĐƠN MUA HÀNG THƯỜNG (#DH...) KHỎI POLIST
+        poList = poList.filter(function(p) {
+          if (!p || isForbiddenLegacyOrder(p)) return false;
+          const pCode = String(p.orderCode || p.id || p.orderId || "").replace(/#/g, "").trim();
+          const pName = String(p.productName || p.prodName || "").toLowerCase();
+          const vName = String(p.variantName || p.variant || "").toLowerCase();
+          const isPreText = pName.includes("đặt trước") || vName.includes("đặt trước") || pName.includes("pre-order") || vName.includes("pre-order");
+          if (Boolean(pCode.match(/^DH\d+$/i)) && !pCode.startsWith("DH_PRE") && !isPreText) return false;
+          return true;
+        });
 
-        if (hadExpired || poList.length > 0) {
-          try { localStorage.setItem("mmo_pre_orders", JSON.stringify(poList)); } catch(e) {}
-        }
+        try { localStorage.setItem("mmo_pre_orders", JSON.stringify(poList)); } catch(e) {}
 
         // Sắp xếp đơn mới nhất lên đầu tiên
         poList.sort(function(a, b) {
@@ -39483,7 +39509,11 @@ function getProductSchemaReviews(p, idx) {
         return st === "WAITING_CONFIRM" || st === "PENDING" || st === "PROCESSING";
       }).length;
       const countBadge = document.getElementById("admPreOrdersCountBadge");
-      if (countBadge) countBadge.innerText = waitingCount;
+      if (countBadge) {
+        countBadge.innerText = preOrders.length;
+        countBadge.style.background = waitingCount > 0 ? "#f59e0b" : "#1e293b";
+        countBadge.style.color = waitingCount > 0 ? "#0b111e" : "#cbd5e1";
+      }
 
       const searchInput = document.getElementById("admPreOrdersSearchInput");
       const kw = searchInput ? (searchInput.value || "").trim().toLowerCase() : "";
