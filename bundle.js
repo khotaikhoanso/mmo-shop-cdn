@@ -24214,14 +24214,28 @@ function syncAllOpenViewsStock(changedProdId) {
                 if (o.hasComplaint) existing.hasComplaint = true;
                 if (o.replacementAccount) existing.replacementAccount = o.replacementAccount;
               } else if (!isOrderWarrantyOrExchange(existing) && o.status && existing.status !== "CANCELLED") {
-                existing.status = o.status;
+                const curSt = String(existing.status || "").toUpperCase();
+                const newSt = String(o.status || "").toUpperCase();
+                if (curSt === "COMPLETED" && newSt !== "COMPLETED") {
+                  // Tuyệt đối không hạ cấp đơn đã hoàn thành/đã giao về PROCESSING/WAITING_CONFIRM
+                } else if (curSt === "PROCESSING" && (newSt === "WAITING_CONFIRM" || newSt === "PENDING")) {
+                  // Tuyệt đối không hạ cấp đơn đang gom hàng về chờ xác nhận
+                } else {
+                  existing.status = o.status;
+                  if (o.statusText) existing.statusText = o.statusText;
+                }
               }
               if (o.deliveredAccounts && o.deliveredAccounts.length > 0 && existing.status !== "CANCELLED") {
                 existing.deliveredAccounts = o.deliveredAccounts;
                 existing.credentials = Array.isArray(o.deliveredAccounts) ? o.deliveredAccounts.join("\n") : o.deliveredAccounts;
                 if (!isOrderWarrantyOrExchange(existing)) {
                   existing.status = "COMPLETED";
+                  existing.statusText = "Đã giao hàng";
                 }
+              }
+              if (existing.deliveredAccounts && existing.deliveredAccounts.length > 0 && existing.status !== "CANCELLED" && !isOrderWarrantyOrExchange(existing)) {
+                existing.status = "COMPLETED";
+                existing.statusText = "Đã giao hàng";
               }
               if (ts > (existing.createdTimestamp || 0)) {
                 existing.createdTimestamp = ts;
@@ -24262,6 +24276,8 @@ function syncAllOpenViewsStock(changedProdId) {
             const isPoBackwards = (poSt === "WAITING_CONFIRM" || poSt === "PENDING");
             if (isCurAdvanced && isPoBackwards) {
               // Tuyệt đối không hạ cấp đơn COMPLETED/PROCESSING về WAITING_CONFIRM
+            } else if (curSt === "COMPLETED" && poSt !== "COMPLETED") {
+              // Tuyệt đối không hạ cấp đơn COMPLETED về PROCESSING
             } else if (po.status) {
               userOrders[uIdx].status = po.status;
               userOrders[uIdx].statusText = po.statusText;
@@ -24277,6 +24293,11 @@ function syncAllOpenViewsStock(changedProdId) {
             userOrders[uIdx].deliveredAccounts = po.deliveredAccounts;
             if (po.deliveredAccounts && po.deliveredAccounts.length > 0) {
               userOrders[uIdx].credentials = Array.isArray(po.deliveredAccounts) ? po.deliveredAccounts.join("\n") : po.deliveredAccounts;
+              userOrders[uIdx].status = "COMPLETED";
+              userOrders[uIdx].statusText = "Đã giao hàng";
+            } else if (userOrders[uIdx].deliveredAccounts && userOrders[uIdx].deliveredAccounts.length > 0) {
+              userOrders[uIdx].status = "COMPLETED";
+              userOrders[uIdx].statusText = "Đã giao hàng";
             }
             if (ts > (userOrders[uIdx].createdTimestamp || 0)) {
               userOrders[uIdx].createdTimestamp = ts;
@@ -24372,6 +24393,9 @@ function syncAllOpenViewsStock(changedProdId) {
       if (typeof switchView === "function") switchView("viewProfile");
       if (typeof filterProfileOrdersTab === "function") filterProfileOrdersTab("ALL");
       if (typeof switchProfileTab === "function") switchProfileTab("tabProfOrders");
+      if (typeof syncUserPreOrdersLiveStatus === "function") {
+        syncUserPreOrdersLiveStatus(true);
+      }
       if (typeof renderProfileOrders === "function") renderProfileOrders();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -24530,8 +24554,13 @@ function syncAllOpenViewsStock(changedProdId) {
           : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
         const sessionTok = localStorage.getItem("mmo_session_token") || "";
         const hdrs = {};
-        if (adminTok) hdrs["x-admin-token"] = adminTok;
-        if (sessionTok) hdrs["x-session-token"] = sessionTok;
+        if (adminTok) {
+          hdrs["x-admin-token"] = adminTok;
+          hdrs["Authorization"] = "Bearer " + adminTok;
+        } else if (sessionTok) {
+          hdrs["x-session-token"] = sessionTok;
+          hdrs["Authorization"] = "Bearer " + sessionTok;
+        }
 
         let hasAnyChange = false;
 
@@ -25326,7 +25355,14 @@ function syncAllOpenViewsStock(changedProdId) {
                     effectiveStatus = "CANCELLED";
                   } else {
                     const candidates = [rawSt, freshSt].map(function(s) { return String(s || "").toUpperCase().trim(); });
-                    if (candidates.includes("COMPLETED") || candidates.includes("DELIVERED") || rawStTxt.includes("đã giao") || rawStTxt.includes("hoàn thành") || freshStTxt.includes("đã giao") || freshStTxt.includes("hoàn thành")) {
+                    const hasAccsDirect = Boolean(
+                      (freshPO && freshPO.deliveredAccounts && freshPO.deliveredAccounts.length > 0) ||
+                      (order && order.deliveredAccounts && order.deliveredAccounts.length > 0) ||
+                      (freshPO && freshPO.credentials && (typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(freshPO.credentials) : Boolean(freshPO.credentials))) ||
+                      (order && order.credentials && (typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(order.credentials) : Boolean(order.credentials))) ||
+                      (rawCreds && (typeof isRealDeliveredAccount === "function" ? isRealDeliveredAccount(rawCreds) : Boolean(rawCreds)))
+                    );
+                    if (candidates.includes("COMPLETED") || candidates.includes("DELIVERED") || rawStTxt.includes("đã giao") || rawStTxt.includes("hoàn thành") || freshStTxt.includes("đã giao") || freshStTxt.includes("hoàn thành") || hasAccsDirect) {
                       effectiveStatus = "COMPLETED";
                     } else if (candidates.includes("PROCESSING") || rawStTxt.includes("gom") || freshStTxt.includes("gom")) {
                       effectiveStatus = "PROCESSING";
@@ -40920,8 +40956,12 @@ function executeAdminFulfillPreOrder() {
       // Cập nhật ngay vào In-Memory Orders
       if (Array.isArray(window._mmoInMemoryOrders)) {
         window._mmoInMemoryOrders.forEach(function(item) {
-          const iId = String(item.orderId || item.id || item.orderCode || "");
-          if (iId === cleanId || iId === order.orderCode || iId === order.id) {
+          if (!item) return;
+          const c1 = String(item.id || "").replace(/#/g, "").trim().toLowerCase();
+          const c2 = String(item.orderCode || "").replace(/#/g, "").trim().toLowerCase();
+          const c3 = String(item.orderId || "").replace(/#/g, "").trim().toLowerCase();
+          const target = cleanId.toLowerCase();
+          if (c1 === target || c2 === target || c3 === target) {
             item.status = "COMPLETED";
             item.statusText = "Đã giao hàng";
             item.deliveredAccounts = lines;
@@ -40939,17 +40979,23 @@ function executeAdminFulfillPreOrder() {
           if (!raw) return;
           let list = JSON.parse(raw);
           if (!Array.isArray(list)) return;
+          let mod = false;
           list.forEach(function(item) {
-            const iId = String(item.orderId || item.id || item.orderCode || "");
-            if (iId === cleanId || iId === order.orderCode || iId === order.id) {
+            if (!item) return;
+            const c1 = String(item.id || "").replace(/#/g, "").trim().toLowerCase();
+            const c2 = String(item.orderCode || "").replace(/#/g, "").trim().toLowerCase();
+            const c3 = String(item.orderId || "").replace(/#/g, "").trim().toLowerCase();
+            const target = cleanId.toLowerCase();
+            if (c1 === target || c2 === target || c3 === target) {
               item.status = "COMPLETED";
               item.statusText = "Đã giao hàng";
               item.deliveredAccounts = lines;
               item.credentials = lines.join("\n");
               item.accounts = lines;
+              mod = true;
             }
           });
-          localStorage.setItem(k, JSON.stringify(list));
+          if (mod) localStorage.setItem(k, JSON.stringify(list));
         } catch(e) {}
       });
 
