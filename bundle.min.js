@@ -6193,20 +6193,21 @@ if (typeof productOrId === "object") {
         const nLow = String(item.note || "").toLowerCase();
         if (extractedCode === "NAP_131154" || oIdUp === "NAP_131154") return;
         const isRef = amt > 0 && (tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền"));
+        const hasAccounts = Boolean(nLow.includes("|") || nLow.includes("@hotmail") || nLow.includes("@gmail") || nLow.includes("@outlook") || nLow.includes("yetskoamoako28") || nLow.includes("charleslagankieran") || nLow.includes("nguyenhuongliendindenn") || item.deliveredAccounts || item.credentials);
         const isDep = !isRef && (
           oIdUp.startsWith("NAP") || 
           oIdUp.startsWith("DEP") || 
-          oIdUp.startsWith("ADM") ||
+          (oIdUp.startsWith("ADM") && amt > 0) ||
+          (oIdUp.startsWith("DH") && !hasAccounts && (amt > 0 || tLow.includes("nạp") || nLow.includes("nạp") || tLow.includes("sepay") || tLow.includes("vietqr"))) ||
           String(item.id || '').startsWith("DEP_") ||
-          tLow.includes("nạp tiền") || 
-          tLow.includes("nạp ví") || 
-          tLow.includes("nạp thủ công") ||
+          tLow.includes("nạp") || 
+          tLow.includes("nap") || 
           tLow.includes("sepay") || 
           tLow.includes("vietqr") || 
-          nLow.includes("nạp tiền vào ví") ||
-          nLow.includes("nạp tiền ví") ||
-          nLow.includes("nạp tiền thủ công") ||
-          nLow.includes("đã cộng")
+          nLow.includes("nạp") ||
+          nLow.includes("nap") ||
+          nLow.includes("đã cộng") ||
+          (amt > 0 && !hasAccounts && !tLow.includes("mua hàng") && !nLow.includes("mua sp"))
         );
         const isDeduct = !isRef && !isDep && (
           tLow.includes("trừ tiền") ||
@@ -6215,14 +6216,10 @@ if (typeof productOrId === "object") {
           String(item.id || '').startsWith("WD_") ||
           (oIdUp.startsWith("ADM") && amt < 0)
         );
-        const hasAccounts = Boolean(nLow.includes("|") || nLow.includes("@hotmail") || nLow.includes("@gmail") || nLow.includes("@outlook") || nLow.includes("yetskoamoako28") || nLow.includes("charleslagankieran") || nLow.includes("nguyenhuongliendindenn"));
         const isExplicitPurchase = String(item.id || '').startsWith("ORD_") || oIdUp.startsWith("ORD") || tLow.includes("mua hàng") || tLow.includes("thanh toán");
         const isPurchase = !isRef && !isDep && !isDeduct && (
-          isExplicitPurchase ||
-          hasAccounts || 
-          (oIdUp.startsWith("DH") && !nLow.includes("nạp tiền")) || 
-          nLow.includes("mua sp") ||
-          amt < 0
+          (amt < 0 && (isExplicitPurchase || hasAccounts || oIdUp.startsWith("ORD") || nLow.includes("mua sp") || oIdUp.startsWith("DH"))) ||
+          (hasAccounts && !isDep && !isRef)
         );
 
         let key = "";
@@ -6343,11 +6340,16 @@ if (typeof productOrId === "object") {
       const uList = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
       const uFound = uList.find(item => (item.email || "").toLowerCase().trim() === cleanEmail);
       let curBal = 0;
-      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined && !isNaN(Number(currentUser.balance))) {
+      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined && !isNaN(Number(currentUser.balance)) && Number(currentUser.balance) > 0) {
         curBal = Number(currentUser.balance);
-      } else if (uFound && !isNaN(Number(uFound.balance))) {
+      } else if (uFound && !isNaN(Number(uFound.balance)) && Number(uFound.balance) > 0) {
         curBal = Number(uFound.balance);
-      } else {
+      } else if (runningBal > 0) {
+        curBal = runningBal;
+      } else if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined) {
+        curBal = Number(currentUser.balance) || 0;
+      }
+      if (runningBal > 0 && curBal < runningBal && totalSpent === 0) {
         curBal = runningBal;
       }
 
@@ -6365,7 +6367,11 @@ if (typeof productOrId === "object") {
 
       // Đảm bảo tính nhất quán giữa currentUser và uFound, không tự động tăng số dư
       try {
-        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined) {
+        if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail) {
+          if (curBal > 0 && (!currentUser.balance || Number(currentUser.balance) === 0)) {
+            currentUser.balance = curBal;
+            localStorage.setItem("mmo_current_user", JSON.stringify(currentUser));
+          }
           if (uFound && Number(uFound.balance) !== Number(currentUser.balance)) {
             uFound.balance = Number(currentUser.balance);
             localStorage.setItem("mmo_registered_users", JSON.stringify(uList));
@@ -31827,7 +31833,7 @@ function syncAllOpenViewsStock(changedProdId) {
           if (id === "nap_131154") return false;
           // TUYỆT ĐỐI KHÔNG HIỂN THỊ ĐƠN MUA HÀNG TRONG LỊCH SỬ NẠP / RÚT TIỀN
           if (t.includes("mua hàng") || id.startsWith("ord") || Number(tx.amount) < 0) return false;
-          const isDeposit = id.startsWith("nap") || id.startsWith("dep") || id.startsWith("adm") || t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || ((n.includes("nạp") || n.includes("đã cộng")) && !n.includes("mua sp") && !n.includes("thanh toán"));
+          const isDeposit = id.startsWith("nap") || id.startsWith("dep") || id.startsWith("adm") || id.startsWith("dh") || t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || ((n.includes("nạp") || n.includes("đã cộng")) && !n.includes("mua sp") && !n.includes("thanh toán"));
           const isRefund = t.includes("hoàn tiền") || n.includes("hoàn tiền");
           const isWithdraw = t.includes("rút") || id.startsWith("wd");
           return isDeposit || isRefund || isWithdraw;
@@ -31840,8 +31846,9 @@ function syncAllOpenViewsStock(changedProdId) {
           const n = (tx.note || "").toLowerCase();
           const id = String(tx.orderId || tx.id || "").toLowerCase();
           if (id === "nap_131154") return false;
-          if (t.includes("mua hàng") || Number(tx.amount) < 0) return false;
-          return t.includes("nạp") || t.includes("rút") || t.includes("hoàn tiền");
+          if (t.includes("mua hàng") || id.startsWith("ord") || Number(tx.amount) < 0) return false;
+          const isDeposit = id.startsWith("nap") || id.startsWith("dep") || id.startsWith("adm") || id.startsWith("dh") || t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || ((n.includes("nạp") || n.includes("đã cộng")) && !n.includes("mua sp") && !n.includes("thanh toán"));
+          return isDeposit || t.includes("rút") || t.includes("hoàn tiền");
         });
       }
 
