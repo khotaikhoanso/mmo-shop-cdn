@@ -5895,9 +5895,10 @@ if (typeof productOrId === "object") {
           if (dNoteLow.includes("đồng bộ") || dNoteLow.includes("dong bo") || dNoteLow.includes("hiệu chỉnh") || dNoteLow.includes("chuẩn hóa")) return;
           
           const dTypeLow = String(d.type || "").toLowerCase();
-          const isDepositItem = oIdStr.startsWith("NAP") || oIdStr.startsWith("DEP") || oIdStr.startsWith("ADM") || dNoteLow.includes("nạp tiền") || dNoteLow.includes("đã cộng") || dNoteLow.includes("nap tien") || dTypeLow.includes("nạp") || dTypeLow.includes("sepay") || dTypeLow.includes("vietqr");
+          const dIsDepositProp = Boolean(d.isDeposit || d.is_deposit || (Number(d.amount) > 0 && (dTypeLow.includes("nạp") || dTypeLow.includes("nap") || dTypeLow.includes("sepay") || dTypeLow.includes("vietqr") || dNoteLow.includes("nạp") || dNoteLow.includes("nap"))));
+          const isDepositItem = dIsDepositProp || oIdStr.startsWith("NAP") || oIdStr.startsWith("DEP") || oIdStr.startsWith("ADM") || dNoteLow.includes("nạp tiền") || dNoteLow.includes("đã cộng") || dNoteLow.includes("nap tien") || dTypeLow.includes("nạp") || dTypeLow.includes("sepay") || dTypeLow.includes("vietqr");
           const hasAccounts = Boolean(dNote.includes("|") || dNote.includes("@hotmail") || dNote.includes("@gmail") || dNote.includes("@outlook") || dNote.includes("YetskoAmoako28") || dNote.includes("charleslagankieran") || dNote.includes("nguyenhuongliendindenn") || d.accounts);
-          const isPurchase = !isDepositItem && (hasAccounts || oIdStr.startsWith("DH") || oIdStr.startsWith("ORD") || dTypeLow.includes("mua hàng") || dNoteLow.includes("mua sp"));
+          const isPurchase = !isDepositItem && (hasAccounts || dTypeLow.includes("mua hàng") || dNoteLow.includes("mua sp") || (oIdStr.startsWith("ORD") && !isDepositItem));
           if (isPurchase) {
             const pAmt = Math.abs(Number(d.amount) || 0);
             if (pAmt > 0) {
@@ -5975,16 +5976,18 @@ if (typeof productOrId === "object") {
 
             // PHÂN BIỆT ĐƠN NẠP TIỀN VÀ ĐƠN MUA HÀNG
             const pNameLow = String(pName).toLowerCase();
-            const pIdUp = String(o.prodId || "").toUpperCase();
+            const pIdUp = String(o.prodId || o.product_id || "").toUpperCase();
             const isDepositOrder = (
               pIdUp === "NAP_VI" || 
+              pIdUp === "WALLET_DEPOSIT" ||
               pIdUp.startsWith("NAP") || 
               oId.startsWith("NAP") || 
               oId.startsWith("DEP") ||
               oId.startsWith("ADM") ||
-              pNameLow.includes("nạp tiền ví") || 
-              pNameLow.includes("nạp tiền vào ví") ||
-              pNameLow.includes("nạp tiền thủ công")
+              pNameLow.includes("nạp tiền") || 
+              pNameLow.includes("nạp ví") || 
+              pNameLow.includes("nap tien") ||
+              Boolean(o.isDeposit || o.is_deposit)
             );
 
             if (isDepositOrder) {
@@ -31131,19 +31134,36 @@ function syncAllOpenViewsStock(changedProdId) {
       const qrUrl = `https://img.vietqr.io/image/${bankCode}-${bankAcc}-compact.png?amount=${amount}&addInfo=${memo}&accountName=${bankOwner}`;
       if (qrImgEl) qrImgEl.src = qrUrl;
 
-      // Register deposit order with Google Apps Script Cloud Backend
+      // Đăng ký đơn nạp tiền tự động lên Cloudflare Worker Turso SSOT
       if (currentUser && currentUser.email) {
-        callGasApi("createDepositOrder", {
-          orderId: depositOrderCode,
-          amount: amount,
-          email: currentUser.email
+        const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
+          ? MMO_WORKER_API.getApiUrl()
+          : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        fetch(workerUrl + "/api/deposit/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: depositOrderCode,
+            amount: amount,
+            email: currentUser.email,
+            name: currentUser.name || currentUser.username || currentUser.email.split("@")[0]
+          })
         }).catch(() => {});
+
+        // Dự phòng với Google Apps Script nếu có
+        if (typeof callGasApi === "function") {
+          callGasApi("createDepositOrder", {
+            orderId: depositOrderCode,
+            amount: amount,
+            email: currentUser.email
+          }).catch(() => {});
+        }
       }
 
       startDepositWatcher();
     }
 
-        var depositPollingTimer = null;
+    var depositPollingTimer = null;
 
     function startDepositWatcher() {
       if (depositPollingTimer) {
@@ -31153,31 +31173,115 @@ function syncAllOpenViewsStock(changedProdId) {
       depositPollingTimer = setInterval(checkDepositStatus, 2000);
     }
 
-        async function handleManualDepositCheck() {
-      if (depositPollingTimer) {
-        clearInterval(depositPollingTimer);
-        depositPollingTimer = null;
-      }
-
-      showToast("⏳ Đang kiểm tra giao dịch nạp tiền...", "info");
-
-      // Gọi đối soát đơn nạp với máy chủ
+    async function handleManualDepositCheck() {
       const currentCode = (depositOrderCode || "").toUpperCase();
-      if (currentCode && typeof callGasApi === "function") {
+      if (!currentCode) return;
+
+      showToast("⏳ Đang kết nối máy chủ đối soát giao dịch...", "info");
+
+      const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
+        ? MMO_WORKER_API.getApiUrl()
+        : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+
+      let paymentDetected = false;
+      let detectedAmount = currentDepositAmount || 20000;
+
+      // 1. Quét từ Cloudflare Worker Turso SSOT
+      try {
+        const chkRes = await fetch(workerUrl + "/api/deposit/check?orderId=" + encodeURIComponent(currentCode), { cache: "no-store" })
+          .then(r => r.json()).catch(() => null);
+        if (chkRes && (chkRes.is_paid || chkRes.payment_status === "PAID" || chkRes.order_status === "COMPLETED")) {
+          paymentDetected = true;
+          detectedAmount = Number(chkRes.amount) || detectedAmount;
+          if (chkRes.balance !== undefined && !isNaN(Number(chkRes.balance)) && currentUser) {
+            currentUser.balance = Number(chkRes.balance);
+          }
+        }
+      } catch(e) {}
+
+      // 2. Dự phòng quét từ Google Apps Script
+      if (!paymentDetected && typeof callGasApi === "function") {
         try {
-          await callGasApi("checkOrder", { orderId: currentCode });
+          const gasRes = await callGasApi("checkOrder", { orderId: currentCode });
+          if (gasRes && (gasRes.status === "COMPLETED" || gasRes.status === "PAID")) {
+            paymentDetected = true;
+            detectedAmount = Number(gasRes.totalAmount) || detectedAmount;
+          }
         } catch(e) {}
       }
 
-      showToast("🎉 Đang mở trang Ví để hiển thị số dư...", "success");
+      if (paymentDetected) {
+        if (depositPollingTimer) {
+          clearInterval(depositPollingTimer);
+          depositPollingTimer = null;
+        }
 
-      // Chuyển view sang tab Ví
-      switchView("viewProfile");
-      switchProfileTab("tabProfWallet");
+        if (currentUser && currentUser.email) {
+          const cleanEmail = (currentUser.email || "").toLowerCase().trim();
+          let creditedTxs = {};
+          try {
+            creditedTxs = JSON.parse(localStorage.getItem("mmo_credited_txs_" + cleanEmail) || "{}");
+          } catch(e) {}
 
-      // Tải số dư & lịch sử mới nhất từ máy chủ
-      if (typeof loadUserWalletFromCloud === "function") {
-        await loadUserWalletFromCloud();
+          if (!creditedTxs[currentCode]) {
+            creditedTxs[currentCode] = true;
+            localStorage.setItem("mmo_credited_txs_" + cleanEmail, JSON.stringify(creditedTxs));
+            currentUser.balance = (Number(currentUser.balance) || 0) + detectedAmount;
+            localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+
+            let allUsers = getRegisteredUsers();
+            const uIdx = allUsers.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
+            if (uIdx !== -1) {
+              allUsers[uIdx].balance = currentUser.balance;
+              saveRegisteredUsers(allUsers);
+            }
+            updateUserUI();
+          }
+
+          // Ghi ngay vào lịch sử nạp tiền và biến động số dư cục bộ
+          const depRecord = {
+            id: currentCode,
+            orderId: currentCode,
+            userEmail: cleanEmail,
+            email: cleanEmail,
+            type: "Nạp tiền VietQR / SePay",
+            amount: detectedAmount,
+            balanceAfter: currentUser.balance,
+            time: new Date().toISOString(),
+            date: new Date().toISOString(),
+            note: "Nạp tiền ví #" + currentCode,
+            isDeposit: true
+          };
+
+          try {
+            let hist = JSON.parse(localStorage.getItem("mmo_transaction_history") || "[]");
+            if (!hist.some(h => String(h.id || h.orderId || "") === currentCode)) {
+              hist.unshift(depRecord);
+              localStorage.setItem("mmo_transaction_history", JSON.stringify(hist));
+            }
+            let deps = JSON.parse(localStorage.getItem("mmo_deposits") || "[]");
+            if (!deps.some(d => String(d.id || d.orderId || "") === currentCode)) {
+              deps.unshift(depRecord);
+              localStorage.setItem("mmo_deposits", JSON.stringify(deps));
+            }
+            let bLogs = JSON.parse(localStorage.getItem("mmo_balance_logs") || "[]");
+            if (!bLogs.some(l => String(l.id || l.orderId || "") === currentCode)) {
+              bLogs.unshift(depRecord);
+              localStorage.setItem("mmo_balance_logs", JSON.stringify(bLogs));
+            }
+          } catch(eRec) {}
+        }
+
+        showToast("🎉 Nạp tiền tự động thành công! Đã cộng +" + formatVND(detectedAmount) + " vào ví.", "success");
+        switchView("viewProfile");
+        switchProfileTab("tabProfWallet");
+        if (typeof renderUserWalletTransactions === "function") renderUserWalletTransactions();
+        if (typeof renderUserBalanceLogs === "function") renderUserBalanceLogs();
+        if (typeof loadUserWalletFromCloud === "function") {
+          loadUserWalletFromCloud(true);
+        }
+      } else {
+        showToast("⏳ Hệ thống đang chờ ngân hàng xác nhận giao dịch. Vui lòng đợi trong giây lát...", "info");
       }
     }
 
@@ -31197,25 +31301,42 @@ function syncAllOpenViewsStock(changedProdId) {
       let paymentDetected = false;
       let detectedAmount = currentDepositAmount || 20000;
 
-      // 1. Quét từ checkOrder
+      // 1. Quét trạng thái từ Cloudflare Worker Turso SSOT (ưu tiên cao nhất)
+      const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
+        ? MMO_WORKER_API.getApiUrl()
+        : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
       try {
-        const orderData = await callGasApi("checkOrder", { orderId: currentCode });
-        if (orderData && (orderData.status === "COMPLETED" || orderData.status === "PAID")) {
+        const chkRes = await fetch(workerUrl + "/api/deposit/check?orderId=" + encodeURIComponent(currentCode), { cache: "no-store" })
+          .then(r => r.json()).catch(() => null);
+        if (chkRes && (chkRes.is_paid || chkRes.payment_status === "PAID" || chkRes.order_status === "COMPLETED")) {
           paymentDetected = true;
-          detectedAmount = Number(orderData.totalAmount) || detectedAmount;
+          detectedAmount = Number(chkRes.amount) || detectedAmount;
+          if (chkRes.balance !== undefined && !isNaN(Number(chkRes.balance)) && currentUser) {
+            currentUser.balance = Number(chkRes.balance);
+          }
         }
       } catch(e) {}
 
-      // 2. Quét từ Cloud getUserOrders
+      // 2. Dự phòng quét từ Google Apps Script checkOrder
+      if (!paymentDetected) {
+        try {
+          const orderData = await callGasApi("checkOrder", { orderId: currentCode });
+          if (orderData && (orderData.status === "COMPLETED" || orderData.status === "PAID")) {
+            paymentDetected = true;
+            detectedAmount = Number(orderData.totalAmount) || detectedAmount;
+          }
+        } catch(e) {}
+      }
+
+      // 3. Dự phòng quét từ Cloud orders
       if (!paymentDetected && currentUser && currentUser.email) {
         try {
-          const apiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") ? MMO_WORKER_API.getApiUrl() : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
-          const ordersRes = await fetch(apiUrl + "/api/orders?email=" + encodeURIComponent(currentUser.email)).then(r => r.json()).catch(() => null);
+          const ordersRes = await fetch(workerUrl + "/api/orders?email=" + encodeURIComponent(currentUser.email)).then(r => r.json()).catch(() => null);
           if (ordersRes && Array.isArray(ordersRes.orders)) {
-            const matched = ordersRes.orders.find(o => String(o.orderId).trim().toUpperCase() === currentCode && (o.status === "COMPLETED" || o.status === "PAID"));
+            const matched = ordersRes.orders.find(o => String(o.orderId || o.id).trim().toUpperCase() === currentCode && (o.status === "COMPLETED" || o.status === "PAID" || o.paymentStatus === "PAID"));
             if (matched) {
               paymentDetected = true;
-              detectedAmount = Number(matched.totalAmount) || detectedAmount;
+              detectedAmount = Number(matched.totalAmount || matched.total || matched.amount) || detectedAmount;
             }
           }
         } catch(e) {}
@@ -31249,6 +31370,39 @@ function syncAllOpenViewsStock(changedProdId) {
             }
             updateUserUI();
           }
+
+          // Ghi ngay vào lịch sử nạp tiền và biến động số dư cục bộ
+          const depRecord = {
+            id: currentCode,
+            orderId: currentCode,
+            userEmail: cleanEmail,
+            email: cleanEmail,
+            type: "Nạp tiền VietQR / SePay",
+            amount: detectedAmount,
+            balanceAfter: currentUser.balance,
+            time: new Date().toISOString(),
+            date: new Date().toISOString(),
+            note: "Nạp tiền ví #" + currentCode,
+            isDeposit: true
+          };
+
+          try {
+            let hist = JSON.parse(localStorage.getItem("mmo_transaction_history") || "[]");
+            if (!hist.some(h => String(h.id || h.orderId || "") === currentCode)) {
+              hist.unshift(depRecord);
+              localStorage.setItem("mmo_transaction_history", JSON.stringify(hist));
+            }
+            let deps = JSON.parse(localStorage.getItem("mmo_deposits") || "[]");
+            if (!deps.some(d => String(d.id || d.orderId || "") === currentCode)) {
+              deps.unshift(depRecord);
+              localStorage.setItem("mmo_deposits", JSON.stringify(deps));
+            }
+            let bLogs = JSON.parse(localStorage.getItem("mmo_balance_logs") || "[]");
+            if (!bLogs.some(l => String(l.id || l.orderId || "") === currentCode)) {
+              bLogs.unshift(depRecord);
+              localStorage.setItem("mmo_balance_logs", JSON.stringify(bLogs));
+            }
+          } catch(eRec) {}
         }
 
         showToast("🎉 Nạp tiền tự động thành công! Đã cộng +" + formatVND(detectedAmount) + " vào ví.", "success");
@@ -31267,8 +31421,10 @@ function syncAllOpenViewsStock(changedProdId) {
         // CHUYỂN NGAY LẬP TỨC SANG TRANG VÍ
         switchView("viewProfile");
         switchProfileTab("tabProfWallet");
+        if (typeof renderUserWalletTransactions === "function") renderUserWalletTransactions();
+        if (typeof renderUserBalanceLogs === "function") renderUserBalanceLogs();
         if (typeof loadUserWalletFromCloud === "function") {
-          loadUserWalletFromCloud();
+          loadUserWalletFromCloud(true);
         }
       }
     }
@@ -31627,8 +31783,8 @@ function syncAllOpenViewsStock(changedProdId) {
           const oIdStr = String(tx.orderId || tx.id || "");
           const oIdStrUp = oIdStr.toUpperCase();
           const isRefund = tx.isRefund || tLow.includes("hoàn tiền") || nLow.includes("hoàn tiền");
-          const isDeposit = !isRefund && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp tiền") || tLow.includes("nạp ví") || tLow.includes("sepay") || tLow.includes("vietqr") || nLow.includes("nạp tiền vào ví") || nLow.includes("nạp tiền ví") || nLow.includes("đã cộng"));
-          const isPurchase = !isRefund && !isDeposit && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || tLow.includes("thanh toán") || (oIdStrUp.startsWith("DH") && !nLow.includes("nạp tiền")) || oIdStrUp.startsWith("ORD") || nLow.includes("|"));
+          const isDeposit = !isRefund && (tx.isDeposit || oIdStrUp.startsWith("NAP") || oIdStrUp.startsWith("DEP") || tLow.includes("nạp") || tLow.includes("sepay") || tLow.includes("vietqr") || nLow.includes("nạp") || nLow.includes("đã cộng") || tx.product_id === "WALLET_DEPOSIT" || tx.prodId === "WALLET_DEPOSIT" || (amt > 0 && !tLow.includes("mua hàng") && !nLow.includes("mua hàng")));
+          const isPurchase = !isRefund && !isDeposit && (tx.isPurchase || amt < 0 || tLow.includes("mua hàng") || tLow.includes("thanh toán") || oIdStrUp.startsWith("ORD") || nLow.includes("|"));
 
           if (isPurchase) {
             amt = -Math.abs(amt);
