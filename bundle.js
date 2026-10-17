@@ -11778,7 +11778,7 @@ if (typeof productOrId === "object") {
             }
           });
 
-          // 1.2 Đơn hàng thường đang có khiếu nại bảo hành THỰC TẾ CHƯA GIẢI QUYẾT
+          // 1.2 Đơn hàng thường đang có khiếu nại bảo hành THỰC TẾ CHƯA GIẢI QUYẾT (Chỉ tính đơn ĐÃ THANH TOÁN)
           let allOrders = [];
           try {
             allOrders = (typeof getAllOrders === "function") ? getAllOrders() : JSON.parse(localStorage.getItem("mmo_all_orders") || "[]");
@@ -11796,23 +11796,25 @@ if (typeof productOrId === "object") {
             const st = String(o.status || "").toUpperCase();
             const stTxt = String(o.statusText || "").toLowerCase();
             const isCancel = st === "CANCELLED" || st === "REFUNDED" || Boolean(o.isCancelled) || Boolean(o.isRefunded) || stTxt.includes("hủy");
+            if (isCancel) return;
 
-            // Kiểm tra khiếu nại bảo hành chưa giải quyết (Loại bỏ đơn đã xử lý, đã đổi, đã hoàn tiền, đã từ chối)
+            // TUYỆT ĐỐI BỎ QUA CÁC ĐƠN PENDING CHƯA THANH TOÁN (ĐƠN NHÁP/BỎ DỞ THANH TOÁN)
+            const paySt = String(o.paymentStatus || o.payment_status || "").toUpperCase();
+            const isPaid = paySt === "PAID" || paySt === "COMPLETED" || Boolean(o.isPaid);
+
+            // Kiểm tra khiếu nại bảo hành chưa giải quyết (Chỉ áp dụng cho đơn đã thanh toán thành công)
             const isRejected = localStorage.getItem("mmo_warranty_rejected_" + oId) === "true" || o.warrantyStatus === "REJECTED";
             const isResolved = localStorage.getItem("mmo_warranty_resolved_" + oId) === "true" || o.warrantyStatus === "RESOLVED" || Boolean(o.isExchanged) || stTxt.includes("đã đổi") || stTxt.includes("đã bảo hành") || stTxt.includes("đã xử lý") || stTxt.includes("đã hoàn");
 
-            const hasActiveComplaint = !isRejected && !isResolved && (
+            const hasActiveComplaint = isPaid && !isRejected && !isResolved && (
               Boolean(o.hasComplaint) ||
               Boolean(o.complaint) ||
-              localStorage.getItem("mmo_complaint_" + oId) === "true" ||
-              stTxt.includes("khiếu nại") ||
-              stTxt.includes("cần bảo hành") ||
-              stTxt.includes("chờ bảo hành")
+              (localStorage.getItem("mmo_complaint_" + oId) === "true" && (stTxt.includes("khiếu nại") || stTxt.includes("bảo hành")))
             );
 
             if (hasActiveComplaint) {
               actionOrderIds.add(oId.toLowerCase());
-            } else if (!isCancel && (st === "WAITING_CONFIRM" || (st === "PENDING" && !stTxt.includes("nạp")))) {
+            } else if (isPaid && (st === "WAITING_CONFIRM" || st === "PROCESSING")) {
               const isPre = typeof isPreOrderCheck === "function" ? isPreOrderCheck(o) : (o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("DH_PRE"));
               if (!isPre && !stTxt.includes("hoàn thành") && !stTxt.includes("đã giao")) {
                 actionOrderIds.add(oId.toLowerCase());
@@ -11885,7 +11887,7 @@ if (typeof productOrId === "object") {
     }
     window.updateAdminSidebarBadges = updateAdminSidebarBadges;
 
-    // [AUTO-HEAL] Tự động đồng bộ chuẩn xác đơn đã hủy sang CANCELLED trên mọi kho dữ liệu
+    // [AUTO-HEAL] Tự động đồng bộ chuẩn xác đơn đã hủy sang CANCELLED và dọn sạch thông báo ảo
     (function autoCleanseCancelledOrdersOnBoot() {
       try {
         const targetKeys = ["mmo_pre_orders", "mmo_all_orders", "mmo_orders", "mmo_user_orders"];
@@ -11913,6 +11915,17 @@ if (typeof productOrId === "object") {
             localStorage.setItem(k, JSON.stringify(list));
           }
         });
+
+        // Xóa các cờ mmo_complaint_ ảo từ tin nhắn chat cũ đã xử lý hoặc không hợp lệ
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith("mmo_complaint_")) {
+            const compId = k.replace("mmo_complaint_", "").trim();
+            if (compId === "PRE138008" || compId.startsWith("TX_") || compId.startsWith("SAMPLE") || compId.startsWith("TEST")) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
       } catch(eHeal) {}
     })();
 
@@ -13214,7 +13227,15 @@ if (typeof productOrId === "object") {
         renderAdminWithdrawTable();
       }
       if (isOrdersTab) {
-        if (typeof switchAdmTxSubTab === "function") switchAdmTxSubTab("orders");
+        let targetSubTab = "orders";
+        try {
+          const preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
+          const hasWaitingPre = preOrders.some(p => p && (p.status === "WAITING_CONFIRM" || p.status === "PROCESSING") && !p.isCancelled && !p.isRefunded);
+          if (hasWaitingPre) {
+            targetSubTab = "preOrders";
+          }
+        } catch(e) {}
+        if (typeof switchAdmTxSubTab === "function") switchAdmTxSubTab(targetSubTab);
       } else if (tabId === "tabAdmTxLogs") {
         if (typeof switchAdmTxSubTab === "function") switchAdmTxSubTab("walletTx");
         if (typeof syncAllDepositsFromCloud === "function") syncAllDepositsFromCloud();
