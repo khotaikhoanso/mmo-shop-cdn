@@ -23685,9 +23685,9 @@ function syncAllOpenViewsStock(changedProdId) {
               const pIdUp = String(co.productId || co.product_id || "").toUpperCase();
               const pNameLow = String(co.productName || co.product_name || "").toLowerCase();
               const vNameLow = String(co.variantName || co.variant || "").toLowerCase();
-              const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanId.startsWith("NAP") || cleanId.startsWith("DEP") || cleanId.startsWith("ADM");
+              const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanId.startsWith("NAP") || cleanId.startsWith("DEP") || cleanId.startsWith("ADM") || Boolean(cleanId.match(/^DH\d{10}$/));
               if (isDeposit) return "WALLET_DEPOSIT";
-              const isP = cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_") || (co.type === "PRE_ORDER" && !cleanId.match(/^DH\d+$/i)) || (co.order_status === "PRE_ORDER" && !cleanId.match(/^DH\d+$/i)) || pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước");
+              const isP = cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_") || co.type === "PRE_ORDER" || co.order_status === "PRE_ORDER" || co.order_status === "WAITING_CONFIRM" || co.status === "WAITING_CONFIRM" || pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước");
               return isP ? "PRE_ORDER" : "REGULAR";
             })(),
             credentials: credsStr,
@@ -23787,17 +23787,22 @@ function syncAllOpenViewsStock(changedProdId) {
           const pIdUp = String(normOrder.productId || "").toUpperCase();
           const pNameLow = String(normOrder.productName || "").toLowerCase();
           const vNameLow = String(normOrder.variant || normOrder.variantName || "").toLowerCase();
-          const isDepositOrder = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanId.startsWith("NAP") || cleanId.startsWith("DEP") || cleanId.startsWith("ADM") || normOrder.type === "WALLET_DEPOSIT";
+          const isDepositOrder = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanId.startsWith("NAP") || cleanId.startsWith("DEP") || cleanId.startsWith("ADM") || normOrder.type === "WALLET_DEPOSIT" || Boolean(cleanId.match(/^DH\d{10}$/));
 
           const isPreOrder = !isDepositOrder && (
             cleanId.startsWith("PRE") ||
             cleanId.startsWith("DH_PRE") ||
             cleanId.startsWith("POD_") ||
-            (normOrder.type === "PRE_ORDER" && !cleanId.match(/^DH\d+$/i)) ||
-            (co.order_status === "PRE_ORDER" && !cleanId.match(/^DH\d+$/i)) ||
+            normOrder.type === "PRE_ORDER" ||
+            co.order_status === "PRE_ORDER" ||
+            co.order_status === "WAITING_CONFIRM" ||
+            normOrder.status === "WAITING_CONFIRM" ||
+            normOrder.status === "PROCESSING" ||
             pNameLow.includes("đặt trước") ||
             vNameLow.includes("đặt trước") ||
-            String(normOrder.statusText || "").toLowerCase().includes("đặt trước")
+            String(normOrder.statusText || "").toLowerCase().includes("đặt trước") ||
+            String(normOrder.statusText || "").toLowerCase().includes("chờ xác nhận") ||
+            String(normOrder.statusText || "").toLowerCase().includes("gom hàng")
           );
 
           if (isPreOrder) {
@@ -23823,8 +23828,8 @@ function syncAllOpenViewsStock(changedProdId) {
                 preOrdersModified = true;
               }
             }
-          } else {
-            // NẾU KHÔNG PHẢI ĐƠN ĐẶT TRƯỚC (Ví dụ đơn nạp tiền hoặc đơn mua thường): Đảm bảo loại bỏ khỏi mmo_pre_orders nếu từng bị ghi nhầm
+          } else if (isDepositOrder) {
+            // NẾU LÀ ĐƠN NẠP TIỀN: Đảm bảo loại bỏ khỏi mmo_pre_orders nếu từng bị ghi nhầm
             const badPIdx = preOrders.findIndex(p => (p && String(p.id || p.orderId || p.orderCode || "").replace("#","").trim() === cleanId));
             if (badPIdx !== -1) {
               preOrders.splice(badPIdx, 1);
@@ -24842,13 +24847,13 @@ function syncAllOpenViewsStock(changedProdId) {
         const tLow = String(o.typeText || o.type || "").toLowerCase();
 
         // TUYỆT ĐỐI KHÔNG PHẢI ĐƠN NẠP TIỀN VÍ
-        if (pId === "WALLET_DEPOSIT" || pName.includes("nạp tiền") || pName.includes("nạp ví") || vName.includes("nạp tiền") || vName.includes("nap tiền") || oId.startsWith("NAP") || oId.startsWith("DEP") || oId.startsWith("ADM") || o.type === "WALLET_DEPOSIT") {
+        if (pId === "WALLET_DEPOSIT" || pName.includes("nạp tiền") || pName.includes("nạp ví") || vName.includes("nạp tiền") || vName.includes("nap tiền") || oId.startsWith("NAP") || oId.startsWith("DEP") || oId.startsWith("ADM") || oId.match(/^DH\d{10}$/) || o.type === "WALLET_DEPOSIT") {
           return false;
         }
 
         const hasPreCode = oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_");
         const hasPreText = pName.includes("đặt trước") || vName.includes("đặt trước") || nLow.includes("đặt trước") || tLow.includes("đặt trước");
-        return hasPreCode || hasPreText || (o.type === "PRE_ORDER" && !oId.match(/^DH\d+$/i)) || (o.order_status === "PRE_ORDER" && !oId.match(/^DH\d+$/i));
+        return hasPreCode || hasPreText || o.type === "PRE_ORDER" || o.order_status === "PRE_ORDER" || o.status === "WAITING_CONFIRM" || o.status === "PROCESSING";
       };
 
       // Đếm số lượng đơn theo phân loại
@@ -37662,7 +37667,20 @@ function getProductSchemaReviews(p, idx) {
     // Helper kiểm tra đơn hàng có thuộc diện Khiếu nại / Bảo hành / Đổi trả / Hoàn tiền
     function isOrderWarrantyOrExchange(o) {
       if (!o) return false;
-      if (o.hasComplaint || o.isWarranty || o.isExchanged || o.isRefunded || o.replacementAccount || o.replacedCredentials) return true;
+      const oId = String(o.orderId || o.id || o.orderCode || "").replace(/#/g, "").trim();
+
+      // TUYỆT ĐỐI KHÔNG COI ĐƠN ĐẶT TRƯỚC LÀ ĐƠN BẢO HÀNH ĐỔI TRẢ
+      const pNameLow = String(o.productName || o.product_name || o.prodName || "").toLowerCase();
+      const vNameLow = String(o.variantName || o.variant || "").toLowerCase();
+      const isPre = o.type === "PRE_ORDER" || o.order_status === "PRE_ORDER" ||
+        oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_") ||
+        pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước") ||
+        (typeof isPreOrderCheck === "function" && isPreOrderCheck(o));
+      if (isPre && !o.hasComplaint && !o.complaint && localStorage.getItem("mmo_complaint_" + oId) !== "true") {
+        return false;
+      }
+
+      if (o.hasComplaint || o.isWarranty || o.isExchanged || (o.isRefunded && !isPre) || o.replacementAccount || o.replacedCredentials) return true;
       const st = String(o.status || o.statusText || "").toLowerCase();
       const cred = String(o.credentials || o.accounts || "").toLowerCase();
       const type = String(o.type || "").toLowerCase();
@@ -37671,9 +37689,9 @@ function getProductSchemaReviews(p, idx) {
              st.includes("bảo hành") || st.includes("bao hanh") ||
              st.includes("đổi trả") || st.includes("doi tra") ||
              st.includes("1-đổi-1") || st.includes("1-doi-1") || st.includes("đổi 1-1") || st.includes("doi 1-1") ||
-             st.includes("hoàn tiền") || st.includes("hoan tien") ||
+             ((st.includes("hoàn tiền") || st.includes("hoan tien")) && !isPre) ||
              st.includes("đã bảo hành") || st.includes("đang bảo hành") ||
-             st.includes("warranty") || st.includes("exchange") || st.includes("refund") || st.includes("complain") ||
+             st.includes("warranty") || st.includes("exchange") || ((st.includes("refund") || st.includes("cancelled")) && !isPre) || st.includes("complain") ||
              cred.includes("đổi trả") || cred.includes("doi tra") || cred.includes("tài khoản mới đổi trả") ||
              type.includes("warranty") || type.includes("exchange");
     }
@@ -38008,12 +38026,13 @@ function getProductSchemaReviews(p, idx) {
                   const pIdUp = String(p.productId || p.product_id || p.prodId || "").toUpperCase();
                   const pNameLow = String(p.productName || p.product_name || p.prodName || "").toLowerCase();
                   const vNameLow = String(p.variantName || p.variant || "").toLowerCase();
-                  const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cId.startsWith("NAP") || cId.startsWith("DEP") || cId.startsWith("ADM") || p.type === "WALLET_DEPOSIT";
+                  const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cId.startsWith("NAP") || cId.startsWith("DEP") || cId.startsWith("ADM") || p.type === "WALLET_DEPOSIT" || Boolean(cId.match(/^DH\d{10}$/));
                   if (isDeposit) return;
 
                   const isExplicitPreCode = cId.startsWith("PRE") || cId.startsWith("DH_PRE") || cId.startsWith("POD_");
                   const isExplicitPreText = pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước") || String(p.statusText || "").toLowerCase().includes("đặt trước") || String(p.note || "").toLowerCase().includes("đặt trước");
-                  const isRealPre = isExplicitPreCode || isExplicitPreText || (p.type === "PRE_ORDER" && !cId.match(/^DH\d+$/i));
+                  const isWaitOrPre = p.type === "PRE_ORDER" || p.status === "WAITING_CONFIRM" || p.status === "PROCESSING" || String(p.statusText || "").toLowerCase().includes("chờ xác nhận") || String(p.statusText || "").toLowerCase().includes("gom hàng");
+                  const isRealPre = isExplicitPreCode || isExplicitPreText || isWaitOrPre;
                   if (!isRealPre) return;
                   // Lọc bỏ ghi chú giả mạo tài khoản
                   let pAccs = [];
@@ -38073,12 +38092,13 @@ function getProductSchemaReviews(p, idx) {
               const pIdUp = String(o.productId || o.product_id || o.prodId || "").toUpperCase();
               const pNameLow = String(o.productName || o.product_name || o.prodName || "").toLowerCase();
               const vNameLow = String(o.variantName || o.variant || "").toLowerCase();
-              const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanCode.startsWith("NAP") || cleanCode.startsWith("DEP") || cleanCode.startsWith("ADM") || o.type === "WALLET_DEPOSIT";
+              const isDeposit = pIdUp === "WALLET_DEPOSIT" || pNameLow.includes("nạp tiền") || pNameLow.includes("nạp ví") || vNameLow.includes("nạp tiền") || vNameLow.includes("nap tiền") || cleanCode.startsWith("NAP") || cleanCode.startsWith("DEP") || cleanCode.startsWith("ADM") || o.type === "WALLET_DEPOSIT" || Boolean(cleanCode.match(/^DH\d{10}$/));
               if (isDeposit) return;
 
               const isExplicitPreCode = cleanCode.startsWith("PRE") || cleanCode.startsWith("DH_PRE") || cleanCode.startsWith("POD_");
               const isExplicitPreText = pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước") || String(o.statusText || "").toLowerCase().includes("đặt trước") || String(o.note || "").toLowerCase().includes("đặt trước") || String(o.typeText || "").toLowerCase().includes("đặt trước");
-              const isPre = isExplicitPreCode || isExplicitPreText || (o.type === "PRE_ORDER" && !cleanCode.match(/^DH\d+$/i));
+              const isWaitOrPre = o.type === "PRE_ORDER" || o.status === "WAITING_CONFIRM" || o.status === "PROCESSING" || String(o.statusText || "").toLowerCase().includes("chờ xác nhận") || String(o.statusText || "").toLowerCase().includes("gom hàng");
+              const isPre = isExplicitPreCode || isExplicitPreText || isWaitOrPre;
               if (!isPre) return;
 
               if (cleanCode) {
@@ -40931,14 +40951,26 @@ function executeAdminFulfillPreOrder() {
 
       const isWarrantyOrder = function(o) {
         if (!o) return false;
-        const oId = String(o.orderId || o.id || "").replace("#", "").trim();
+        const oId = String(o.orderId || o.id || o.orderCode || "").replace("#", "").trim();
         if (localStorage.getItem("mmo_warranty_rejected_" + oId) === "true" || o.warrantyStatus === "REJECTED") return false;
         if (localStorage.getItem("mmo_complaint_" + oId) === "true") return true;
-        if (o.hasComplaint || o.complaint || o.isWarranty || o.isExchanged || o.isRefunded) return true;
+
+        // TUYỆT ĐỐI KHÔNG ĐỂ ĐƠN ĐẶT TRƯỚC NHẢY SANG BẢO HÀNH & ĐỔI TRẢ
+        const pNameLow = String(o.productName || o.product_name || o.prodName || "").toLowerCase();
+        const vNameLow = String(o.variantName || o.variant || "").toLowerCase();
+        const isPre = o.type === "PRE_ORDER" || o.order_status === "PRE_ORDER" ||
+          oId.startsWith("PRE") || oId.startsWith("DH_PRE") || oId.startsWith("POD_") ||
+          pNameLow.includes("đặt trước") || vNameLow.includes("đặt trước") ||
+          (typeof isPreOrderCheck === "function" && isPreOrderCheck(o));
+        if (isPre && !o.hasComplaint && !o.complaint) {
+          return false;
+        }
+
+        if (o.hasComplaint || o.complaint || o.isWarranty || o.isExchanged || (o.isRefunded && !isPre)) return true;
         if (typeof isOrderWarrantyOrExchange === "function" && isOrderWarrantyOrExchange(o)) return true;
         const st = String(o.status || o.statusText || "").toLowerCase();
         const cred = String(o.credentials || o.accounts || "").toLowerCase();
-        return st.includes("khiếu nại") || st.includes("khieu nai") || st.includes("bảo hành") || st.includes("bao hanh") || st.includes("đổi trả") || st.includes("doi tra") || st.includes("hoàn tiền") || st.includes("hoan tien") || st.includes("1-đổi-1") || st.includes("đổi 1-1") || cred.includes("đổi trả");
+        return st.includes("khiếu nại") || st.includes("khieu nai") || st.includes("bảo hành") || st.includes("bao hanh") || st.includes("đổi trả") || st.includes("doi tra") || ((st.includes("hoàn tiền") || st.includes("hoan tien")) && !isPre) || st.includes("1-đổi-1") || st.includes("đổi 1-1") || cred.includes("đổi trả");
       };
 
       // Cập nhật huy hiệu số lượng
