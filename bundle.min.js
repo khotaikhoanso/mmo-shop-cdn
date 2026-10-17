@@ -35534,13 +35534,20 @@ function getProductSchemaReviews(p, idx) {
 
 
     // ==================== ALL PRODUCTS PAGE LOGIC ====================
-    allProdCurrentCat = "Tất cả";
-    let allProdCurrentSort = "featured";
-    let allProdCurrentPage = 1;
+    var allProdCurrentCat = "Tất cả";
+    var allProdCurrentSort = "featured";
+    var allProdViewMode = "grid";
+    var allProdCurrentPage = 1;
+
+    window.allProdCurrentCat = allProdCurrentCat;
+    window.allProdCurrentSort = allProdCurrentSort;
+    window.allProdViewMode = allProdViewMode;
+    window.allProdCurrentPage = allProdCurrentPage;
 
     function getAllProductsPageSize() {
       if (typeof window === "undefined") return 21;
-      if (typeof allProdViewMode !== "undefined" && allProdViewMode === "list") {
+      const curMode = (typeof allProdViewMode !== "undefined" ? allProdViewMode : (window.allProdViewMode || "grid"));
+      if (curMode === "list") {
         return 10;
       }
       const w = window.innerWidth;
@@ -35799,19 +35806,34 @@ function getProductSchemaReviews(p, idx) {
       const startIndex = (safePage - 1) * pageSize;
       const pageProds = list.slice(startIndex, startIndex + pageSize);
 
-      if (allProdViewMode === "list") {
+      const currentViewMode = (typeof allProdViewMode !== "undefined" ? allProdViewMode : (window.allProdViewMode || "grid"));
+      if (currentViewMode === "list") {
         container.className = "all-prods-list";
         container.style.display = "flex";
         container.style.flexDirection = "column";
         container.style.gap = "10px";
-        container.innerHTML = pageProds.map(function(p) { return renderSingleCardListMode(p); }).join("");
+        container.innerHTML = pageProds.map(function(p) {
+          try {
+            return (typeof renderSingleCardListMode === "function") ? renderSingleCardListMode(p) : renderSingleCard(p, false);
+          } catch(e) {
+            console.error("[AllProds] Error rendering list card:", e);
+            return "";
+          }
+        }).join("");
       } else {
         container.className = "all-prods-grid";
         container.style.display = "";
         container.style.flexDirection = "";
         container.style.gridTemplateColumns = "";
         container.style.gap = "";
-        container.innerHTML = pageProds.map(function(p) { return renderSingleCard(p, false); }).join("");
+        container.innerHTML = pageProds.map(function(p) {
+          try {
+            return (typeof renderSingleCard === "function") ? renderSingleCard(p, false) : "";
+          } catch(e) {
+            console.error("[AllProds] Error rendering grid card:", e);
+            return "";
+          }
+        }).join("");
       }
 
       if (typeof renderPaginationUI === "function") {
@@ -35819,6 +35841,20 @@ function getProductSchemaReviews(p, idx) {
       }
     }
     window.renderAllProductsPage = renderAllProductsPage;
+
+    if (typeof window !== "undefined" && !window.__allProdResizeAttached) {
+      window.__allProdResizeAttached = true;
+      var _allProdResizeTimer = null;
+      window.addEventListener("resize", function() {
+        clearTimeout(_allProdResizeTimer);
+        _allProdResizeTimer = setTimeout(function() {
+          var v = document.getElementById("viewAllProducts");
+          if (v && v.style.display !== "none" && typeof renderAllProductsPage === "function") {
+            renderAllProductsPage();
+          }
+        }, 200);
+      });
+    }
 
     // ==================== MOBILE NAVIGATION & DRAWER LOGIC ====================
     function toggleMobileDrawer(show) {
