@@ -35536,9 +35536,22 @@ function getProductSchemaReviews(p, idx) {
     // ==================== ALL PRODUCTS PAGE LOGIC ====================
     allProdCurrentCat = "Tất cả";
     let allProdCurrentSort = "featured";
-    let allProdViewMode = "grid";
     let allProdCurrentPage = 1;
-    const ALL_PROD_PAGE_SIZE = 100; // 7 cột x 3 hàng = 21 sản phẩm/trang
+
+    function getAllProductsPageSize() {
+      if (typeof window === "undefined") return 21;
+      if (typeof allProdViewMode !== "undefined" && allProdViewMode === "list") {
+        return 10;
+      }
+      const w = window.innerWidth;
+      if (w > 1380) return 21; // 7 cột x 3 hàng = 21 sản phẩm
+      if (w > 1100) return 15; // 5 cột x 3 hàng = 15 sản phẩm
+      if (w > 850) return 12;  // 4 cột x 3 hàng = 12 sản phẩm
+      if (w > 600) return 9;   // 3 cột x 3 hàng = 9 sản phẩm
+      return 6;                // 2 cột x 3 hàng = 6 sản phẩm
+    }
+    window.getAllProductsPageSize = getAllProductsPageSize;
+    const ALL_PROD_PAGE_SIZE = 21; // Chuẩn 3 hàng trên desktop (7 cột x 3 hàng)
 
     function setAllProdCategory(cat) {
       allProdCurrentCat = cat;
@@ -35648,8 +35661,8 @@ function getProductSchemaReviews(p, idx) {
     function changeAllProdPage(p) {
       allProdCurrentPage = p;
       renderAllProductsPage();
-      const el = document.getElementById("viewAllProducts");
-      if (el) el.scrollIntoView({ behavior: "smooth" });
+      const el = document.querySelector(".all-prod-top-bar") || document.getElementById("allProductsGrid") || document.getElementById("viewAllProducts");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     window.changeAllProdPage = changeAllProdPage;
 
@@ -35777,8 +35790,14 @@ function getProductSchemaReviews(p, idx) {
         return;
       }
 
-      // 4. HIỂN THỊ KHÔNG GIỚI HẠN 100% TẤT CẢ SẢN PHẨM (KHÔNG CẮT TRANG)
-      const pageProds = list;
+      // 4. PHÂN TRANG CHUẨN 3 HÀNG (7 CỘT X 3 HÀNG = 21 SẢN PHẨM/TRANG TRÊN DESKTOP)
+      const pageSize = typeof getAllProductsPageSize === "function" ? getAllProductsPageSize() : 21;
+      const totalPages = Math.ceil(list.length / pageSize) || 1;
+      const safePage = Math.max(1, Math.min(allProdCurrentPage || 1, totalPages));
+      allProdCurrentPage = safePage;
+
+      const startIndex = (safePage - 1) * pageSize;
+      const pageProds = list.slice(startIndex, startIndex + pageSize);
 
       if (allProdViewMode === "list") {
         container.className = "all-prods-list";
@@ -35795,8 +35814,9 @@ function getProductSchemaReviews(p, idx) {
         container.innerHTML = pageProds.map(function(p) { return renderSingleCard(p, false); }).join("");
       }
 
-      const allPagEl = document.getElementById("allProductsPagination");
-      if (allPagEl) allPagEl.innerHTML = "";
+      if (typeof renderPaginationUI === "function") {
+        renderPaginationUI("allProductsPagination", safePage, list.length, "changeAllProdPage", pageSize);
+      }
     }
     window.renderAllProductsPage = renderAllProductsPage;
 
