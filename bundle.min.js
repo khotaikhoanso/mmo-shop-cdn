@@ -38291,6 +38291,12 @@ function getProductSchemaReviews(p, idx) {
           }
         });
 
+        orders.sort(function(a, b) {
+          const tsA = (typeof getOrderTimestamp === "function") ? getOrderTimestamp(a) : (a.createdTimestamp || 0);
+          const tsB = (typeof getOrderTimestamp === "function") ? getOrderTimestamp(b) : (b.createdTimestamp || 0);
+          return tsB - tsA;
+        });
+
         _cachedPreOrdersList = orders;
         _lastPreOrdersFetchTime = Date.now();
         localStorage.setItem("mmo_pre_orders", JSON.stringify(orders));
@@ -39444,6 +39450,13 @@ function getProductSchemaReviews(p, idx) {
           if (!matchCode && !matchBuyer && !matchProd) return false;
         }
         return true;
+      });
+
+      // Luôn sắp xếp đơn hàng mới nhất lên đầu bảng
+      filtered.sort(function(a, b) {
+        const tA = typeof getOrderTimestamp === "function" ? getOrderTimestamp(a) : 0;
+        const tB = typeof getOrderTimestamp === "function" ? getOrderTimestamp(b) : 0;
+        return tB - tA;
       });
 
       // Tự động đảm bảo cột Checkbox ở thead
