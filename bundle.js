@@ -31280,8 +31280,8 @@ function syncAllOpenViewsStock(changedProdId) {
         if (chkRes && (chkRes.is_paid || chkRes.payment_status === "PAID" || chkRes.order_status === "COMPLETED")) {
           paymentDetected = true;
           detectedAmount = Number(chkRes.amount) || detectedAmount;
-          if (chkRes.balance !== undefined && !isNaN(Number(chkRes.balance)) && currentUser) {
-            currentUser.balance = Number(chkRes.balance);
+          if (chkRes.balance !== undefined && !isNaN(Number(chkRes.balance)) && Number(chkRes.balance) > 0 && currentUser) {
+            currentUser.balance = Math.max(Number(currentUser.balance) || 0, Number(chkRes.balance));
           }
         }
       } catch(e) {}
@@ -31322,20 +31322,51 @@ function syncAllOpenViewsStock(changedProdId) {
             creditedTxs = JSON.parse(localStorage.getItem("mmo_credited_txs_" + cleanEmail) || "{}");
           } catch(e) {}
 
+          let isNewlyCredited = false;
+          const currentBal = Number(currentUser.balance) || 0;
           if (!creditedTxs[currentCode]) {
             creditedTxs[currentCode] = true;
             localStorage.setItem("mmo_credited_txs_" + cleanEmail, JSON.stringify(creditedTxs));
-            currentUser.balance = (Number(currentUser.balance) || 0) + detectedAmount;
-            localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+            currentUser.balance = currentBal + detectedAmount;
+            isNewlyCredited = true;
+          } else if (currentBal === 0 && detectedAmount > 0) {
+            // Tự động khôi phục số dư nếu đơn đã từng nhận diện nhưng số dư bị xóa nhầm về 0
+            currentUser.balance = detectedAmount;
+            isNewlyCredited = true;
+          }
 
-            let allUsers = getRegisteredUsers();
-            const uIdx = allUsers.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
-            if (uIdx !== -1) {
-              allUsers[uIdx].balance = currentUser.balance;
-              saveRegisteredUsers(allUsers);
+          const finalBal = Number(currentUser.balance) || 0;
+          localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+          localStorage.setItem("mmo_last_balance_change_time", String(Date.now()));
+          localStorage.setItem("mmo_expected_balance_" + cleanEmail, String(finalBal));
+
+          let allUsers = getRegisteredUsers();
+          const uIdx = allUsers.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
+          if (uIdx !== -1) {
+            allUsers[uIdx].balance = finalBal;
+            saveRegisteredUsers(allUsers);
+          }
+
+          // Cập nhật ngay tất cả thẻ số dư hiển thị trên giao diện
+          const balEls = [
+            document.getElementById("userBalanceBadge"),
+            document.getElementById("profDisplayBalance"),
+            document.getElementById("profBalanceDisplay"),
+            document.getElementById("headerWalletBalance"),
+            document.getElementById("headerUserBalance"),
+            document.getElementById("navUserBalance"),
+            document.getElementById("withdrawModalCurrentBal")
+          ];
+          const fmtStr = (typeof formatVND === "function") ? formatVND(finalBal) : finalBal.toLocaleString("vi-VN") + " đ";
+          balEls.forEach(el => {
+            if (el) {
+              el.innerText = fmtStr;
+              if (el.id === "userBalanceBadge") el.style.display = "inline-flex";
             }
-            updateUserUI();
+          });
+          if (typeof updateUserUI === "function") updateUserUI();
 
+          if (isNewlyCredited) {
             showToast("🎉 Nạp tiền tự động thành công! Đã cộng +" + formatVND(detectedAmount) + " vào ví.", "success");
             if (typeof addUserNotification === "function") {
               addUserNotification({
@@ -31350,6 +31381,11 @@ function syncAllOpenViewsStock(changedProdId) {
             }
           }
 
+          // Đồng bộ số dư mới lên Cloudflare Worker & Turso SSOT
+          if (typeof syncUserBalanceToCloud === "function") {
+            syncUserBalanceToCloud(cleanEmail, detectedAmount, "add", "Nạp tiền ví #" + currentCode, currentCode, finalBal);
+          }
+
           // Ghi ngay vào lịch sử nạp tiền và biến động số dư cục bộ
           const depRecord = {
             id: currentCode,
@@ -31360,7 +31396,7 @@ function syncAllOpenViewsStock(changedProdId) {
             email: cleanEmail,
             type: "Nạp tiền VietQR / SePay",
             amount: detectedAmount,
-            balanceAfter: currentUser.balance,
+            balanceAfter: finalBal,
             time: new Date().toISOString(),
             date: new Date().toISOString(),
             note: "Nạp tiền ví #" + currentCode,
@@ -31424,8 +31460,8 @@ function syncAllOpenViewsStock(changedProdId) {
         if (chkRes && (chkRes.is_paid || chkRes.payment_status === "PAID" || chkRes.order_status === "COMPLETED")) {
           paymentDetected = true;
           detectedAmount = Number(chkRes.amount) || detectedAmount;
-          if (chkRes.balance !== undefined && !isNaN(Number(chkRes.balance)) && currentUser) {
-            currentUser.balance = Number(chkRes.balance);
+          if (chkRes.balance !== undefined && !isNaN(Number(chkRes.balance)) && Number(chkRes.balance) > 0 && currentUser) {
+            currentUser.balance = Math.max(Number(currentUser.balance) || 0, Number(chkRes.balance));
           }
         }
       } catch(e) {}
@@ -31481,20 +31517,51 @@ function syncAllOpenViewsStock(changedProdId) {
             creditedTxs = JSON.parse(localStorage.getItem("mmo_credited_txs_" + cleanEmail) || "{}");
           } catch(e) {}
 
+          let isNewlyCredited = false;
+          const currentBal = Number(currentUser.balance) || 0;
           if (!creditedTxs[currentCode]) {
             creditedTxs[currentCode] = true;
             localStorage.setItem("mmo_credited_txs_" + cleanEmail, JSON.stringify(creditedTxs));
-            currentUser.balance = (Number(currentUser.balance) || 0) + detectedAmount;
-            localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+            currentUser.balance = currentBal + detectedAmount;
+            isNewlyCredited = true;
+          } else if (currentBal === 0 && detectedAmount > 0) {
+            // Tự động khôi phục số dư nếu đơn đã từng nhận diện nhưng số dư bị xóa nhầm về 0
+            currentUser.balance = detectedAmount;
+            isNewlyCredited = true;
+          }
 
-            let allUsers = getRegisteredUsers();
-            const uIdx = allUsers.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
-            if (uIdx !== -1) {
-              allUsers[uIdx].balance = currentUser.balance;
-              saveRegisteredUsers(allUsers);
+          const finalBal = Number(currentUser.balance) || 0;
+          localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+          localStorage.setItem("mmo_last_balance_change_time", String(Date.now()));
+          localStorage.setItem("mmo_expected_balance_" + cleanEmail, String(finalBal));
+
+          let allUsers = getRegisteredUsers();
+          const uIdx = allUsers.findIndex(u => (u.email || "").toLowerCase().trim() === cleanEmail);
+          if (uIdx !== -1) {
+            allUsers[uIdx].balance = finalBal;
+            saveRegisteredUsers(allUsers);
+          }
+
+          // Cập nhật ngay tất cả thẻ số dư hiển thị trên giao diện
+          const balEls = [
+            document.getElementById("userBalanceBadge"),
+            document.getElementById("profDisplayBalance"),
+            document.getElementById("profBalanceDisplay"),
+            document.getElementById("headerWalletBalance"),
+            document.getElementById("headerUserBalance"),
+            document.getElementById("navUserBalance"),
+            document.getElementById("withdrawModalCurrentBal")
+          ];
+          const fmtStr = (typeof formatVND === "function") ? formatVND(finalBal) : finalBal.toLocaleString("vi-VN") + " đ";
+          balEls.forEach(el => {
+            if (el) {
+              el.innerText = fmtStr;
+              if (el.id === "userBalanceBadge") el.style.display = "inline-flex";
             }
-            updateUserUI();
+          });
+          if (typeof updateUserUI === "function") updateUserUI();
 
+          if (isNewlyCredited) {
             showToast("🎉 Nạp tiền tự động thành công! Đã cộng +" + formatVND(detectedAmount) + " vào ví.", "success");
             if (typeof addUserNotification === "function") {
               addUserNotification({
@@ -31509,6 +31576,11 @@ function syncAllOpenViewsStock(changedProdId) {
             }
           }
 
+          // Đồng bộ số dư mới lên Cloudflare Worker & Turso SSOT
+          if (typeof syncUserBalanceToCloud === "function") {
+            syncUserBalanceToCloud(cleanEmail, detectedAmount, "add", "Nạp tiền ví #" + currentCode, currentCode, finalBal);
+          }
+
           // Ghi ngay vào lịch sử nạp tiền và biến động số dư cục bộ
           const depRecord = {
             id: currentCode,
@@ -31519,7 +31591,7 @@ function syncAllOpenViewsStock(changedProdId) {
             email: cleanEmail,
             type: "Nạp tiền VietQR / SePay",
             amount: detectedAmount,
-            balanceAfter: currentUser.balance,
+            balanceAfter: finalBal,
             time: new Date().toISOString(),
             date: new Date().toISOString(),
             note: "Nạp tiền ví #" + currentCode,
@@ -31594,15 +31666,26 @@ function syncAllOpenViewsStock(changedProdId) {
         if (authoritativeBal !== null && !isNaN(authoritativeBal)) {
           const curLocalBal = Number(currentUser.balance) || 0;
           const lastChangeTime = Number(localStorage.getItem("mmo_last_balance_change_time") || 0);
-          const isRecentChange = (Date.now() - lastChangeTime) < 30000;
+          const isRecentChange = (Date.now() - lastChangeTime) < 60000;
+          const expBalStr = localStorage.getItem("mmo_expected_balance_" + cleanEmail);
+          const expectedBal = (expBalStr !== null && !isNaN(Number(expBalStr))) ? Number(expBalStr) : null;
 
           let targetBal = authoritativeBal;
-          if (isRecentChange && authoritativeBal > curLocalBal) {
-            // Đám mây chưa kịp ghi nhận trừ tiền mua hàng, ưu tiên giữ số dư cục bộ đã trừ và đồng bộ lại lên Cloud
-            console.log("[WalletSync] Bảo vệ số dư vừa trừ:", curLocalBal, "Bỏ qua số dư cũ đám mây:", authoritativeBal);
+          if (isRecentChange) {
+            // Vừa có giao dịch biến động số dư trong 60s (nạp tiền hoặc mua hàng), ưu tiên bảo vệ số dư cục bộ
+            console.log("[WalletSync] Bảo vệ số dư vừa thay đổi gần đây:", curLocalBal, "Bỏ qua số dư chưa đồng bộ từ đám mây:", authoritativeBal);
+            targetBal = expectedBal !== null ? Math.max(curLocalBal, expectedBal) : curLocalBal;
+            if (typeof syncUserBalanceToCloud === "function" && Math.abs(targetBal - authoritativeBal) > 0) {
+              const diff = Math.abs(targetBal - authoritativeBal);
+              const act = targetBal > authoritativeBal ? "add" : "sub";
+              syncUserBalanceToCloud(cleanEmail, diff, act, act === "add" ? "Đồng bộ nạp tiền ví" : "Đồng bộ số dư sau mua hàng", "SYNC_" + Date.now(), targetBal);
+            }
+          } else if (curLocalBal > authoritativeBal && (authoritativeBal === 0 || curLocalBal > 0)) {
+            // Local có số dư lớn hơn đám mây (ví dụ nạp tiền trước đó chưa kịp đẩy lên Turso) -> Giữ local và đẩy lên Cloud
+            console.log("[WalletSync] Giữ số dư local lớn hơn đám mây:", curLocalBal, "Cloud:", authoritativeBal);
             targetBal = curLocalBal;
             if (typeof syncUserBalanceToCloud === "function") {
-              syncUserBalanceToCloud(cleanEmail, authoritativeBal - curLocalBal, "sub", "Đồng bộ số dư sau mua hàng", "SYNC_" + Date.now(), curLocalBal);
+              syncUserBalanceToCloud(cleanEmail, curLocalBal - authoritativeBal, "add", "Tự động đồng bộ số dư lên đám mây", "SYNC_" + Date.now(), curLocalBal);
             }
           }
 
