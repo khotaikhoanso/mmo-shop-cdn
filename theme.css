@@ -28,6 +28,32 @@
       --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+/* TRIỆT TIÊU 100% THANH COOKIE GOOGLE/BLOGGER (COOKIE CONSENT BANNER) */
+#cookieChoiceInfo,
+.cookie-choices-info,
+.cookie-choices-inner,
+.cookie-choices-text,
+.cookie-choices-buttons,
+div[aria-label*="cookie" i],
+div[id*="cookieChoice" i],
+div[class*="cookieChoice" i],
+div[class*="cookie-choice" i],
+a[href*="blogspot-cookies"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  z-index: -9999 !important;
+}
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -73,9 +99,9 @@
 
     /* Header */
     .header {
-      background: rgba(10, 15, 26, 0.97) !important;
-      backdrop-filter: blur(16px) !important;
-      -webkit-backdrop-filter: blur(16px) !important;
+      background: #0a0f1a !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
       border-bottom: 1px solid var(--border-color) !important;
       position: fixed !important;
       top: 0 !important;
@@ -1477,34 +1503,66 @@
     /* Specs 2x2 Table */
     .detail-specs-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
       background: #090e17;
       border: 1px solid var(--border-color);
       border-radius: var(--radius-md);
       padding: 10px 14px;
       margin-bottom: 12px;
+      box-sizing: border-box;
+      width: 100%;
     }
     .spec-item {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      font-size: 0.78rem;
+      gap: 6px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      min-width: 0;
+      overflow: hidden;
     }
-    .spec-label { color: #64748b; }
-    .spec-val { color: #e2e8f0; font-weight: 600; }
+    .spec-label {
+      color: #64748b;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .spec-val {
+      color: #e2e8f0;
+      font-weight: 600;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 0;
+      flex-shrink: 0;
+    }
     .spec-val.green { color: var(--accent-light); font-weight: 700; }
 
     .detail-warranty-alert {
       background: rgba(245, 158, 11, 0.08);
       border: 1px solid rgba(245, 158, 11, 0.25);
       border-radius: var(--radius-md);
-      padding: 10px 14px;
-      font-size: 0.76rem;
+      padding: 8px 12px;
+      font-size: 0.78rem;
       color: #fbbf24;
       margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .detail-warranty-alert span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     /* Variants Selector */
@@ -2197,10 +2255,51 @@
       max-width: 680px;
       margin: 0 auto;
     }
+    .blog-page-container {
+      max-width: 1540px;
+      width: 96%;
+      margin: 24px auto 60px;
+    }
     .blog-grid-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 24px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+    }
+    #blogMainGrid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #blogMainGrid .blog-card-img {
+      height: 155px;
+    }
+    #blogMainGrid .blog-card-body {
+      padding: 14px 12px;
+    }
+    #blogMainGrid .blog-card-heading {
+      font-size: 0.92rem;
+    }
+    #blogMainGrid .blog-card-snippet {
+      font-size: 0.78rem;
+    }
+    @media (max-width: 1080px) {
+      .blog-grid-cards, #blogMainGrid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+    }
+    @media (max-width: 768px) {
+      .blog-grid-cards, #blogMainGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+    }
+    @media (max-width: 480px) {
+      .blog-grid-cards, #blogMainGrid {
+        grid-template-columns: 1fr;
+      }
     }
     .blog-card-full {
       background: var(--bg-card);
@@ -2741,12 +2840,13 @@
       margin-bottom: 20px;
     }
     .deposit-qr-img {
-      max-width: 170px !important;
-      max-height: 170px !important;
-      width: 170px;
+      max-width: 220px !important;
+      max-height: none !important;
+      width: 100%;
       height: auto;
       object-fit: contain;
-      border-radius: 4px;
+      border-radius: 6px;
+      background: #ffffff;
     }
     .qr-bank-sub {
       color: #0f172a;
@@ -3158,13 +3258,22 @@
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 1000;
+      background: rgba(6, 10, 18, 0.94) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      z-index: 999999 !important;
       display: none;
       align-items: center;
       justify-content: center;
       padding: 16px;
+    }
+    body.modal-open .marquee-track,
+    body.modal-open .chat-widget-btn,
+    body.modal-open .pulse-dot,
+    body.modal-open [class*="pulse"],
+    body.modal-open #admApiNavBadge {
+      animation: none !important;
+      animation-play-state: paused !important;
     }
     .modal-card {
       background: var(--bg-card);
@@ -5273,9 +5382,9 @@ header.header {
   align-items: center !important;
   justify-content: center !important;
   z-index: 99999 !important;
-  background: rgba(10, 15, 26, 0.98) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
+  background: #0a0f1a !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border-bottom: 1px solid var(--border-color) !important;
   box-sizing: border-box !important;
   padding: 0 !important;
