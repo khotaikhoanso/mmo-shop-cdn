@@ -11882,13 +11882,15 @@ if (typeof productOrId === "object") {
     }
     window.markAllAdminNotificationsAsRead = markAllAdminNotificationsAsRead;
 
-    // Cập nhật toàn bộ huy hiệu số lượng trên thanh Menu Quản Trị (Hình 2)
+    // Cập nhật toàn bộ huy hiệu số lượng trên thanh Menu Quản Trị
     function updateAdminSidebarBadges() {
       try {
         // 1. Badge Lịch Sử Đơn Hàng & Đổi Trả (tabBtnAdmOrders)
         const badgeOrders = document.getElementById("admOrdersNavBadge");
         if (badgeOrders) {
           const actionOrderIds = new Set();
+          let waitingPreCount = 0;
+          let waitingWarrantyCount = 0;
 
           // 1.1 Đơn đặt trước đang chờ Admin duyệt/chuẩn bị (WAITING_CONFIRM hoặc PROCESSING)
           let preOrders = [];
@@ -11907,8 +11909,13 @@ if (typeof productOrId === "object") {
             const isCancel = st === "CANCELLED" || st === "REFUNDED" || Boolean(o.isCancelled) || Boolean(o.isRefunded) || stTxt.includes("hủy") || stTxt.includes("hoàn tiền");
             const isDone = st === "COMPLETED" || st === "DELIVERED" || stTxt.includes("đã giao") || stTxt.includes("hoàn thành");
 
-            if (!isCancel && !isDone && (st === "WAITING_CONFIRM" || st === "PROCESSING" || st === "PENDING" || stTxt.includes("chờ") || stTxt.includes("gom"))) {
+            // Chỉ tính đơn đặt trước thực tế đã thanh toán hoặc đang chờ xử lý (bỏ qua đơn bỏ dở WAITING_PAYMENT)
+            const paySt = String(o.paymentStatus || o.payment_status || "").toUpperCase();
+            const isUnpaid = paySt === "PENDING" && (st === "WAITING_PAYMENT" || stTxt.includes("chờ thanh toán"));
+
+            if (!isCancel && !isDone && !isUnpaid && (st === "WAITING_CONFIRM" || st === "PROCESSING" || stTxt.includes("chờ shop") || stTxt.includes("gom hàng") || stTxt.includes("chờ xác nhận"))) {
               actionOrderIds.add(oId.toLowerCase());
+              waitingPreCount++;
             }
           });
 
@@ -11948,10 +11955,12 @@ if (typeof productOrId === "object") {
 
             if (hasActiveComplaint) {
               actionOrderIds.add(oId.toLowerCase());
+              waitingWarrantyCount++;
             } else if (isPaid && (st === "WAITING_CONFIRM" || st === "PROCESSING")) {
               const isPre = typeof isPreOrderCheck === "function" ? isPreOrderCheck(o) : (o.type === "PRE_ORDER" || oId.startsWith("PRE") || oId.startsWith("DH_PRE"));
               if (!isPre && !stTxt.includes("hoàn thành") && !stTxt.includes("đã giao")) {
                 actionOrderIds.add(oId.toLowerCase());
+                waitingPreCount++;
               }
             }
           });
@@ -11962,6 +11971,35 @@ if (typeof productOrId === "object") {
             badgeOrders.innerText = totalPending > 99 ? "99+" : totalPending;
           } else {
             badgeOrders.style.display = "none";
+          }
+
+          // Cập nhật Banner cảnh báo & hướng dẫn trực quan ngay trong tab Đơn Hàng
+          const alertBanner = document.getElementById("admOrdersActionAlertBanner");
+          if (alertBanner) {
+            if (totalPending > 0) {
+              alertBanner.style.display = "flex";
+              let desc = "<span style='font-weight:700; color:#cbd5e1;'>Đang có <b style='color:#f59e0b; font-size:1.05rem;'>" + totalPending + "</b> đơn cần xử lý:</span>";
+              if (waitingPreCount > 0) desc += " <span style='background:#f59e0b; color:#0b111e; font-size:0.75rem; font-weight:800; padding:2px 7px; border-radius:6px; margin:0 4px;'><i class='fa-solid fa-calendar-check'></i> " + waitingPreCount + " Đặt trước</span>";
+              if (waitingWarrantyCount > 0) desc += " <span style='background:#ef4444; color:#fff; font-size:0.75rem; font-weight:800; padding:2px 7px; border-radius:6px; margin:0 4px;'><i class='fa-solid fa-shield-halved'></i> " + waitingWarrantyCount + " Khiếu nại/Đổi trả</span>";
+              
+              const txtEl = document.getElementById("admOrdersActionAlertText");
+              if (txtEl) txtEl.innerHTML = desc;
+
+              const btnsEl = document.getElementById("admOrdersActionAlertBtns");
+              if (btnsEl) {
+                let htmlBtns = "";
+                if (waitingPreCount > 0) {
+                  htmlBtns += "<button type='button' onclick='switchAdmTxSubTab(\"preOrders\")' style='background:#f59e0b; color:#0b111e; font-weight:700; border:none; border-radius:6px; padding:6px 13px; font-size:0.78rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;'><i class=\"fa-solid fa-arrow-right\"></i> Xem " + waitingPreCount + " Đơn Đặt Trước</button>";
+                }
+                if (waitingWarrantyCount > 0) {
+                  htmlBtns += "<button type='button' onclick='switchAdmTxSubTab(\"warranty\")' style='background:#38bdf8; color:#0b111e; font-weight:700; border:none; border-radius:6px; padding:6px 13px; font-size:0.78rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;'><i class=\"fa-solid fa-arrow-right\"></i> Xem " + waitingWarrantyCount + " Đơn Bảo Hành</button>";
+                }
+                htmlBtns += "<button type='button' onclick='dismissAllActionOrderBadges()' style='background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.25); border-radius:6px; padding:6px 10px; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px;' title='Đánh dấu tất cả là đã xử lý / bỏ qua thông báo cũ'><i class=\"fa-solid fa-check-double\"></i> Xóa báo đỏ (" + totalPending + ")</button>";
+                btnsEl.innerHTML = htmlBtns;
+              }
+            } else {
+              alertBanner.style.display = "none";
+            }
           }
         }
 
@@ -12020,6 +12058,49 @@ if (typeof productOrId === "object") {
       }
     }
     window.updateAdminSidebarBadges = updateAdminSidebarBadges;
+
+    // Hàm tiện ích: Làm sạch / Xóa toàn bộ huy hiệu báo đỏ đơn hàng khi Admin muốn bỏ qua đơn cũ
+    function dismissAllActionOrderBadges() {
+      if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ huy hiệu thông báo đơn cần xử lý này không?\n\nToàn bộ các đơn khiếu nại bảo hành cũ sẽ được đánh dấu là 'Đã xử lý' và huy hiệu số lượng sẽ biến mất ngay lập tức.")) return;
+      try {
+        let allOrders = (typeof getAllOrders === "function") ? getAllOrders() : [];
+        allOrders.forEach(function(o) {
+          if (!o) return;
+          const oId = String(o.id || o.orderId || o.orderCode || "").replace(/^#/, "").trim();
+          if (!oId) return;
+          localStorage.setItem("mmo_warranty_resolved_" + oId, "true");
+          localStorage.removeItem("mmo_complaint_" + oId);
+          o.hasComplaint = false;
+          o.complaint = null;
+        });
+
+        // Đánh dấu các đơn đặt trước nháp hoặc cũ
+        let preOrders = (typeof getPreOrders === "function") ? getPreOrders(true) : [];
+        preOrders.forEach(function(p) {
+          if (!p) return;
+          const pId = String(p.id || p.orderId || p.orderCode || "").replace(/^#/, "").trim();
+          if (!pId) return;
+          localStorage.setItem("mmo_warranty_resolved_" + pId, "true");
+        });
+
+        updateAdminSidebarBadges();
+        const warrantyBadge = document.getElementById("admWarrantyCountBadge");
+        if (warrantyBadge) {
+          warrantyBadge.innerText = "0";
+          warrantyBadge.style.background = "#1e293b";
+          warrantyBadge.style.color = "#94a3b8";
+        }
+        const alertBanner = document.getElementById("admOrdersActionAlertBanner");
+        if (alertBanner) alertBanner.style.display = "none";
+
+        if (typeof showToast === "function") {
+          showToast("Đã dọn sạch thông báo và xóa huy hiệu báo đỏ thành công!", "success");
+        }
+      } catch(e) {
+        console.error("[DISMISS BADGES ERROR]", e);
+      }
+    }
+    window.dismissAllActionOrderBadges = dismissAllActionOrderBadges;
 
     // [AUTO-HEAL] Tự động đồng bộ chuẩn xác đơn đã hủy sang CANCELLED và dọn sạch thông báo ảo
     (function autoCleanseCancelledOrdersOnBoot() {
@@ -13455,9 +13536,21 @@ if (typeof productOrId === "object") {
           const hasWaitingPre = preOrders.some(p => p && (p.status === "WAITING_CONFIRM" || p.status === "PROCESSING") && !p.isCancelled && !p.isRefunded);
           if (hasWaitingPre) {
             targetSubTab = "preOrders";
+          } else {
+            const allOrders = (typeof getAllOrders === "function") ? getAllOrders() : [];
+            const hasWarranty = allOrders.some(function(o) {
+              if (!o) return false;
+              const oId = String(o.orderId || o.id || o.orderCode || "").replace("#", "").trim();
+              const isResolved = localStorage.getItem("mmo_warranty_resolved_" + oId) === "true" || o.warrantyStatus === "RESOLVED";
+              return !isResolved && (Boolean(o.hasComplaint) || localStorage.getItem("mmo_complaint_" + oId) === "true");
+            });
+            if (hasWarranty) {
+              targetSubTab = "warranty";
+            }
           }
         } catch(e) {}
         if (typeof switchAdmTxSubTab === "function") switchAdmTxSubTab(targetSubTab);
+        if (typeof updateAdminSidebarBadges === "function") updateAdminSidebarBadges();
       } else if (tabId === "tabAdmTxLogs") {
         if (typeof switchAdmTxSubTab === "function") switchAdmTxSubTab("walletTx");
         if (typeof syncAllDepositsFromCloud === "function") syncAllDepositsFromCloud();
