@@ -9188,13 +9188,14 @@ if (typeof productOrId === "object") {
       var _isPollingCloudTimestamp = false;
 
       async function checkCloudProductsTimestamp() {
+        if (typeof document !== "undefined" && document.hidden) return;
         if (_isPollingCloudTimestamp) return;
         _isPollingCloudTimestamp = true;
         try {
           var workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
             ? MMO_WORKER_API.getApiUrl()
             : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
-          var res = await fetch(workerUrl + "/api/products/timestamp?_t=" + Date.now(), {
+          var res = await fetch(workerUrl + "/api/products/timestamp", {
             cache: "no-store",
             headers: { "Cache-Control": "no-cache" }
           });
@@ -9218,7 +9219,7 @@ if (typeof productOrId === "object") {
       function startRealtimeCloudWatcher() {
         if (window._hasStartedRealtimeCloudWatcher) return;
         window._hasStartedRealtimeCloudWatcher = true;
-        setInterval(checkCloudProductsTimestamp, 60000);
+        setInterval(checkCloudProductsTimestamp, 180000);
         window.addEventListener("focus", function() { checkCloudProductsTimestamp(); });
         document.addEventListener("visibilitychange", function() {
           if (document.visibilityState === "visible") checkCloudProductsTimestamp();
@@ -15037,7 +15038,7 @@ if (typeof productOrId === "object") {
       }
       if (!res || !Array.isArray(res.products)) {
         try {
-          const directFetch = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products?_t=" + Date.now(), {
+          const directFetch = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products", {
             cache: "no-store",
             headers: { "Cache-Control": "no-cache" }
           });
@@ -16201,7 +16202,7 @@ function syncAllOpenViewsStock(changedProdId) {
         } else if (typeof syncProductsFromBackend === "function") {
           syncProductsFromBackend();
         }
-      }, 60000);
+      }, 300000);
     }
 
     // Tự động kiểm tra và đồng bộ tồn kho khi chuyển tab/cửa sổ (debounce 30 giây chống nghẽn mạng khi xem 2 cửa sổ song song)
@@ -21825,19 +21826,21 @@ function syncAllOpenViewsStock(changedProdId) {
 
     // Giám sát định kỳ tự động bảo vệ chống bán lỗ 24/7
     if (typeof window !== "undefined") {
-      // 1. Quét chống bán lỗ tức thì mỗi 15 giây
+      // 1. Quét chống bán lỗ mỗi 120 giây (chỉ chạy cho Admin khi đang xem tab)
       setInterval(function() {
-        if (typeof scanAndAutoAdjustLossProducts === "function") {
-          scanAndAutoAdjustLossProducts("Định Kỳ 15s");
+        if (typeof document !== "undefined" && document.hidden) return;
+        if (typeof isAdminUser === "function" && isAdminUser() && typeof scanAndAutoAdjustLossProducts === "function") {
+          scanAndAutoAdjustLossProducts("Định Kỳ 120s");
         }
-      }, 15000);
+      }, 120000);
 
-      // 2. Tự động kéo giá mới từ các web nguồn API ngầm mỗi 60 giây
+      // 2. Tự động kéo giá mới từ các web nguồn API ngầm mỗi 300 giây (5 phút, chỉ chạy cho Admin)
       setInterval(function() {
-        if (typeof fetchApiSourceProducts === "function") {
+        if (typeof document !== "undefined" && document.hidden) return;
+        if (typeof isAdminUser === "function" && isAdminUser() && typeof fetchApiSourceProducts === "function") {
           fetchApiSourceProducts(false).catch(function() {});
         }
-      }, 60000);
+      }, 300000);
 
       // 3. Quét ngay khi người dùng quay lại tab trình duyệt
       window.addEventListener("focus", function() {
@@ -24685,6 +24688,7 @@ function syncAllOpenViewsStock(changedProdId) {
     function startProfileOrdersPoller() {
       if (_mmoProfilePollInterval) return;
       _mmoProfilePollInterval = setInterval(function() {
+        if (typeof document !== "undefined" && document.hidden) return;
         const profView = document.getElementById("viewProfile");
         if (profView && profView.offsetParent !== null) {
           if (typeof syncCloudOrdersToLocalUI === "function") {
@@ -24693,7 +24697,7 @@ function syncAllOpenViewsStock(changedProdId) {
             }).catch(function() {});
           }
         }
-      }, 5000);
+      }, 30000);
     }
     if (typeof window !== "undefined") {
       startProfileOrdersPoller();
@@ -25352,12 +25356,13 @@ function syncAllOpenViewsStock(changedProdId) {
     if (typeof window !== "undefined") {
       setInterval(function() {
         try {
+          if (typeof document !== "undefined" && document.hidden) return;
           const pView = document.getElementById("viewProfile");
           if (pView && (pView.classList.contains("active") || pView.style.display !== "none")) {
             if (typeof syncUserPreOrdersLiveStatus === "function") syncUserPreOrdersLiveStatus(false);
           }
         } catch(e) {}
-      }, 6000);
+      }, 30000);
     }
 
 
@@ -34301,7 +34306,8 @@ function syncAllOpenViewsStock(changedProdId) {
       // Quét tự động trạng thái khóa tài khoản người dùng mỗi 3 giây (cưỡng chế đăng xuất nếu Admin vừa khóa)
       if (!window._mmoLockedUserPollTimer) {
         window._mmoLockedUserPollTimer = setInterval(function() {
-          if (typeof currentUser !== "undefined" && currentUser && currentUser.email && !document.hidden) {
+          if (typeof document !== "undefined" && document.hidden) return;
+          if (typeof currentUser !== "undefined" && currentUser && currentUser.email) {
             const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
             if (currentUser.email.toLowerCase().trim() !== rootEmail) {
               if (typeof checkUserLockedFromCloud === "function") {
@@ -34313,7 +34319,7 @@ function syncAllOpenViewsStock(changedProdId) {
               }
             }
           }
-        }, 3000);
+        }, 180000);
       }
 
       const withdrawList = getWithdrawRequests();
@@ -36219,7 +36225,8 @@ function changeAdmUsersPage(p) {
       // Polling thời gian thực đơn hàng, đơn đặt trước & yêu cầu rút tiền cho Admin mỗi 45 giây (chỉ khi Admin đang ở màn hình Quản trị viewAdmin)
       if (!window._mmoAdminOrdersRealtimePollTimer) {
         window._mmoAdminOrdersRealtimePollTimer = setInterval(function() {
-          if (typeof isAdminUser === "function" && isAdminUser() && !document.hidden) {
+          if (typeof document !== "undefined" && document.hidden) return;
+          if (typeof isAdminUser === "function" && isAdminUser()) {
             const curV = (typeof currentView !== "undefined" && currentView) ? currentView : (localStorage.getItem("mmo_current_view") || "");
             const admEl = document.getElementById("viewAdmin");
             const isAdmVisible = admEl && admEl.style.display !== "none" && !admEl.classList.contains("hidden");
@@ -36232,7 +36239,7 @@ function changeAdmUsersPage(p) {
               }
             }
           }
-        }, 5000);
+        }, 45000);
       }
       if (typeof isAdminUser === "function" && isAdminUser()) {
         const curV = (typeof currentView !== "undefined" && currentView) ? currentView : (localStorage.getItem("mmo_current_view") || "");
@@ -42431,10 +42438,13 @@ function getProductSchemaReviews(p, idx) {
 
       // Chu kỳ polling siêu tốc 2.5s (2500ms) để Admin nhận đơn tức thì
       _adminPreOrdersPollingInterval = setInterval(function() {
-        if (!document.hidden) {
+        if (typeof document !== "undefined" && document.hidden) return;
+        const admEl = document.getElementById("viewAdmin");
+        const isAdmVisible = admEl && admEl.style.display !== "none" && !admEl.classList.contains("hidden");
+        if (isAdmVisible || (typeof currentView !== "undefined" && currentView === "viewAdmin")) {
           pollAdminPreOrdersNow();
         }
-      }, 2500);
+      }, 30000);
 
       // Kích hoạt ngay khi người dùng quay lại tab hoặc tab nhận focus
       if (typeof window !== "undefined") {
