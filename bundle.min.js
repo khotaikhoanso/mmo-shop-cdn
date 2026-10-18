@@ -11207,6 +11207,23 @@ if (typeof productOrId === "object") {
       if (tabId === "affiliate" || tabId === "tabAffiliate") tabId = "tabProfAffiliate";
       localStorage.setItem("mmo_profile_tab", tabId);
 
+      // Cập nhật URL thanh địa chỉ khi đổi tab tài khoản
+      try {
+        if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {
+          const profSlug = (tabId === "tabProfOrders" ? "orders" : (tabId === "tabProfInfo" ? "info" : (tabId === "tabProfBank" ? "bank" : (tabId === "tabProfAffiliate" ? "affiliate" : "wallet"))));
+          const curUrl = new URL(window.location.href);
+          curUrl.searchParams.delete("prod");
+          curUrl.searchParams.delete("product");
+          curUrl.searchParams.delete("post");
+          curUrl.searchParams.delete("blog");
+          curUrl.searchParams.delete("m");
+          curUrl.searchParams.set("view", "viewProfile");
+          curUrl.searchParams.set("tab", profSlug);
+          curUrl.hash = "";
+          window.history.replaceState({ view: "viewProfile", tab: profSlug }, "", curUrl.pathname + "?" + curUrl.searchParams.toString());
+        }
+      } catch(eHistProf) {}
+
       const sections = ["tabProfWallet", "tabProfOrders", "tabProfInfo", "tabProfBank", "tabProfAffiliate", "tabProfNotify", "tabProfWishlist", "tabProfApi"];
       sections.forEach(sId => {
         const el = document.getElementById(sId);
@@ -12225,17 +12242,36 @@ if (typeof productOrId === "object") {
 
       localStorage.setItem("mmo_current_view", viewId);
       try {
-        if (typeof window !== "undefined" && window.location && window.history) {
+        if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {
           const curUrl = new URL(window.location.href);
           if (viewId !== "viewProductDetail") {
             curUrl.searchParams.delete("prod");
             curUrl.searchParams.delete("product");
+            curUrl.searchParams.delete("post");
+            curUrl.searchParams.delete("blog");
+            curUrl.searchParams.delete("m");
+            curUrl.hash = "";
             if (viewId === "viewStore") {
               curUrl.searchParams.delete("view");
+              curUrl.searchParams.delete("tab");
+              curUrl.searchParams.delete("subtab");
+            } else if (viewId === "viewAdmin") {
+              curUrl.searchParams.set("view", "viewAdmin");
+              const curAdmTab = localStorage.getItem("mmo_admin_tab") || "tabAdmDashboard";
+              const tabSlug = (typeof getAdminTabSlug === "function") ? getAdminTabSlug(curAdmTab) : "dashboard";
+              curUrl.searchParams.set("tab", tabSlug);
+            } else if (viewId === "viewProfile") {
+              curUrl.searchParams.set("view", "viewProfile");
+              const curProfTab = localStorage.getItem("mmo_profile_tab") || "tabProfWallet";
+              const profSlug = (curProfTab === "tabProfOrders" ? "orders" : (curProfTab === "tabProfInfo" ? "info" : (curProfTab === "tabProfBank" ? "bank" : (curProfTab === "tabProfAffiliate" ? "affiliate" : "wallet"))));
+              curUrl.searchParams.set("tab", profSlug);
             } else {
               curUrl.searchParams.set("view", viewId);
+              curUrl.searchParams.delete("tab");
+              curUrl.searchParams.delete("subtab");
             }
-            window.history.replaceState({ view: viewId }, "", curUrl.pathname + (curUrl.searchParams.toString() ? '?' + curUrl.searchParams.toString() : '') + window.location.hash);
+            const cleanUrl = curUrl.pathname + (curUrl.searchParams.toString() ? '?' + curUrl.searchParams.toString() : '');
+            window.history.replaceState({ view: viewId }, "", cleanUrl);
           }
         }
       } catch(eHist) {}
@@ -12425,46 +12461,9 @@ if (typeof productOrId === "object") {
       // Cuộn lên đầu tức thì 0ms khi chuyển view
       try { window.scrollTo(0, 0); } catch(e) {}
 
-      // PERSIST VIEW ACROSS F5 & REFRESH & CLEAN URL PARAMETERS
+      // PERSIST VIEW ACROSS F5 & REFRESH
       try {
         localStorage.setItem("mmo_current_view", viewId);
-        if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {
-          if (viewId === "viewStore") {
-            // Khi về Trang Chủ: Giữ lại ?category= hoặc ?s= nếu người dùng đang lọc/tìm kiếm!
-            try { localStorage.removeItem("mmo_last_viewed_prod"); } catch(e) {}
-            const url = new URL(window.location.href);
-            url.searchParams.delete("prod");
-            url.searchParams.delete("product");
-            url.searchParams.delete("post");
-            url.searchParams.delete("blog");
-            url.searchParams.delete("view");
-            url.searchParams.delete("m");
-            url.hash = "";
-            if (url.searchParams.has("category") || url.searchParams.has("s")) {
-              const newUrl = window.location.origin + "/?" + url.searchParams.toString();
-              window.history.replaceState(null, "", newUrl);
-            } else {
-              window.history.replaceState(null, "", window.location.origin + "/");
-            }
-          } else if (viewId === "viewProductDetail") {
-            // Đang xem chi tiết sản phẩm: URL sẽ do openProductDetailById quản lý (?prod=...)
-          } else if (viewId === "viewBlogDetail") {
-            // Đang xem chi tiết bài blog: URL sẽ do openBlogDetail quản lý
-          } else {
-            // Các trang khác (viewAllProducts, viewBlog, viewTools, viewProfile, viewDeposit, viewAdmin):
-            // Luôn đặt URL chuẩn tại gốc trang chủ kèm hash tương ứng, xóa sạch pathname của bài viết nếu có
-            const url = new URL(window.location.href);
-            url.searchParams.delete("prod");
-            url.searchParams.delete("product");
-            url.searchParams.delete("post");
-            url.searchParams.delete("blog");
-            url.searchParams.delete("view");
-            url.searchParams.delete("m");
-            url.hash = "#" + viewId;
-            const newUrl = window.location.origin + "/" + (url.searchParams.toString() ? ("?" + url.searchParams.toString()) : "") + url.hash;
-            window.history.replaceState(null, "", newUrl);
-          }
-        }
       } catch(e) {}
 
       try { window.scrollTo(0, 0); } catch(e) {}
@@ -13221,24 +13220,130 @@ if (typeof productOrId === "object") {
     }
 
 
+    // [ADMIN ROUTING MAPPING HELPER]
+    function getAdminTabSlug(tabId) {
+      const map = {
+        tabAdmDashboard: "dashboard",
+        tabAdmProducts: "products",
+        tabAdmApiSources: "api_sources",
+        tabAdmStock: "stock",
+        tabAdmUsers: "users",
+        tabAdmWithdrawals: "withdrawals",
+        tabAdmOrders: "orders",
+        tabAdmTxLogs: "txlogs",
+        tabAdmAffiliate: "affiliate",
+        tabAdmPayment: "payment",
+        tabAdmChat: "chat",
+        tabAdmGeneral: "general",
+        tabAdmAdmins: "admins",
+        tabAdmBlog: "blog"
+      };
+      return map[tabId] || (typeof tabId === "string" ? tabId.replace(/^tabAdm/i, "").toLowerCase() : "dashboard");
+    }
+    window.getAdminTabSlug = getAdminTabSlug;
+
+    function getAdminTabIdFromSlug(slug) {
+      if (!slug) return "tabAdmDashboard";
+      const clean = String(slug).toLowerCase().trim().replace(/^tabadm/i, "");
+      const map = {
+        dashboard: "tabAdmDashboard",
+        tongquan: "tabAdmDashboard",
+        "tong-quan": "tabAdmDashboard",
+        products: "tabAdmProducts",
+        sanpham: "tabAdmProducts",
+        "san-pham": "tabAdmProducts",
+        apisources: "tabAdmApiSources",
+        api_sources: "tabAdmApiSources",
+        "api-sources": "tabAdmApiSources",
+        nguonhang: "tabAdmApiSources",
+        "nguon-hang": "tabAdmApiSources",
+        stock: "tabAdmStock",
+        khohang: "tabAdmStock",
+        "kho-hang": "tabAdmStock",
+        users: "tabAdmUsers",
+        thanhvien: "tabAdmUsers",
+        "thanh-vien": "tabAdmUsers",
+        withdrawals: "tabAdmWithdrawals",
+        ruttien: "tabAdmWithdrawals",
+        "rut-tien": "tabAdmWithdrawals",
+        orders: "tabAdmOrders",
+        donhang: "tabAdmOrders",
+        "don-hang": "tabAdmOrders",
+        txlogs: "tabAdmTxLogs",
+        lichsu: "tabAdmTxLogs",
+        "lich-su": "tabAdmTxLogs",
+        affiliate: "tabAdmAffiliate",
+        tiepthi: "tabAdmAffiliate",
+        "tiep-thi": "tabAdmAffiliate",
+        payment: "tabAdmPayment",
+        thanhtoan: "tabAdmPayment",
+        "thanh-toan": "tabAdmPayment",
+        chat: "tabAdmChat",
+        livechat: "tabAdmChat",
+        "live-chat": "tabAdmChat",
+        general: "tabAdmGeneral",
+        caidat: "tabAdmGeneral",
+        "cai-dat": "tabAdmGeneral",
+        admins: "tabAdmAdmins",
+        quantri: "tabAdmAdmins",
+        "quan-tri": "tabAdmAdmins",
+        blog: "tabAdmBlog",
+        baiviet: "tabAdmBlog",
+        "bai-viet": "tabAdmBlog"
+      };
+      return map[clean] || (clean.startsWith("tabadm") ? clean : "tabAdmDashboard");
+    }
+    window.getAdminTabIdFromSlug = getAdminTabIdFromSlug;
+
 // ADMIN TABS SWITCHER
     function switchAdminTab(tabId) {
-      if (tabId === "stock") tabId = "tabAdmStock";
-      if (tabId === "products") tabId = "tabAdmProducts";
-      if (tabId === "dashboard") tabId = "tabAdmDashboard";
-      if (tabId === "users") tabId = "tabAdmUsers";
-      if (tabId === "withdrawals") tabId = "tabAdmWithdrawals";
-      if (tabId === "orders") tabId = "tabAdmOrders";
-      if (tabId === "chat") tabId = "tabAdmChat";
-      if (tabId === "blog") tabId = "tabAdmBlog";
-      if (tabId === "payment") tabId = "tabAdmPayment";
-      if (tabId === "general") tabId = "tabAdmGeneral";
-      if (tabId === "admins") tabId = "tabAdmAdmins";
-      if (tabId === "affiliate" || tabId === "tabAdmAffiliate") tabId = "tabAdmAffiliate";
+      if (!tabId) tabId = "tabAdmDashboard";
+      if (typeof getAdminTabIdFromSlug === "function") {
+        tabId = getAdminTabIdFromSlug(tabId);
+      } else {
+        if (tabId === "stock") tabId = "tabAdmStock";
+        if (tabId === "products") tabId = "tabAdmProducts";
+        if (tabId === "dashboard") tabId = "tabAdmDashboard";
+        if (tabId === "users") tabId = "tabAdmUsers";
+        if (tabId === "withdrawals") tabId = "tabAdmWithdrawals";
+        if (tabId === "orders") tabId = "tabAdmOrders";
+        if (tabId === "chat") tabId = "tabAdmChat";
+        if (tabId === "blog") tabId = "tabAdmBlog";
+        if (tabId === "payment") tabId = "tabAdmPayment";
+        if (tabId === "general") tabId = "tabAdmGeneral";
+        if (tabId === "admins") tabId = "tabAdmAdmins";
+        if (tabId === "affiliate" || tabId === "tabAdmAffiliate") tabId = "tabAdmAffiliate";
+      }
 
       try {
         localStorage.setItem("mmo_admin_tab", tabId);
       } catch(e) {}
+
+      // [URL ROUTING ĐỒNG BỘ 100%]: Cập nhật URL thanh địa chỉ ngay lập tức khi bấm đổi tab admin
+      try {
+        if (typeof window !== "undefined" && window.location && window.history && window.history.replaceState) {
+          const tabSlug = (typeof getAdminTabSlug === "function") ? getAdminTabSlug(tabId) : "dashboard";
+          const curUrl = new URL(window.location.href);
+          curUrl.searchParams.delete("prod");
+          curUrl.searchParams.delete("product");
+          curUrl.searchParams.delete("post");
+          curUrl.searchParams.delete("blog");
+          curUrl.searchParams.delete("m");
+          curUrl.searchParams.set("view", "viewAdmin");
+          curUrl.searchParams.set("tab", tabSlug);
+          curUrl.hash = "";
+          const newUrl = curUrl.pathname + "?" + curUrl.searchParams.toString();
+          window.history.replaceState({ view: "viewAdmin", tab: tabSlug }, "", newUrl);
+        }
+      } catch(eHistTab) {}
+
+      // Tự động kích hoạt viewAdmin nếu giao diện admin đang bị ẩn
+      const admViewEl = document.getElementById("viewAdmin");
+      if (admViewEl && admViewEl.style.display === "none") {
+        if (typeof switchView === "function") {
+          switchView("viewAdmin");
+        }
+      }
 
       let targetViewId = tabId;
       let isOrdersTab = false;
@@ -35599,14 +35704,21 @@ function changeAdmUsersPage(p) {
         
         const validViews = ["viewStore", "viewProductDetail", "viewBlog", "viewBlogDetail", "viewTools", "viewProfile", "viewDeposit", "viewAdmin", "viewAllProducts", "viewSitemap", "viewTerms", "viewPrivacy", "viewWarranty"];
         const viewParam = urlParams.get("view");
+        const tabParam = urlParams.get("tab") || urlParams.get("subtab");
         const catParam = urlParams.get("category");
-        if (isAllProdPath || viewParam === "viewAllProducts" || hash === "viewAllProducts") {
+
+        // [ƯU TIÊN TUYỆT ĐỐI VIEWPARAM]: Nếu người dùng truy cập trực tiếp viewAdmin hoặc viewProfile, luôn mở đúng view và tab
+        if (viewParam === "viewAdmin" || hash === "viewAdmin" || hash === "admin") {
+          targetView = "viewAdmin";
+        } else if (viewParam === "viewProfile" || hash === "viewProfile" || hash === "profile") {
+          targetView = "viewProfile";
+        } else if (isAllProdPath || viewParam === "viewAllProducts" || hash === "viewAllProducts") {
           targetView = "viewAllProducts";
         } else if (hash === "viewPrivacy" || hash === "privacy" || viewParam === "viewPrivacy" || (viewParam === "viewTerms" && (hash === "viewPrivacy" || hash === "privacy"))) {
           targetView = "viewPrivacy";
         } else if (hash === "viewTerms" || hash === "terms" || viewParam === "viewTerms") {
           targetView = "viewTerms";
-        } else if (hasProdParam && explicitProdId) {
+        } else if (hasProdParam && explicitProdId && (viewParam === "viewProductDetail" || !viewParam)) {
           targetView = "viewProductDetail";
         } else if (hasBlogParam || isArticlePath) {
           targetView = "viewBlogDetail";
@@ -35660,15 +35772,18 @@ function changeAdmUsersPage(p) {
         updateUserUI();
 
         if (targetView === "viewAdmin") {
-          const savedAdminTab = localStorage.getItem("mmo_admin_tab") || "tabAdmDashboard";
-          if (savedAdminTab && typeof switchAdminTab === "function") {
-            switchAdminTab(savedAdminTab);
+          const tabParam = urlParams.get("tab") || urlParams.get("subtab");
+          const targetTabId = tabParam ? ((typeof getAdminTabIdFromSlug === "function") ? getAdminTabIdFromSlug(tabParam) : tabParam) : (localStorage.getItem("mmo_admin_tab") || "tabAdmDashboard");
+          if (targetTabId && typeof switchAdminTab === "function") {
+            switchAdminTab(targetTabId);
           }
         } else if (targetView === "viewProfile") {
-        if (typeof loadUserWalletFromCloud === "function") loadUserWalletFromCloud();
-          const savedProfTab = localStorage.getItem("mmo_profile_tab");
-          if (savedProfTab && typeof switchProfileTab === "function") {
-            switchProfileTab(savedProfTab);
+          if (typeof loadUserWalletFromCloud === "function") loadUserWalletFromCloud();
+          const tabParam = urlParams.get("tab") || urlParams.get("subtab");
+          const profTabSlug = tabParam || "wallet";
+          const targetProfTab = (profTabSlug === "orders" ? "tabProfOrders" : (profTabSlug === "info" ? "tabProfInfo" : (profTabSlug === "bank" ? "tabProfBank" : (profTabSlug === "affiliate" ? "tabProfAffiliate" : (localStorage.getItem("mmo_profile_tab") || "tabProfWallet")))));
+          if (typeof switchProfileTab === "function") {
+            switchProfileTab(targetProfTab);
           }
         }
       } catch(e) {}
@@ -35715,10 +35830,19 @@ function changeAdmUsersPage(p) {
         } else {
           const urlParams = new URLSearchParams(window.location.search);
           const view = urlParams.get("view");
+          const tab = urlParams.get("tab") || urlParams.get("subtab");
           const hash = (window.location.hash || "").replace("#", "").trim();
           const validViews = ["viewStore", "viewProductDetail", "viewBlog", "viewBlogDetail", "viewTools", "viewProfile", "viewDeposit", "viewAdmin", "viewAllProducts", "viewSitemap", "viewTerms", "viewPrivacy", "viewWarranty"];
           const popProdId = urlParams.get("prod") || urlParams.get("product") || (hash.startsWith("product_") ? hash.replace("product_", "").split("?")[0] : null);
-          if (view === "viewProductDetail" && popProdId) {
+          if (view === "viewAdmin" || hash === "viewAdmin" || hash === "admin") {
+            switchView("viewAdmin");
+            const tTab = tab ? ((typeof getAdminTabIdFromSlug === "function") ? getAdminTabIdFromSlug(tab) : tab) : (localStorage.getItem("mmo_admin_tab") || "tabAdmDashboard");
+            if (typeof switchAdminTab === "function") switchAdminTab(tTab);
+          } else if (view === "viewProfile" || hash === "viewProfile" || hash === "profile") {
+            switchView("viewProfile");
+            const pTab = (tab === "orders" ? "tabProfOrders" : (tab === "info" ? "tabProfInfo" : (tab === "bank" ? "tabProfBank" : (tab === "affiliate" ? "tabProfAffiliate" : "tabProfWallet"))));
+            if (typeof switchProfileTab === "function") switchProfileTab(pTab);
+          } else if ((view === "viewProductDetail" || (!view && popProdId)) && popProdId) {
             switchView("viewProductDetail");
             if (typeof openProductDetailById === "function") openProductDetailById(popProdId);
           } else if (view && validViews.includes(view) && view !== "viewProductDetail") {
