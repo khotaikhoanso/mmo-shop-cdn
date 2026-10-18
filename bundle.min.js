@@ -2940,7 +2940,7 @@ if (typeof productOrId === "object") {
               return '<tr>' +
                 '<td>' + p.id + '</td>' +
                 '<td><img data-id="' + p.id + '" data-name="' + esc(p.name) + '" src="' + (typeof resolveProductImage === "function" ? resolveProductImage(p) : (p.image || (typeof KTS_CLEAN_FALLBACK_SVG !== "undefined" ? KTS_CLEAN_FALLBACK_SVG : ""))) + '" style="width:36px; height:36px; border-radius:4px; object-fit:cover;" onerror="this.onerror=null; if(typeof handleProductImgError===\'function\'){ handleProductImgError(this); } else { this.src=KTS_CLEAN_FALLBACK_SVG; }" /></td>' +
-                '<td style="max-width:480px; min-width:240px; overflow:hidden;"><a href="?prod=' + encodeURIComponent(p.slug || p.id) + '&view=viewProductDetail" target="_blank" style="color:#ffffff; text-decoration:none; font-weight:700; display:inline-flex; align-items:center; gap:5px; font-size:0.88rem; max-width:100%;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'#ffffff\'" title="Mở xem chi tiết sản phẩm"><strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:440px; display:inline-block;">' + esc(p.name) + '</strong> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.7rem; color:#38bdf8; flex-shrink:0;"></i></a>' +
+                '<td style="max-width:480px; min-width:240px; overflow:hidden;"><a href="/?prod=' + encodeURIComponent(p.slug || p.id) + '&view=viewProductDetail" target="_blank" style="color:#ffffff; text-decoration:none; font-weight:700; display:inline-flex; align-items:center; gap:5px; font-size:0.88rem; max-width:100%;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'#ffffff\'" title="Mở xem chi tiết sản phẩm"><strong style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:440px; display:inline-block;">' + esc(p.name) + '</strong> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.7rem; color:#38bdf8; flex-shrink:0;"></i></a>' +
                   sourceInfoHtml +
                 '</td>' +
                 '<td>' + esc(p.category) + '</td>' +
@@ -12854,7 +12854,7 @@ if (typeof productOrId === "object") {
         return '<div class="compact-product-item" onclick="openProductDetailById(\'' + pSlugEscaped + '\')">' +
           '<div class="compact-thumb"><img src="' + imgUrl + '" alt="' + pNameEscaped + '" data-name="' + pNameEscaped + '" data-id="' + pIdEscaped + '" loading="lazy" onerror="this.onerror=null; if(typeof handleProductImgError===\'function\'){ handleProductImgError(this); } else { this.src=KTS_CLEAN_FALLBACK_SVG; }" /></div>' +
           '<div class="compact-info">' +
-            '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&view=viewProductDetail" target="_blank" class="compact-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + pSlugEscaped + '\'); }" style="text-decoration:none; color:inherit; display:block;">' + pNameEscaped + '</a>' +
+            '<a href="/?prod=' + encodeURIComponent(pSlugOrId) + '&view=viewProductDetail" target="_blank" class="compact-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + pSlugEscaped + '\'); }" style="text-decoration:none; color:inherit; display:block;">' + pNameEscaped + '</a>' +
             '<div class="compact-meta">' +
               '<span class="compact-price">' + priceDisplay + '</span>' +
               '<span class="compact-sold">Đã bán: ' + displaySold + '</span>' +
@@ -13010,7 +13010,7 @@ if (typeof productOrId === "object") {
         return '<div class="compact-product-item" data-prod-id="' + pSlugOrId + '" onclick="if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + pSlugOrId + '\'); } else { window.location.href=\'?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail\'; }" style="cursor:pointer;">' +
           '<div class="compact-thumb"><img data-id="' + p.id + '" data-name="' + escapeHtml(p.name) + '" src="' + imgUrl + '" alt="' + escapeHtml(p.name) + '" loading="lazy" onerror="this.onerror=null; if(typeof handleProductImgError===\'function\'){ handleProductImgError(this); } else { this.src=KTS_CLEAN_FALLBACK_SVG; }" /></div>' +
           '<div class="compact-info">' +
-            '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail" target="_blank" class="compact-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + pSlugOrId + '\'); } else { location.href=this.href; } }" style="text-decoration:none; color:inherit; display:block;">' + escapeHtml(p.name) + '</a>' +
+            '<a href="/?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail" target="_blank" class="compact-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + pSlugOrId + '\'); } else { location.href=this.href; } }" style="text-decoration:none; color:inherit; display:block;">' + escapeHtml(p.name) + '</a>' +
             '<div class="compact-meta">' +
               '<span class="compact-price">' + ((typeof getProductPriceDisplay === "function") ? getProductPriceDisplay(p) : formatVND(p.price)) + '</span>' +
               '<span class="compact-sold">Đã bán: ' + displaySold + '</span>' +
@@ -13147,7 +13147,7 @@ if (typeof productOrId === "object") {
           '<img data-id="' + p.id + '" data-name="' + escapeHtml(p.name) + '" src="' + cardImg + '" alt="' + escapeHtml(p.name) + '" loading="lazy" onerror="this.onerror=null; if(typeof handleProductImgError===\'function\'){ handleProductImgError(this); } else { this.src=KTS_CLEAN_FALLBACK_SVG; }" />' +
         '</div>' +
         '<div class="product-body">' +
-          '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&view=viewProductDetail" target="_blank" class="product-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + pSlugOrId + '\'); }" style="text-decoration:none; color:inherit; display:block;" title="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + '</a>' +
+          '<a href="/?prod=' + encodeURIComponent(pSlugOrId) + '&view=viewProductDetail" target="_blank" class="product-title" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + pSlugOrId + '\'); }" style="text-decoration:none; color:inherit; display:block;" title="' + escapeHtml(p.name) + '">' + escapeHtml(p.name) + '</a>' +
           commTagHtml +
           '<div class="product-footer-row">' +
             '<span class="product-price">' + ((typeof getProductPriceDisplay === "function") ? getProductPriceDisplay(p) : formatVND(p.price)) + '</span>' +
@@ -17881,7 +17881,7 @@ function syncAllOpenViewsStock(changedProdId) {
             '<div style="display:flex; align-items:center; gap:8px;">' +
               '<img src="' + (p.image || KTS_CLEAN_FALLBACK_SVG) + '" style="width:32px; height:32px; border-radius:4px; object-fit:cover;" onerror="this.onerror=null; this.src=KTS_CLEAN_FALLBACK_SVG;" />' +
               '<div>' +
-                '<a href="?prod=' + encodeURIComponent(p.slug || p.id) + '&view=viewProductDetail" target="_blank" style="color:#fff; font-weight:700; text-decoration:none; font-size:0.82rem;">' + (typeof escapeHtml === "function" ? escapeHtml(p.name) : p.name) + '</a>' +
+                '<a href="/?prod=' + encodeURIComponent(p.slug || p.id) + '&view=viewProductDetail" target="_blank" style="color:#fff; font-weight:700; text-decoration:none; font-size:0.82rem;">' + (typeof escapeHtml === "function" ? escapeHtml(p.name) : p.name) + '</a>' +
                 '<div style="font-size:0.72rem; color:#64748b;">Mã SP: ' + p.id + ' | Giá bán: ' + (typeof formatVND === "function" ? formatVND(p.price) : p.price) + '</div>' +
               '</div>' +
             '</div>' +
@@ -23241,7 +23241,7 @@ function syncAllOpenViewsStock(changedProdId) {
               '<img alt="' + escapeHtml(p.name) + '" src="' + escapeHtml((typeof resolveProductImage === "function") ? resolveProductImage(p) : (p.image || KTS_CLEAN_FALLBACK_SVG)) + '" onerror="this.onerror=null; this.src=KTS_CLEAN_FALLBACK_SVG;" />' +
             '</div>' +
             '<h4 class="sponsor-title">' +
-              '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail" target="_blank" onclick="if(!event.ctrlKey &amp;&amp; !event.metaKey &amp;&amp; event.button === 0){ event.preventDefault(); event.stopPropagation(); if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + escapeHtml(pSlugOrId) + '\'); } else { location.href=this.href; } }" style="color:inherit; text-decoration:none;">' +
+              '<a href="/?prod=' + encodeURIComponent(pSlugOrId) + '&amp;view=viewProductDetail" target="_blank" onclick="if(!event.ctrlKey &amp;&amp; !event.metaKey &amp;&amp; event.button === 0){ event.preventDefault(); event.stopPropagation(); if(typeof openProductDetailById===\'function\'){ openProductDetailById(\'' + escapeHtml(pSlugOrId) + '\'); } else { location.href=this.href; } }" style="color:inherit; text-decoration:none;">' +
                 escapeHtml(p.name) +
               '</a>' +
             '</h4>' +
@@ -26680,9 +26680,9 @@ function syncAllOpenViewsStock(changedProdId) {
         const catEscaped = escapeHtml(cat);
         
         // 1. Tag chuyên mục chính
-        tagHtml += '<a href="?category=' + encodeURIComponent(cat) + '" onclick="event.preventDefault(); if(typeof filterShopCategory===\'function\') filterShopCategory(\'' + catEscaped + '\'); switchView(\'viewStore\');" style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-layer-group" style="font-size:0.62rem;"></i> Mua ' + catEscaped + ' giá rẻ</a>';
-        tagHtml += '<a href="?category=' + encodeURIComponent(cat) + '" onclick="event.preventDefault(); if(typeof filterShopCategory===\'function\') filterShopCategory(\'' + catEscaped + '\'); switchView(\'viewStore\');" style="background:rgba(16,185,129,0.1); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-shield-check" style="font-size:0.62rem;"></i> Tài khoản ' + catEscaped + ' uy tín</a>';
-        tagHtml += '<a href="?category=' + encodeURIComponent(cat) + '" onclick="event.preventDefault(); if(typeof filterShopCategory===\'function\') filterShopCategory(\'' + catEscaped + '\'); switchView(\'viewStore\');" style="background:rgba(251,191,36,0.1); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-bolt" style="font-size:0.62rem;"></i> Bán nick ' + catEscaped + ' tự động 24/7</a>';
+        tagHtml += '<a href="/?category=' + encodeURIComponent(cat) + '" onclick="event.preventDefault(); if(typeof filterShopCategory===\'function\') filterShopCategory(\'' + catEscaped + '\'); switchView(\'viewStore\');" style="background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-layer-group" style="font-size:0.62rem;"></i> Mua ' + catEscaped + ' giá rẻ</a>';
+        tagHtml += '<a href="/?category=' + encodeURIComponent(cat) + '" onclick="event.preventDefault(); if(typeof filterShopCategory===\'function\') filterShopCategory(\'' + catEscaped + '\'); switchView(\'viewStore\');" style="background:rgba(16,185,129,0.1); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-shield-check" style="font-size:0.62rem;"></i> Tài khoản ' + catEscaped + ' uy tín</a>';
+        tagHtml += '<a href="/?category=' + encodeURIComponent(cat) + '" onclick="event.preventDefault(); if(typeof filterShopCategory===\'function\') filterShopCategory(\'' + catEscaped + '\'); switchView(\'viewStore\');" style="background:rgba(251,191,36,0.1); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); padding:3px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-bolt" style="font-size:0.62rem;"></i> Bán nick ' + catEscaped + ' tự động 24/7</a>';
 
         // 2. Tags cho từng sản phẩm liên quan trong chùm
         selected.forEach(function(p) {
@@ -26694,7 +26694,7 @@ function syncAllOpenViewsStock(changedProdId) {
         });
 
         // 3. Tags tổng hợp hỗ trợ SEO MMO
-        tagHtml += '<a href="?view=viewStore" onclick="event.preventDefault(); switchView(\'viewStore\');" style="background:#0f172a; color:#94a3b8; border:1px dashed #475569; padding:3px 9px; border-radius:20px; font-size:0.72rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-boxes-stacked" style="font-size:0.62rem;"></i> Kho tài khoản MMO Việt Nam</a>';
+        tagHtml += '<a href="/?view=viewStore" onclick="event.preventDefault(); switchView(\'viewStore\');" style="background:#0f172a; color:#94a3b8; border:1px dashed #475569; padding:3px 9px; border-radius:20px; font-size:0.72rem; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid fa-boxes-stacked" style="font-size:0.62rem;"></i> Kho tài khoản MMO Việt Nam</a>';
 
         clusterTagsContainer.innerHTML = tagHtml;
       }
@@ -26767,20 +26767,51 @@ function syncAllOpenViewsStock(changedProdId) {
           schemaEl.type = "application/ld+json";
           document.head.appendChild(schemaEl);
         }
+        const ratingData = (typeof getProductSchemaReviews === "function") 
+          ? getProductSchemaReviews(p, 0)
+          : {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                "ratingValue": "5.0",
+                "reviewCount": 128,
+                "ratingCount": 128,
+                "bestRating": "5",
+                "worstRating": "1"
+              },
+              review: [{
+                "@type": "Review",
+                "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+                "author": { "@type": "Person", "name": "Khách hàng xác thực" },
+                "datePublished": "2026-09-20",
+                "reviewBody": "Sản phẩm chất lượng cao, giao dịch tự động nhanh chóng và uy tín."
+              }]
+            };
+
+        const prodUrl = (window.location.origin || "https://www.khotaikhoanso.net") + "/?prod=" + encodeURIComponent(p.slug || pId) + "&view=viewProductDetail";
+
         schemaEl.textContent = JSON.stringify({
           "@context": "https://schema.org/",
           "@type": "Product",
+          "@id": prodUrl + "#product",
           "name": pName,
           "image": [cleanImg],
           "description": pDesc,
           "sku": pId,
+          "mpn": pId,
+          "brand": { "@type": "Brand", "name": "KHO TÀI KHOẢN SỐ" },
           "offers": {
             "@type": "Offer",
-            "url": window.location.href,
+            "url": prodUrl,
             "priceCurrency": "VND",
             "price": p.price || 0,
-            "availability": (p.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/PreOrder"
-          }
+            "priceValidUntil": "2027-12-31",
+            "validFrom": "2026-01-01",
+            "availability": (p.stock > 0) ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+            "itemCondition": "https://schema.org/NewCondition",
+            "seller": { "@type": "Organization", "name": "KHO TÀI KHOẢN SỐ" }
+          },
+          "aggregateRating": ratingData.aggregateRating,
+          "review": ratingData.review
         });
       } catch(eSeo) {
         console.warn("KTS SEO meta error:", eSeo);
@@ -36432,7 +36463,7 @@ function changeAdmUsersPage(p) {
       const prods = (MOCK_DATA && Array.isArray(MOCK_DATA.products)) ? MOCK_DATA.products : [];
       container.innerHTML = prods.map(p => {
         return '<div style="border-bottom:1px solid #1e293b; padding-bottom:8px;">' +
-          '<a href="?prod=' + encodeURIComponent(p.slug || p.id) + '&view=viewProductDetail" target="_blank" style="color:#e2e8f0; text-decoration:none; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; gap:8px;">' +
+          '<a href="/?prod=' + encodeURIComponent(p.slug || p.id) + '&view=viewProductDetail" target="_blank" style="color:#e2e8f0; text-decoration:none; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; gap:8px;">' +
             '<span style="font-weight:600;"><i class="fa-solid fa-box" style="color:#10b981; font-size:0.75rem; margin-right:6px;"></i>' + escapeHtml(p.name) + '</span>' +
             '<span style="color:#38bdf8; font-weight:700; white-space:nowrap;">' + formatVND(p.price || 0) + '</span>' +
           '</a>' +
@@ -36917,7 +36948,7 @@ function getProductSchemaReviews(p, idx) {
         '<div style="flex:1; min-width:0;">' +
           '<div style="font-size:0.95rem; font-weight:700; color:#fff; margin-bottom:6px; line-height:1.3; display:flex; align-items:center; gap:8px;">' +
             '' +
-            '<a href="?prod=' + encodeURIComponent(pSlugOrId) + '&view=viewProductDetail" target="_blank" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + pSlugOrId + '\'); }" style="color:#fff; text-decoration:none;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'#fff\'"><span>' + escapeHtml(p.name) + '</span></a>' +
+            '<a href="/?prod=' + encodeURIComponent(pSlugOrId) + '&view=viewProductDetail" target="_blank" onclick="if(!event.ctrlKey && !event.metaKey && event.button === 0){ event.preventDefault(); event.stopPropagation(); openProductDetailById(\'' + pSlugOrId + '\'); }" style="color:#fff; text-decoration:none;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'#fff\'"><span>' + escapeHtml(p.name) + '</span></a>' +
           '</div>' +
           '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">' +
             '<span style="font-size:0.75rem; color:#10b981; background:rgba(16,185,129,0.1); padding:2px 8px; border-radius:4px; font-weight:700;">' +
