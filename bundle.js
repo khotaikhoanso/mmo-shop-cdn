@@ -27,6 +27,38 @@ try {
 // =========================================================================
 try {
   if (typeof localStorage !== "undefined") {
+    // [TỰ ĐỘNG LÀM SẠCH CACHE GIÁ LỖI PROD_MU2YQ1J3PY]
+    try {
+      ["PROD_MU2YQ1J3PY", "prod_mu2yq1j3py"].forEach(function(pid) {
+        var oldP = localStorage.getItem("mmo_custom_price_" + pid);
+        if (oldP === "69000" || oldP === "69.000") {
+          localStorage.removeItem("mmo_custom_price_" + pid);
+          localStorage.removeItem("mmo_last_edited_" + pid);
+          localStorage.removeItem("mmo_custom_variants_" + pid);
+        }
+      });
+      ["mmo_products", "mmo_admin_products"].forEach(function(storeKey) {
+        var raw = localStorage.getItem(storeKey);
+        if (raw && (raw.includes('"PROD_MU2YQ1J3PY"') || raw.includes('"prod_mu2yq1j3py"')) && raw.includes('69000')) {
+          try {
+            var arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+              arr.forEach(function(p) {
+                if (p && String(p.id).toLowerCase() === 'prod_mu2yq1j3py') {
+                  if (p.price === 69000) p.price = 600;
+                  if (Array.isArray(p.variants)) {
+                    p.variants.forEach(function(v) {
+                      if (v && (v.price === 69000 || !v.price)) v.price = 600;
+                    });
+                  }
+                }
+              });
+              localStorage.setItem(storeKey, JSON.stringify(arr));
+            }
+          } catch(ePars) {}
+        }
+      });
+    } catch(eCleanOld) {}
     var CURRENT_KTS_VERSION = "v4.3.81";
     if (localStorage.getItem("kts_app_storage_version") !== CURRENT_KTS_VERSION) {
       localStorage.removeItem("mmo_products");
@@ -5064,8 +5096,23 @@ if (typeof productOrId === "object") {
         }
       }
       populateCategorySelects(p.category);
+      if (p.id === "PROD_MU2YQ1J3PY" || String(p.id).toLowerCase() === "prod_mu2yq1j3py") {
+        try {
+          localStorage.removeItem("mmo_custom_price_PROD_MU2YQ1J3PY");
+          localStorage.removeItem("mmo_custom_price_prod_mu2yq1j3py");
+          localStorage.removeItem("mmo_custom_variants_PROD_MU2YQ1J3PY");
+          localStorage.removeItem("mmo_custom_variants_prod_mu2yq1j3py");
+        } catch(eClean) {}
+        if (p.price === 69000) p.price = 600;
+        if (Array.isArray(p.variants)) {
+          p.variants.forEach(function(v) {
+            if (v && (v.price === 69000 || !v.price)) v.price = 600;
+          });
+        }
+      }
       const savedCustomPrice = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_price_" + p.id) || localStorage.getItem("mmo_custom_price_" + String(p.id).toUpperCase())) : null;
-      const initialPrice = (savedCustomPrice !== null && !isNaN(Number(savedCustomPrice)) && Number(savedCustomPrice) > 0) ? Number(savedCustomPrice) : (Number(p.price) || 0);
+      let initialPrice = (Number(p.price) > 0) ? Number(p.price) : ((savedCustomPrice !== null && !isNaN(Number(savedCustomPrice)) && Number(savedCustomPrice) > 0) ? Number(savedCustomPrice) : 0);
+      if ((p.id === "PROD_MU2YQ1J3PY" || String(p.id).toLowerCase() === "prod_mu2yq1j3py") && (initialPrice === 69000 || initialPrice <= 0)) initialPrice = 600;
       if (document.getElementById("admProdPrice")) {
         document.getElementById("admProdPrice").value = initialPrice;
         document.getElementById("admProdPrice").oninput = function() {
@@ -5120,13 +5167,18 @@ if (typeof productOrId === "object") {
       }
       try {
         const savedVars = localStorage.getItem("mmo_custom_variants_" + p.id) || localStorage.getItem("mmo_custom_variants_" + String(p.id).toUpperCase());
-        if (savedVars) {
+        if (savedVars && !(p.id === "PROD_MU2YQ1J3PY" || String(p.id).toLowerCase() === "prod_mu2yq1j3py")) {
           const parsedSaved = JSON.parse(savedVars);
           if (Array.isArray(parsedSaved) && parsedSaved.length > 0) {
             cleanVariants = parsedSaved;
           }
         }
       } catch(eLSV) {}
+      if ((p.id === "PROD_MU2YQ1J3PY" || String(p.id).toLowerCase() === "prod_mu2yq1j3py") && Array.isArray(cleanVariants)) {
+        cleanVariants.forEach(function(v) {
+          if (v && (v.price === 69000 || !v.price)) v.price = 600;
+        });
+      }
       const variants = (Array.isArray(cleanVariants) && cleanVariants.length > 0) ? cleanVariants : [{ name: p.name, price: initialPrice || p.price }];
       renderVariantInputs(variants);
 
@@ -14801,6 +14853,14 @@ if (typeof productOrId === "object") {
 
           let finalPrice = (tp.price !== undefined) ? Number(tp.price) : 0;
           let finalVariants = variants;
+          if (tp.id === "PROD_MU2YQ1J3PY" || String(tp.id).toLowerCase() === "prod_mu2yq1j3py") {
+            if (finalPrice === 69000) finalPrice = 600;
+            if (Array.isArray(finalVariants)) {
+              finalVariants.forEach(function(v) {
+                if (v && (v.price === 69000 || !v.price)) v.price = 600;
+              });
+            }
+          }
           if (isLocallyInFlight) {
             if (localCustomPrice !== null && !isNaN(Number(localCustomPrice))) finalPrice = Number(localCustomPrice);
             if (localCustomVars) {
