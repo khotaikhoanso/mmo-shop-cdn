@@ -20134,12 +20134,14 @@ function syncAllOpenViewsStock(changedProdId) {
     function updateApiSourceAlertsBadge() {
       try {
         const alerts = computeApiSourceAlerts();
-        const urgentCount = alerts.filter(a => a.isUrgent).length;
+        // [TÁCH RIÊNG ĐỘC LẬP 100% TỪNG MỤC]: Mỗi sản phẩm chỉ thuộc đúng 1 mục duy nhất
         const lossCount = alerts.filter(a => a.isLoss).length;
-        const priceUpCount = alerts.filter(a => a.isPriceUp).length;
         const outOfStockCount = alerts.filter(a => a.isOutOfStock).length;
-        const priceDownCount = alerts.filter(a => a.isPriceDown).length;
+        const priceUpCount = alerts.filter(a => a.isPriceUp && !a.isLoss && !a.isOutOfStock).length;
+        const priceDownCount = alerts.filter(a => a.isPriceDown && !a.isLoss && !a.isOutOfStock).length;
+        const stableCount = alerts.filter(a => !a.isLoss && !a.isPriceUp && !a.isPriceDown && !a.isOutOfStock).length;
         const totalCount = alerts.length;
+        const urgentCount = lossCount + priceUpCount + outOfStockCount;
 
         // Badge sidebar
         const navBadge = document.getElementById("admApiNavBadge");
@@ -20183,8 +20185,19 @@ function syncAllOpenViewsStock(changedProdId) {
           const numSources = (typeof API_SOURCES !== "undefined" && API_SOURCES) ? Object.keys(API_SOURCES).length : 6;
           connectedSourcesEl.innerText = numSources + " web nguồn kết nối";
         }
-        const filterUrgentEl = document.getElementById("filterCountUrgent");
-        if (filterUrgentEl) filterUrgentEl.innerText = urgentCount;
+        // Đồng bộ số đếm lên từng nút bộ lọc riêng biệt
+        const fAll = document.getElementById("filterCountAll");
+        if (fAll) fAll.innerText = totalCount;
+        const fLoss = document.getElementById("filterCountLoss");
+        if (fLoss) fLoss.innerText = lossCount;
+        const fPriceUp = document.getElementById("filterCountPriceUp");
+        if (fPriceUp) fPriceUp.innerText = priceUpCount;
+        const fOos = document.getElementById("filterCountOutOfStock");
+        if (fOos) fOos.innerText = outOfStockCount;
+        const fPriceDown = document.getElementById("filterCountPriceDown");
+        if (fPriceDown) fPriceDown.innerText = priceDownCount;
+        const fStable = document.getElementById("filterCountStable");
+        if (fStable) fStable.innerText = stableCount;
 
         // Cập nhật Banner cảnh báo bán lỗ
         const lossBanner = document.getElementById("admApiLossBanner");
@@ -20223,31 +20236,60 @@ function syncAllOpenViewsStock(changedProdId) {
       const activeFilter = filter || "ALL";
       window.admApiCurrentFilter = activeFilter;
       window.admApiAlertsCurrentPage = 1;
+
+      // 1. Đồng bộ viền active của 5 Stat Cards ở trên đỉnh
+      const cardMap = {
+        LOSS: "statCardLoss",
+        PRICE_UP: "statCardPriceUp",
+        OUT_OF_STOCK: "statCardOutOfStock",
+        PRICE_DOWN: "statCardPriceDown",
+        ALL: "statCardTotalApi"
+      };
+      const cardBorderColors = {
+        LOSS: "#ef4444",
+        PRICE_UP: "#f59e0b",
+        OUT_OF_STOCK: "#f43f5e",
+        PRICE_DOWN: "#10b981",
+        ALL: "#38bdf8"
+      };
+      Object.keys(cardMap).forEach(function(k) {
+        const cEl = document.getElementById(cardMap[k]);
+        if (cEl) {
+          if (k === activeFilter) {
+            cEl.style.border = "2px solid " + cardBorderColors[k];
+            cEl.style.boxShadow = "0 0 16px " + cardBorderColors[k] + "50";
+            cEl.style.transform = "translateY(-2px)";
+            cEl.style.background = "rgba(255,255,255,0.06)";
+          } else {
+            cEl.style.border = "1px solid rgba(255,255,255,0.08)";
+            cEl.style.boxShadow = "none";
+            cEl.style.transform = "none";
+            cEl.style.background = "";
+          }
+        }
+      });
+
+      // 2. Đồng bộ nút trong nhóm Filter Tabs
       const grp = document.getElementById("admApiAlertFilterGroup");
       if (grp) {
-        let matchedBtn = btn || null;
         grp.querySelectorAll(".btn-api-filter").forEach(function(b) {
           b.classList.remove("active");
           b.style.background = "transparent";
-          b.style.color = "#94a3b8";
           b.style.borderColor = "transparent";
           const onclickAttr = b.getAttribute("onclick") || "";
-          if (!matchedBtn && onclickAttr.includes('"' + activeFilter + '"')) {
-            matchedBtn = b;
+          if (onclickAttr.includes('"' + activeFilter + '"')) {
+            b.classList.add("active");
+            b.style.background = "#1e293b";
+            b.style.borderColor = "#334155";
           }
         });
-        if (matchedBtn) {
-          matchedBtn.classList.add("active");
-          matchedBtn.style.background = "#1e293b";
-          matchedBtn.style.color = "#38bdf8";
-          matchedBtn.style.borderColor = "#334155";
-        }
       }
+
       renderAdminApiSourcesAlertsUI();
 
-      // Nếu bấm từ Stat Card (btn không truyền), cuộn nhẹ đến bảng để người dùng thấy ngay kết quả
+      // Cuộn nhẹ đến tiêu đề bảng
       if (!btn) {
-        const el = document.getElementById("admApiAlertsTable");
+        const el = document.getElementById("admApiAlertsActiveCategoryTitle") || document.getElementById("admApiAlertsTable");
         if (el && typeof el.scrollIntoView === "function") {
           el.scrollIntoView({ behavior: "smooth", block: "start" });
         }
@@ -20281,16 +20323,64 @@ function syncAllOpenViewsStock(changedProdId) {
       const provFilter = window.admApiCurrentProvider || "ALL";
       const q = (window.admApiSearchQuery || "").toLowerCase();
 
+      // [TÁCH BIỆT 100% CÁC MỤC]: Mục nào chỉ hiển thị đúng mục đó
       let filtered = alerts.filter(function(item) {
         if (provFilter !== "ALL" && item.provider !== provFilter) return false;
-        if (filter === "URGENT") return item.isUrgent;
-        if (filter === "LOSS") return item.isLoss;
-        if (filter === "PRICE_UP") return item.isPriceUp;
-        if (filter === "OUT_OF_STOCK") return item.isOutOfStock;
-        if (filter === "PRICE_DOWN") return item.isPriceDown;
-        if (filter === "STABLE") return item.isStable;
+        if (filter === "LOSS") {
+          // CHỈ hiển thị SP có nguy cơ bán lỗ
+          return item.isLoss;
+        }
+        if (filter === "PRICE_UP") {
+          // CHỈ hiển thị SP nguồn tăng giá còn hàng, không lẫn SP hết hàng hay bán lỗ
+          return item.isPriceUp && !item.isLoss && !item.isOutOfStock;
+        }
+        if (filter === "OUT_OF_STOCK") {
+          // CHỈ hiển thị SP hết hàng hoặc nguồn đã gỡ
+          return item.isOutOfStock;
+        }
+        if (filter === "PRICE_DOWN") {
+          // CHỈ hiển thị SP nguồn giảm giá còn hàng
+          return item.isPriceDown && !item.isLoss && !item.isOutOfStock;
+        }
+        if (filter === "STABLE") {
+          // CHỈ hiển thị SP giá và kho ổn định
+          return !item.isLoss && !item.isPriceUp && !item.isPriceDown && !item.isOutOfStock;
+        }
         return true;
       });
+
+      // Cập nhật Banner tiêu đề mục đang hiển thị
+      const titleEl = document.getElementById("admApiCategoryNameText");
+      const badgeEl = document.getElementById("admApiCategoryCountBadge");
+      const activeBanner = document.getElementById("admApiAlertsActiveCategoryTitle");
+      const categoryNames = {
+        LOSS: "🚨 NGUY CƠ BÁN LỖ (Giá nguồn >= Giá shop)",
+        PRICE_UP: "🔺 NGUỒN TĂNG GIÁ (Còn hàng - Cần điều chỉnh giá shop)",
+        OUT_OF_STOCK: "❌ HẾT HÀNG / NGUỒN XOÁ SẢN PHẨM (Kho web = 0 acc hoặc đã gỡ)",
+        PRICE_DOWN: "🔻 NGUỒN GIẢM GIÁ (Cơ hội tăng biên lợi nhuận)",
+        STABLE: "✅ GIÁ VÀ KHO HÀNG ỔN ĐỊNH",
+        ALL: "⚡ TẤT CẢ SẢN PHẨM LIÊN KẾT API"
+      };
+      const categoryColors = {
+        LOSS: "#ef4444",
+        PRICE_UP: "#f59e0b",
+        OUT_OF_STOCK: "#f43f5e",
+        PRICE_DOWN: "#10b981",
+        STABLE: "#38bdf8",
+        ALL: "#38bdf8"
+      };
+      if (titleEl) {
+        titleEl.innerText = categoryNames[filter] || "Danh Sách Sản Phẩm";
+        titleEl.style.color = categoryColors[filter] || "#38bdf8";
+      }
+      if (badgeEl) {
+        badgeEl.innerText = filtered.length + " sản phẩm";
+        badgeEl.style.color = categoryColors[filter] || "#38bdf8";
+        badgeEl.style.borderColor = categoryColors[filter] || "#334155";
+      }
+      if (activeBanner) {
+        activeBanner.style.borderLeftColor = categoryColors[filter] || "#38bdf8";
+      }
 
       if (q) {
         const removeAccents = function(str) {
