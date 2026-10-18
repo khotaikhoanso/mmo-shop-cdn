@@ -4643,7 +4643,8 @@ if (typeof productOrId === "object") {
         const curProds = (typeof window.cachedSourceProducts !== "undefined" && Array.isArray(window.cachedSourceProducts))
           ? window.cachedSourceProducts
           : ((typeof cachedSourceProducts !== "undefined" && Array.isArray(cachedSourceProducts)) ? cachedSourceProducts : []);
-        const srcItem = curProds.find(s => s && (String(s.id).replace(/^#/, "").trim() === sId || String(s.id) === sId) && (!prov || !s.provider || s.provider === prov))
+        const srcItem = (typeof getFastSourceProduct === "function" && sId ? getFastSourceProduct(prov, sId) : null)
+                     || curProds.find(s => s && (String(s.id).replace(/^#/, "").trim() === sId || String(s.id) === sId) && (!prov || !s.provider || s.provider === prov))
                      || curProds.find(s => s && (String(s.id).replace(/^#/, "").trim() === sId || String(s.id) === sId));
 
         let displayName = "";
@@ -8828,6 +8829,8 @@ if (typeof productOrId === "object") {
             if (Array.isArray(p.variants) && p.variants.length > 0 && p.variants[0] && p.variants[0].price !== undefined) {
               effectivePrice = Number(p.variants[0].price) || effectivePrice;
             }
+            window.currentSelectedPrice = effectivePrice;
+            window.currentSelectedVariantIndex = (typeof currentSelectedVariantIndex === "number") ? currentSelectedVariantIndex : 0;
             var dtlPrice = document.getElementById("dtlPrice");
             if (dtlPrice) {
               dtlPrice.innerText = (typeof formatVND === "function") ? formatVND(effectivePrice) : (effectivePrice.toLocaleString("vi-VN") + " đ");
@@ -8875,11 +8878,17 @@ if (typeof productOrId === "object") {
               var cleanW = String(p.warranty).trim().replace(/^(chính\s*sách\s*)?bảo\s*hành\s*:?\s*/i, "");
               dtlWarr.innerText = "🛡 " + (cleanW || p.warranty);
             }
+            var dtlNotice = document.getElementById("dtlWarrantyNotice");
+            if (dtlNotice && p.warranty) {
+              var cleanW2 = String(p.warranty).trim().replace(/^(chính\s*sách\s*)?bảo\s*hành\s*:?\s*/i, "");
+              dtlNotice.innerText = "Bảo hành " + (cleanW2 || "1 Đổi 1") + " • Kiểm tra kỹ thông tin trước khi mua.";
+            }
 
             // 7. Biến thể
             var isApiProd = (p.deliveryType === "api" || p.delivery_type === "api" || (typeof isProductApi === "function" && isProductApi(p)));
             var pillsContainer = document.getElementById("dtlVariantPills");
             if (pillsContainer && Array.isArray(p.variants) && p.variants.length > 0) {
+              var curActiveVIdx = (typeof currentSelectedVariantIndex === "number") ? currentSelectedVariantIndex : 0;
               pillsContainer.innerHTML = p.variants.map(function(v, idx) {
                 var vStock = isApiProd
                   ? ((typeof getShopVariantStock === "function") ? getShopVariantStock(p, idx) : (Number(v.stock) || 0))
@@ -8890,7 +8899,7 @@ if (typeof productOrId === "object") {
                   : '<small style="color:#ef4444; font-weight:700; margin-left:6px; font-size:0.75rem;">(0 acc)</small>';
                 var vName = v.name || ("Gói " + (idx + 1));
                 var vPrice = v.price || 0;
-                return '<div class="variant-pill-option ' + (idx === 0 ? 'active' : '') + '" onclick="selectVariant(' + idx + ', ' + vPrice + ')">' +
+                return '<div class="variant-pill-option ' + (idx === curActiveVIdx ? 'active' : '') + '" onclick="selectVariant(' + idx + ', ' + vPrice + ')">' +
                   '<span>' + (typeof escapeHtml === 'function' ? escapeHtml(vName) : vName) + stockBadge + '</span>' +
                   '<span style="font-weight:700;">' + (typeof formatVND === "function" ? formatVND(vPrice) : (vPrice.toLocaleString("vi-VN") + " đ")) + '</span>' +
                 '</div>';
@@ -8904,7 +8913,22 @@ if (typeof productOrId === "object") {
             if (typeof renderProductDetailSidebars === "function") renderProductDetailSidebars(p);
             if (typeof renderDetailRelatedProducts === "function") renderDetailRelatedProducts(p);
             if (typeof updateProductSeoMeta === "function") updateProductSeoMeta(p, exactImg);
-            if (typeof checkAndShowAdminQuickWrap === "function") checkAndShowAdminQuickWrap();
+            if (typeof renderDetailAdminProfitLossBanner === "function") renderDetailAdminProfitLossBanner();
+            else if (typeof checkAndShowAdminQuickWrap === "function") checkAndShowAdminQuickWrap();
+
+            // Hoa hồng
+            var commFooterEl = document.getElementById("dtlCommissionFooterText");
+            if (commFooterEl) {
+              var commRate = 10;
+              if (typeof p.commissionRate === "number") commRate = p.commissionRate;
+              else if (typeof p.commission === "number") commRate = p.commission;
+              else {
+                var mComm = String(p.commission || p.commissionRate || "").match(/[0-9]+/);
+                commRate = mComm ? parseInt(mComm[0], 10) : 10;
+              }
+              var commVal = Math.round(Number(effectivePrice || 0) * commRate / 100);
+              commFooterEl.innerText = "$ Hoa hồng: " + commRate + "% (~" + (typeof formatVND === "function" ? formatVND(commVal) : (commVal.toLocaleString("vi-VN") + " đ")) + ")";
+            }
 
             // 10. URL canonical
             if (window.history && window.history.replaceState) {
@@ -9378,10 +9402,17 @@ if (typeof productOrId === "object") {
         let liveSourceName = "";
         let foundSrc = null;
         if (isApiSelected && apiSourceProdIdVal) {
+          const cleanSrcId = String(apiSourceProdIdVal).trim().replace(/^#/, "");
+          if (typeof getFastSourceProduct === "function") {
+            foundSrc = getFastSourceProduct(apiProviderVal, cleanSrcId);
+          }
           const prodsSrc = (typeof window.cachedSourceProducts !== "undefined" && Array.isArray(window.cachedSourceProducts))
             ? window.cachedSourceProducts
             : ((typeof cachedSourceProducts !== "undefined" && Array.isArray(cachedSourceProducts)) ? cachedSourceProducts : []);
-          foundSrc = prodsSrc.find(s => (String(s.id) === String(apiSourceProdIdVal) || String(s.id).trim().replace(/^#/, "") === String(apiSourceProdIdVal).trim().replace(/^#/, "")) && (!apiProviderVal || s.provider === apiProviderVal));
+          if (!foundSrc) {
+            foundSrc = prodsSrc.find(s => (String(s.id).trim().replace(/^#/, "") === cleanSrcId || String(s.id) === String(apiSourceProdIdVal)) && (!apiProviderVal || s.provider === apiProviderVal))
+                    || prodsSrc.find(s => String(s.id).trim().replace(/^#/, "") === cleanSrcId);
+          }
           
           const srcSelect = document.getElementById("admProdApiSourceSelect");
           const selOpt = (srcSelect && srcSelect.options && typeof srcSelect.selectedIndex === "number" && srcSelect.selectedIndex >= 0) ? srcSelect.options[srcSelect.selectedIndex] : null;
@@ -9398,7 +9429,14 @@ if (typeof productOrId === "object") {
             liveSourcePrice = optPrice;
             liveSourceName = optName;
           } else {
-            liveSourceStock = (oldProd && typeof oldProd.stock === "number") ? oldProd.stock : 0;
+            const prevMap = (oldProd && (oldProd.apiMapping || (typeof getApiProductMapping === "function" ? getApiProductMapping(oldProd) : null)));
+            if (prevMap && prevMap.sourceProdId && String(prevMap.sourceProdId).trim().replace(/^#/, "") === cleanSrcId && typeof prevMap.sourceStock === "number" && prevMap.sourceStock > 0) {
+              liveSourceStock = prevMap.sourceStock;
+              liveSourcePrice = prevMap.sourcePrice || 0;
+              liveSourceName = prevMap.sourceProdName || "";
+            } else {
+              liveSourceStock = (oldProd && typeof oldProd.stock === "number") ? oldProd.stock : 0;
+            }
           }
           liveSourceStock = Math.max(0, Number(liveSourceStock) || 0);
           variants.forEach(v => {
@@ -9523,6 +9561,8 @@ if (typeof productOrId === "object") {
         if (typeof window !== "undefined") {
           window.currentSelectedProduct = currentSelectedProduct;
           window._currentActiveDetailProduct = currentSelectedProduct;
+          window.currentSelectedPrice = effectiveFinalPrice;
+          window.currentSelectedVariantIndex = 0;
         }
 
         // 2. LƯU AN TOÀN VÀO LOCALSTORAGE
@@ -9624,6 +9664,14 @@ if (typeof productOrId === "object") {
           broadcastProductUpdateRealtime(prodData);
         }
 
+        // Cập nhật ngay trang chi tiết đang mở
+        if (typeof refreshActiveProductDetailUI === "function") {
+          refreshActiveProductDetailUI(prodData);
+        }
+        if (typeof renderDetailAdminProfitLossBanner === "function") {
+          renderDetailAdminProfitLossBanner();
+        }
+
         // Đóng modal an toàn và hiển thị thông báo
         closeModal("adminProductModal");
         if (typeof showToast === "function") {
@@ -9651,7 +9699,19 @@ if (typeof productOrId === "object") {
               var syncedProd = res.product;
               syncedProd._lastEditedAt = Date.now();
               syncedProd.price = effectiveFinalPrice;
-              syncedProd.variants = variants;
+              
+              if (Array.isArray(syncedProd.variants) && syncedProd.variants.length > 0) {
+                syncedProd.variants.forEach(function(sv, svIdx) {
+                  if (variants[svIdx] && variants[svIdx].price) {
+                    sv.price = variants[svIdx].price;
+                  }
+                  if (variants[svIdx] && variants[svIdx].name) {
+                    sv.name = variants[svIdx].name;
+                  }
+                });
+              } else {
+                syncedProd.variants = variants;
+              }
               if (typeof syncedProd.variants === "string") {
                 try { syncedProd.variants = JSON.parse(syncedProd.variants); } catch(e) {}
               }
@@ -9661,7 +9721,7 @@ if (typeof productOrId === "object") {
                 if (typeof showToast === "function") showToast("⚡ Đã đồng bộ tức thì với nguồn sỉ: Tồn kho " + syncedProd.sourceStock + " | Giá sỉ " + (Number(syncedProd.sourcePrice) || 0).toLocaleString("vi-VN") + "đ", "success");
               }
               if (typeof MOCK_DATA !== "undefined" && Array.isArray(MOCK_DATA.products)) {
-                var sIdx = MOCK_DATA.products.findIndex(p => p && String(p.id) === String(syncedProd.id));
+                var sIdx = MOCK_DATA.products.findIndex(p => p && (String(p.id).toLowerCase() === String(syncedProd.id).toLowerCase() || (p.slug && syncedProd.slug && String(p.slug).toLowerCase() === String(syncedProd.slug).toLowerCase())));
                 if (sIdx !== -1) {
                   MOCK_DATA.products[sIdx] = Object.assign({}, MOCK_DATA.products[sIdx], syncedProd);
                   if (typeof saveProductsToStorage === "function") saveProductsToStorage();
@@ -9669,6 +9729,14 @@ if (typeof productOrId === "object") {
                   if (typeof renderProductGrid === "function") renderProductGrid();
                   if (typeof broadcastProductUpdateRealtime === "function") broadcastProductUpdateRealtime(MOCK_DATA.products[sIdx]);
                 }
+              }
+              // Cập nhật ngay trang chi tiết đang mở
+              var curDet = window.currentSelectedProduct || window._currentActiveDetailProduct;
+              if (curDet && (String(curDet.id).toLowerCase() === String(syncedProd.id).toLowerCase() || (curDet.slug && syncedProd.slug && String(curDet.slug).toLowerCase() === String(syncedProd.slug).toLowerCase()))) {
+                window.currentSelectedProduct = Object.assign({}, curDet, syncedProd);
+                window._currentActiveDetailProduct = window.currentSelectedProduct;
+                if (typeof refreshActiveProductDetailUI === "function") refreshActiveProductDetailUI(window.currentSelectedProduct);
+                if (typeof renderDetailAdminProfitLossBanner === "function") renderDetailAdminProfitLossBanner();
               }
             }
           }).catch(err => {
@@ -15646,6 +15714,9 @@ if (typeof productOrId === "object") {
               m.isSourceDeleted = false;
             } else if (typeof m.sourceStock === "number" && m.sourceStock > 0) {
               effectiveStock = Math.max(0, Number(m.sourceStock));
+              m.isSourceDeleted = false;
+            } else if (effectiveStock > 0) {
+              m.sourceStock = effectiveStock;
               m.isSourceDeleted = false;
             } else if (typeof getShopVariantStock === "function") {
               effectiveStock = getShopVariantStock(curP, curVIdx);
