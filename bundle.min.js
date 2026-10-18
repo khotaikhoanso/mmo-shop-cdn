@@ -18483,62 +18483,82 @@ function syncAllOpenViewsStock(changedProdId) {
     window.currentCompareProdName = "";
     window._compareRegistry = window._compareRegistry || {};
 
-    // 1. Hàm nhận diện thời hạn / gói của sản phẩm (Duration Recognizer - v3.4.2)
-    // Phân loại chuẩn xác theo nhóm: Ngày (day), Tuần (week), Tháng (month), Năm (year), Vĩnh viễn (lifetime)
+    // 1. Hàm nhận diện thời hạn / gói của sản phẩm (Duration Recognizer - v4.4.32)
+    // Phân loại chuẩn xác: 10 phút, 12h, 24h/1 ngày, 3 ngày, 7 ngày, 14 ngày, 1 tháng, 3 tháng, 6 tháng, 18 tháng, 1 năm, 2 năm/24 tháng, 3 năm/36 tháng, vĩnh viễn
     function parseProductDuration(name) {
       if (!name) return { key: "unknown", label: "Chung / Khác", bin: "none", order: 99 };
       const raw = String(name || "");
       const s = (" " + raw + " ").toLowerCase();
       const norm = (" " + removeVietnameseAccents(raw) + " ").toLowerCase().replace(/[\-_–—,\(\)\[\]\.\/\\]/g, " ");
 
-      // Vĩnh viễn (Lifetime)
-      if (/\b(vinh\s*vien|lifetime)\b/.test(norm) || s.includes("vĩnh viễn")) {
-        return { key: "lifetime", label: "Vĩnh Viễn", bin: "lifetime", order: 9 };
+      // Vĩnh viễn (Lifetime / Trọn đời)
+      if (/\b(vinh\s*vien|lifetime|tron\s*doi)\b/.test(norm) || s.includes("vĩnh viễn") || s.includes("trọn đời")) {
+        return { key: "lifetime", label: "Vĩnh Viễn", bin: "lifetime", order: 12 };
+      }
+
+      // 3 Năm (36 Tháng)
+      if (/\b(3\s*(nam|year|years|yr)|36\s*(thang|month|months|m))\b/.test(norm) || /\b3\s*năm\b/.test(s) || /\b36\s*tháng\b/.test(s)) {
+        return { key: "3_years", label: "3 Năm (36 Tháng)", bin: "year", order: 11 };
       }
 
       // 2 Năm (24 Tháng)
       if (/\b(2\s*(nam|year|years|yr)|24\s*(thang|month|months|m))\b/.test(norm) || /\b2\s*năm\b/.test(s) || /\b24\s*tháng\b/.test(s)) {
-        return { key: "2_years", label: "2 Năm", bin: "year", order: 8 };
+        return { key: "2_years", label: "2 Năm (24 Tháng)", bin: "year", order: 10 };
       }
 
-      // 6-36 Tháng / 18 Tháng / 12-36 Tháng / 12-72 Tháng (Ưu tiên nhận diện dải tháng trước)
-      if (/\b(18\s*(thang|month|months|m)|12\s*36\s*(thang|month|months|m)?|12\s*72\s*(thang|month|months|m)?|6\s*12\s*(thang|month|months|m)?|live\s*12\s*36|live\s*6\s*12)\b/.test(norm)) {
-        return { key: "18_months", label: "6–36 Tháng", bin: "month", order: 7 };
+      // 18 Tháng (hoặc dải 12-36 tháng)
+      if (/\b(18\s*(thang|month|months|m)|12\s*36\s*(thang|month|months|m)?|12\s*72\s*(thang|month|months|m)?|live\s*12\s*36)\b/.test(norm) || /\b18\s*tháng\b/.test(s)) {
+        return { key: "18_months", label: "18 Tháng", bin: "month", order: 9 };
       }
 
       // 1 Năm (12 Tháng / 365 Ngày)
       if (/\b(1\s*(nam|year|years|yr)|365\s*(ngay|day|days)|12\s*(thang|month|months|m))\b/.test(norm) || /\b1\s*năm\b/.test(s) || /\b365\s*ngày\b/.test(s) || /\b12\s*tháng\b/.test(s)) {
-        return { key: "1_year", label: "1 Năm (365 ngày)", bin: "year", order: 6 };
+        return { key: "1_year", label: "1 Năm (12 Tháng)", bin: "year", order: 8 };
       }
 
       // 6 Tháng (180 Ngày)
       if (/\b(6\s*(thang|month|months|m)|180\s*(ngay|day|days))\b/.test(norm) || /\b6\s*tháng\b/.test(s) || /\b180\s*ngày\b/.test(s)) {
-        return { key: "6_months", label: "6 Tháng", bin: "month", order: 5 };
+        return { key: "6_months", label: "6 Tháng", bin: "month", order: 7 };
       }
 
       // 3 Tháng (90 Ngày)
       if (/\b(3\s*(thang|month|months|m)|90\s*(ngay|day|days))\b/.test(norm) || /\b3\s*tháng\b/.test(s) || /\b90\s*ngày\b/.test(s)) {
-        return { key: "3_months", label: "3 Tháng", bin: "month", order: 4 };
+        return { key: "3_months", label: "3 Tháng", bin: "month", order: 6 };
       }
 
       // 1 Tháng (30 Ngày)
       if (/\b(1\s*(thang|month|months|m)|30\s*(ngay|day|days))\b/.test(norm) || /\b1\s*tháng\b/.test(s) || /\b30\s*ngày\b/.test(s)) {
-        return { key: "1_month", label: "1 Tháng (30 ngày)", bin: "month", order: 3 };
+        return { key: "1_month", label: "1 Tháng (30 Ngày)", bin: "month", order: 5 };
       }
 
       // 14 Ngày (2 Tuần)
       if (/\b(14\s*(ngay|day|days)|2\s*(tuan|week|weeks))\b/.test(norm) || /\b14\s*ngày\b/.test(s) || /\b2\s*tuần\b/.test(s)) {
-        return { key: "14_days", label: "14 Ngày", bin: "week", order: 2 };
+        return { key: "14_days", label: "14 Ngày / 2 Tuần", bin: "week", order: 4 };
       }
 
       // 7 Ngày (1 Tuần)
       if (/\b(7\s*(ngay|day|days)|1\s*(tuan|week|weeks)|7\s*14\s*(ngay|day|days))\b/.test(norm) || /\b7\s*ngày\b/.test(s) || /\b1\s*tuần\b/.test(s)) {
-        return { key: "7_days", label: "7 Ngày / 1 Tuần", bin: "week", order: 1 };
+        return { key: "7_days", label: "7 Ngày / 1 Tuần", bin: "week", order: 3 };
       }
 
-      // 1 Ngày / 24 Giờ / Giờ / Phút
-      if (/\b(1\s*(ngay|day)|24\s*(h|gio|hour|hours)|12\s*h|4\s*h|2\s*h|10\s*phut|2\s*phut)\b/.test(norm) || /\b1\s*ngày\b/.test(s) || /\b24\s*giờ\b/.test(s) || /\b(10|2)\s*phút\b/.test(s)) {
-        return { key: "1_day", label: "1 Ngày / Giờ", bin: "day", order: 0 };
+      // 3 Ngày (72 Giờ)
+      if (/\b(3\s*(ngay|day|days)|72\s*(h|gio|hour|hours))\b/.test(norm) || /\b3\s*ngày\b/.test(s) || /\b72\s*giờ\b/.test(s)) {
+        return { key: "3_days", label: "3 Ngày", bin: "day", order: 2 };
+      }
+
+      // 24 Giờ / 1 Ngày
+      if (/\b(24\s*(h|gio|hour|hours)|1\s*(ngay|day|days))\b/.test(norm) || /\b24\s*giờ\b/.test(s) || /\b1\s*ngày\b/.test(s)) {
+        return { key: "1_day", label: "24h / 1 Ngày", bin: "day", order: 1 };
+      }
+
+      // 12 Giờ (12h)
+      if (/\b(12\s*(h|gio|hour|hours|tieng))\b/.test(norm) || /\b12\s*(giờ|tiếng)\b/.test(s) || s.includes("12h")) {
+        return { key: "12_hours", label: "12 Giờ (12h)", bin: "hour", order: 0.5 };
+      }
+
+      // 10 Phút / Phút
+      if (/\b(10\s*(phut|p|min|mins|minute|minutes))\b/.test(norm) || /\b10\s*phút\b/.test(s) || s.includes("10p") || s.includes("10phut") || s.includes("10 phút") || /\b(live\s*10\s*p|10m)\b/.test(norm)) {
+        return { key: "10_min", label: "10 Phút", bin: "minute", order: 0 };
       }
 
       return { key: "unknown", label: "Chung / Khác", bin: "none", order: 90 };
@@ -19117,7 +19137,7 @@ function syncAllOpenViewsStock(changedProdId) {
       },
       proxy: {
         canonical: "Proxy",
-        keywords: ["proxy", "socks5", "ipv4", "ipv6", "residential", "datacenter", "mobile 4g", "4g", "vinaphone", "viettel", "fpt", "vnpt"]
+        keywords: ["proxy", "socks5", "residential", "datacenter", "mobile 4g", "4g"]
       },
       gemini: {
         canonical: "Gemini / Google AI",
@@ -19139,76 +19159,149 @@ function syncAllOpenViewsStock(changedProdId) {
     }
     window.removeAccentsCompare = removeAccentsCompare;
 
+    // Helper nhận diện phiên bản IP (IPv4 vs IPv6) tách biệt tuyệt đối
+    function detectIpVersionFromText(text) {
+      const norm = (" " + removeAccentsCompare(text) + " ").replace(/[\-_–—,\(\)\[\]\.\/\\]/g, " ");
+      const hasV4 = /\b(ipv4|v4|ip4|ip\s*v4|ipv\s*4)\b/.test(norm);
+      const hasV6 = /\b(ipv6|v6|ip6|ip\s*v6|ipv\s*6)\b/.test(norm);
+      return { hasV4, hasV6 };
+    }
+    window.detectIpVersionFromText = detectIpVersionFromText;
+
+    // Bản đồ từ đồng nghĩa cho từng từ khóa (chỉ mở rộng theo từng token, không bypass các từ khác trong query)
+    const BRAND_SYNONYMS_MAP = {
+      "fb": ["fb", "facebook", "via", "clone", "bm"],
+      "facebook": ["facebook", "fb", "via", "clone", "bm"],
+      "via": ["via", "clone", "fb", "facebook"],
+      "clone": ["clone", "via", "fb", "facebook"],
+      "ytb": ["ytb", "youtube"],
+      "youtube": ["youtube", "ytb"],
+      "inta": ["inta", "instagram", "ig", "insta"],
+      "instagram": ["instagram", "inta", "ig", "insta"],
+      "gpt": ["gpt", "chatgpt", "openai"],
+      "chatgpt": ["chatgpt", "gpt", "openai"],
+      "openai": ["openai", "chatgpt", "gpt"],
+      "mail": ["mail", "gmail", "hotmail", "outlook", "email"],
+      "gmail": ["gmail", "google workspace", "gg domain", "mail domain"],
+      "hotmail": ["hotmail", "outlook", "microsoft mail", "live.com"],
+      "outlook": ["outlook", "hotmail", "microsoft mail", "live.com"],
+      "tele": ["tele", "telegram"],
+      "telegram": ["telegram", "tele"],
+      "proxy": ["proxy", "socks5"]
+    };
+
     function matchesCompareProductFamily(item, qRaw) {
       if (!item) return false;
       const q = String(qRaw || "").trim().toLowerCase();
       if (!q) return true;
-      let qNorm = removeAccentsCompare(q);
-      qNorm = qNorm.replace(/\b(intagram|inta)\b/g, "instagram")
-                   .replace(/\b(luoi|nuoi)\b/g, "nuoi")
-                   .replace(/\b(titok|tik tok)\b/g, "tiktok")
-                   .replace(/\bytb\b/g, "youtube")
-                   .replace(/\bfb\b/g, "facebook");
 
+      const sId = String(item.id || "").toLowerCase();
+      if (sId === q || sId.includes(q)) return true;
+
+      const qNorm = removeAccentsCompare(q);
       const sName = String(item.name || "").toLowerCase();
       const sNameNorm = removeAccentsCompare(item.name);
       const sCat = String(item.category || "").toLowerCase();
       const sCatNorm = removeAccentsCompare(item.category);
       const sProv = String(item.provider || "").toLowerCase();
-      const sId = String(item.id || "").toLowerCase();
-
-      // Khớp chính xác ID sản phẩm
-      if (sId === q || sId.includes(q)) return true;
+      const fullTextNorm = (" " + sNameNorm + " " + sCatNorm + " " + sProv + " " + sId + " ").replace(/[\-_–—,\(\)\[\]\.\/\\]/g, " ");
 
       // [LOẠI TRỪ DỊCH VỤ KHÔNG TƯƠNG THÍCH]:
       // Nếu sản phẩm của shop là TÀI KHOẢN (Clone, VIA, Nuôi, Trâu...) thì TUYỆT ĐỐI KHÔNG gợi ý dịch vụ Thuê OTP / Code / SIM
       const targetName = removeAccentsCompare(window.currentCompareProdName || "").toLowerCase();
       const isTargetOtp = /\b(otp|sms|thue sim|code|thue mail)\b/i.test(targetName);
       const isItemOtp = /\b(otp|sms|thue sim|code|thue mail)\b/i.test(sNameNorm);
-      if (!isTargetOtp && isItemOtp) {
-        return false;
+      if (!isTargetOtp && isItemOtp) return false;
+      if (isTargetOtp && !isItemOtp) return false;
+
+      // 1. QUY TẮC BẮT BUỘC IP: v4 và v6 Tuyệt Đối Tách Biệt, Không Lẫn Nhau
+      const queryIp = detectIpVersionFromText(qNorm);
+      const itemIp = detectIpVersionFromText(sNameNorm + " " + sCatNorm);
+
+      if (queryIp.hasV6 && !queryIp.hasV4) {
+        // Tìm v6: BẮT BUỘC item phải là v6, VÀ TUYỆT ĐỐI KHÔNG phải là v4
+        if (!itemIp.hasV6) return false;
+        if (itemIp.hasV4 && !itemIp.hasV6) return false;
       }
-      if (isTargetOtp && !isItemOtp) {
-        return false;
+      if (queryIp.hasV4 && !queryIp.hasV6) {
+        // Tìm v4: BẮT BUỘC item phải là v4, VÀ TUYỆT ĐỐI KHÔNG phải là v6
+        if (!itemIp.hasV4) return false;
+        if (itemIp.hasV6) return false;
       }
 
-      // Tìm xem query có thuộc gia đình sản phẩm nào không
-      let matchedFamily = null;
-      for (const famKey in COMPARE_PRODUCT_FAMILIES) {
-        const fam = COMPARE_PRODUCT_FAMILIES[famKey];
-        if (fam.keywords.some(k => qNorm.includes(removeAccentsCompare(k)))) {
-          matchedFamily = fam;
-          break;
-        }
-      }
+      // 2. TÁCH CÁC TỪ KHÓA (TOKENS) & CHUẨN HÓA CỤM THỜI GIAN
+      let cleanedQ = qNorm
+        .replace(/\b10\s*(phut|p|min|mins)\b/g, " 10_min ")
+        .replace(/\b12\s*(h|gio|hour|tieng)\b/g, " 12_hours ")
+        .replace(/\b24\s*(h|gio|hour|tieng)\b/g, " 24_hours ")
+        .replace(/\b1\s*(ngay|day)\b/g, " 1_day ")
+        .replace(/\b3\s*(ngay|day)\b/g, " 3_days ")
+        .replace(/\b7\s*(ngay|day)\b/g, " 7_days ")
+        .replace(/\b14\s*(ngay|day)\b/g, " 14_days ")
+        .replace(/\b1\s*(thang|month)\b/g, " 1_month ")
+        .replace(/\b3\s*(thang|month)\b/g, " 3_months ")
+        .replace(/\b6\s*(thang|month)\b/g, " 6_months ")
+        .replace(/\b18\s*(thang|month)\b/g, " 18_months ")
+        .replace(/\b24\s*(thang|month)\b/g, " 24_months ")
+        .replace(/\b36\s*(thang|month)\b/g, " 36_months ")
+        .replace(/\b1\s*(nam|year)\b/g, " 1_year ")
+        .replace(/\b2\s*(nam|year)\b/g, " 2_years ")
+        .replace(/\b3\s*(nam|year)\b/g, " 3_years ")
+        .replace(/\b(vinh\s*vien|lifetime)\b/g, " lifetime ");
 
-      if (matchedFamily) {
-        // Nếu thuộc cùng họ sản phẩm (ví dụ tìm Outlook thì Hotmail cũng khớp, tìm Gmail thì Google/Domain mail cũng khớp)
-        if (matchedFamily.keywords.some(k => {
-          const kNorm = removeAccentsCompare(k);
-          return sNameNorm.includes(kNorm) || sCatNorm.includes(kNorm);
-        })) {
-          return true;
-        }
-      }
+      const rawTokens = cleanedQ.split(/\s+/).filter(Boolean);
+      if (rawTokens.length === 0) return true;
 
-      // Khớp theo các token từ khóa thông thường (hỗ trợ cả có dấu và không dấu)
-      const stopWords = ["cho", "the", "cac", "nhung", "ngay", "thang", "nam", "live", "da", "cuc", "ky", "sieu", "gia", "re", "chat", "luong", "trau"];
-      const tokens = qNorm.split(/\s+/).filter(Boolean);
+      // Loại stop words nhưng giữ lại từ khóa và số lượng
+      const stopWords = ["cho", "the", "cac", "nhung", "cuc", "ky", "sieu", "gia", "re", "chat", "luong"];
+      const tokens = rawTokens.filter(t => !stopWords.includes(t));
       if (tokens.length === 0) return true;
 
-      // 1. Nếu tất cả tokens khớp
-      if (tokens.every(tok => sNameNorm.includes(tok) || sCatNorm.includes(tok) || sProv.includes(tok))) {
-        return true;
-      }
+      // 3. KIỂM TRA MỌI TOKEN: TẤT CẢ PHẢI KHỚP (AND LOGIC NGHIÊM NGẶT)
+      const itemDur = parseProductDuration(item.name);
+      const itemCountry = parseProductCountry(item.name, item.category);
 
-      // 2. Thử khớp theo từ khóa chính quan trọng (bỏ qua các hư từ / tính từ tiếng Việt)
-      const sigTokens = tokens.filter(tok => tok.length >= 2 && !stopWords.includes(tok));
-      if (sigTokens.length > 0) {
-        return sigTokens.some(tok => sNameNorm.includes(tok) || sCatNorm.includes(tok));
-      }
+      return tokens.every(tok => {
+        // A. Token IP
+        if (tok === "v4" || tok === "ipv4" || tok === "ip4") {
+          return itemIp.hasV4 && !itemIp.hasV6;
+        }
+        if (tok === "v6" || tok === "ipv6" || tok === "ip6") {
+          return itemIp.hasV6 && !itemIp.hasV4;
+        }
 
-      return false;
+        // B. Token Thời Gian
+        if (tok === "10_min") return itemDur.key === "10_min";
+        if (tok === "12_hours") return itemDur.key === "12_hours";
+        if (tok === "24_hours" || tok === "1_day") return itemDur.key === "1_day";
+        if (tok === "3_days") return itemDur.key === "3_days";
+        if (tok === "7_days") return itemDur.key === "7_days";
+        if (tok === "14_days") return itemDur.key === "14_days";
+        if (tok === "1_month") return itemDur.key === "1_month";
+        if (tok === "3_months") return itemDur.key === "3_months";
+        if (tok === "6_months") return itemDur.key === "6_months";
+        if (tok === "18_months") return itemDur.key === "18_months";
+        if (tok === "24_months" || tok === "2_years") return itemDur.key === "2_years";
+        if (tok === "36_months" || tok === "3_years") return itemDur.key === "3_years";
+        if (tok === "1_year") return itemDur.key === "1_year";
+        if (tok === "lifetime") return itemDur.key === "lifetime";
+
+        // C. Token Quốc Gia Việt Nam
+        if (tok === "viet" || tok === "vn" || tok === "vietnam") {
+          return itemCountry.key === "vn" || /\b(vn|viet|vietnam)\b/.test(fullTextNorm);
+        }
+        if (tok === "us" || tok === "my") {
+          return itemCountry.key === "us" || /\b(us|usa|my)\b/.test(fullTextNorm);
+        }
+
+        // D. Token Đồng Nghĩa Thương Hiệu
+        if (BRAND_SYNONYMS_MAP[tok]) {
+          return BRAND_SYNONYMS_MAP[tok].some(syn => fullTextNorm.includes(" " + syn + " ") || fullTextNorm.includes(syn));
+        }
+
+        // E. Khớp chuỗi thông thường
+        return fullTextNorm.includes(tok);
+      });
     }
     window.matchesCompareProductFamily = matchesCompareProductFamily;
 
@@ -19230,7 +19323,11 @@ function syncAllOpenViewsStock(changedProdId) {
       if (s.includes("gmail")) return "Gmail";
       if (s.includes("hotmail")) return "Hotmail";
       if (s.includes("outlook")) return "Outlook";
-      if (s.includes("proxy")) return "Proxy";
+      if (s.includes("proxy")) {
+        if (/\b(ipv6|v6)\b/.test(s)) return "Proxy IPv6";
+        if (/\b(ipv4|v4)\b/.test(s)) return "Proxy IPv4";
+        return "Proxy";
+      }
       if (s.includes("tiktok")) return "TikTok";
       if (s.includes("facebook") || s.includes("fb") || s.includes("via fb") || s.includes("clone fb")) return "Facebook";
       if (s.includes("discord")) return "Discord";
@@ -19239,6 +19336,7 @@ function syncAllOpenViewsStock(changedProdId) {
       const words = s.split(/\s+/).filter(w => w.length >= 2);
       return words.slice(0, 3).join(" ");
     }
+    window.extractSmartCompareKeyword = extractSmartCompareKeyword;
 
     function executeCompareSourcesSearch() {
       const prodId = window.currentCompareProdId;
@@ -19330,7 +19428,7 @@ function syncAllOpenViewsStock(changedProdId) {
         effectiveCountryKey = chosenCountry;
       }
 
-      // 4. Phân biệt theo Thời Hạn (Ngày, Tuần, Tháng, Năm, Vĩnh viễn)
+      // 4. Phân biệt theo Thời Hạn (10 phút, 12h, 24h, 3 ngày, 7 ngày, 14 ngày, 1 tháng, 3 tháng, 6 tháng, 18 tháng, 1 năm, 2 năm/24 tháng, 3 năm/36 tháng, vĩnh viễn)
       let effectiveDurKey = "all";
       let effectiveDurBin = "all";
       if (chosenDur === "auto") {
@@ -19340,14 +19438,25 @@ function syncAllOpenViewsStock(changedProdId) {
         }
       } else if (chosenDur !== "all") {
         effectiveDurKey = chosenDur;
-        if (chosenDur === "1_year" || chosenDur === "2_years") effectiveDurBin = "year";
-        else if (chosenDur === "18_months" || chosenDur === "6_months" || chosenDur === "3_months" || chosenDur === "1_month") effectiveDurBin = "month";
-        else if (chosenDur === "14_days" || chosenDur === "7_days") effectiveDurBin = "week";
-        else if (chosenDur === "1_day") effectiveDurBin = "day";
+        if (chosenDur === "10_min") effectiveDurBin = "minute";
+        else if (chosenDur === "12_hours") effectiveDurBin = "hour";
+        else if (chosenDur === "1_day" || chosenDur === "3_days") effectiveDurBin = "day";
+        else if (chosenDur === "7_days" || chosenDur === "14_days") effectiveDurBin = "week";
+        else if (chosenDur === "1_month" || chosenDur === "3_months" || chosenDur === "6_months" || chosenDur === "18_months") effectiveDurBin = "month";
+        else if (chosenDur === "1_year" || chosenDur === "2_years" || chosenDur === "3_years" || chosenDur === "24_months" || chosenDur === "36_months") effectiveDurBin = "year";
         else if (chosenDur === "lifetime") effectiveDurBin = "lifetime";
       }
 
-      // 5. Áp dụng bộ lọc với Cơ Chế Dự Phòng Thông Minh (Fallback: "Cái nào không có hoặc hết hàng thì cứ rẻ nhất mà đề xuất")
+      function checkDurationMatch(sDur, targetKey) {
+        if (!targetKey || targetKey === "all") return true;
+        if (!sDur || sDur.key === "unknown") return false;
+        if (sDur.key === targetKey) return true;
+        if ((targetKey === "2_years" || targetKey === "24_months") && (sDur.key === "2_years" || sDur.key === "24_months")) return true;
+        if ((targetKey === "3_years" || targetKey === "36_months") && (sDur.key === "3_years" || sDur.key === "36_months")) return true;
+        return false;
+      }
+
+      // 5. Áp dụng bộ lọc với Cơ Chế Dự Phòng Thông Minh
       let filtered = candidates.slice();
 
       // Bộ lọc nghiêm ngặt (Strict Filter: đúng cả Quốc gia và Thời hạn)
@@ -19358,7 +19467,7 @@ function syncAllOpenViewsStock(changedProdId) {
         }
         if (effectiveDurKey !== "all") {
           const sDur = parseProductDuration(s.name);
-          if (sDur.key !== effectiveDurKey && (effectiveDurBin === "all" || sDur.bin !== effectiveDurBin)) return false;
+          if (!checkDurationMatch(sDur, effectiveDurKey)) return false;
         }
         return true;
       });
@@ -19369,16 +19478,20 @@ function syncAllOpenViewsStock(changedProdId) {
       // Kiểm tra có còn hàng trong bộ lọc strict không
       let strictInStock = strictFiltered.filter(s => (Number(s.amount !== undefined ? s.amount : s.stock) || 0) > 0);
 
+      // Nếu người dùng chủ động chọn bộ lọc cụ thể (không phải auto), KHÔNG relax làm bung bét sai thời hạn/quốc gia
+      const isManualCountry = (chosenCountry !== "auto" && chosenCountry !== "all");
+      const isManualDur = (chosenDur !== "auto" && chosenDur !== "all");
+
       if (strictInStock.length > 0) {
         filtered = strictFiltered;
       } else if (strictFiltered.length > 0 && !onlyInStock) {
         filtered = strictFiltered;
-      } else {
+      } else if (!isManualCountry && !isManualDur) {
         // Fallback 1: Nếu lọc theo quốc gia + thời hạn không có hàng, thử lọc theo thời hạn
         if (effectiveCountryKey !== "all" && effectiveDurKey !== "all") {
           let durOnly = filtered.filter(function(s) {
             const sDur = parseProductDuration(s.name);
-            return sDur.key === effectiveDurKey || (effectiveDurBin !== "all" && sDur.bin === effectiveDurBin);
+            return checkDurationMatch(sDur, effectiveDurKey) || (effectiveDurBin !== "all" && sDur.bin === effectiveDurBin);
           });
           let durInStock = durOnly.filter(s => (Number(s.amount !== undefined ? s.amount : s.stock) || 0) > 0);
           if (durInStock.length > 0) {
@@ -19410,6 +19523,8 @@ function syncAllOpenViewsStock(changedProdId) {
             relaxedNote = "Tự động đề xuất sản phẩm rẻ nhất còn hàng từ cả các nguồn hàng";
           }
         }
+      } else {
+        filtered = strictFiltered;
       }
 
       // 6. Lọc chỉ hiện còn hàng (nếu checkbox bật)
@@ -19503,6 +19618,10 @@ function syncAllOpenViewsStock(changedProdId) {
             durColor = "#fb923c"; durBg = "rgba(251,146,60,0.15)"; durBorder = "rgba(251,146,60,0.3)";
           } else if (itemDur.bin === "day") {
             durColor = "#f87171"; durBg = "rgba(248,113,113,0.15)"; durBorder = "rgba(248,113,113,0.3)";
+          } else if (itemDur.bin === "hour") {
+            durColor = "#a78bfa"; durBg = "rgba(167,139,250,0.15)"; durBorder = "rgba(167,139,250,0.3)";
+          } else if (itemDur.bin === "minute") {
+            durColor = "#e879f9"; durBg = "rgba(232,121,249,0.15)"; durBorder = "rgba(232,121,249,0.3)";
           } else if (itemDur.bin === "lifetime") {
             durColor = "#10b981"; durBg = "rgba(16,185,129,0.15)"; durBorder = "rgba(16,185,129,0.3)";
           }
