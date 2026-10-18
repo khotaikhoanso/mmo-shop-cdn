@@ -24449,7 +24449,28 @@ function syncAllOpenViewsStock(changedProdId) {
           // Helper cập nhật dữ liệu đồng bộ cho 1 đối tượng đơn hàng trong mảng
           function applySyncToTarget(targetItem) {
             let changed = false;
-            if (isCloudCompleted) {
+            const isLocalExchanged = Boolean(targetItem.isExchanged || targetItem.replacementAccount || String(targetItem.status||'').includes('Đổi Trả') || String(targetItem.status||'').includes('Đã Bảo Hành') || (typeof localStorage !== 'undefined' && (localStorage.getItem('mmo_warranty_exchanged_' + cleanId) === 'true' || localStorage.getItem('mmo_warranty_exchanged_DH' + cleanId.replace(/^DH/i, '')) === 'true')));
+            const isCloudExchanged = Boolean(normOrder.isExchanged || normOrder.order_status === 'EXCHANGED' || String(normOrder.status||'').includes('Đổi Trả') || String(normOrder.statusText||'').includes('Đổi Trả') || String(normOrder.status||'').includes('Đã Bảo Hành'));
+
+            if (isLocalExchanged || isCloudExchanged) {
+              targetItem.isExchanged = true;
+              targetItem.hasComplaint = false;
+              targetItem.isWarranty = false;
+              targetItem.status = "Đã Bảo Hành (Đã Đổi Trả 1-1)";
+              targetItem.statusText = "Đã Đổi Trả 1-1";
+              if (normOrder.credentials) {
+                targetItem.credentials = normOrder.credentials;
+              }
+              if (normOrder.replacementAccount) {
+                targetItem.replacementAccount = normOrder.replacementAccount;
+              }
+              try {
+                localStorage.removeItem("mmo_complaint_" + cleanId);
+                localStorage.removeItem("mmo_complaint_DH" + cleanId.replace(/^DH/i, ''));
+                localStorage.setItem("mmo_warranty_exchanged_" + cleanId, "true");
+              } catch(e) {}
+              changed = true;
+            } else if (isCloudCompleted) {
               targetItem.status = "COMPLETED";
               targetItem.statusText = "Đã giao hàng";
               changed = true;
@@ -24782,7 +24803,29 @@ function syncAllOpenViewsStock(changedProdId) {
               if (o.type === "PRE_ORDER" || cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_")) {
                 existing.type = "PRE_ORDER";
               }
-              if (o.status === "CANCELLED" || o.status === "REFUNDED" || o.isCancelled || o.isRefunded || String(o.statusText || "").toLowerCase().includes("hủy")) {
+              const isExchangedMerge = Boolean(
+                o.isExchanged || existing.isExchanged ||
+                o.replacementAccount || existing.replacementAccount ||
+                String(o.status||'').includes('Đổi Trả') || String(existing.status||'').includes('Đổi Trả') ||
+                String(o.statusText||'').includes('Đổi Trả') || String(existing.statusText||'').includes('Đổi Trả') ||
+                String(o.status||'').includes('Đã Bảo Hành') || String(existing.status||'').includes('Đã Bảo Hành') ||
+                String(o.order_status||'') === 'EXCHANGED' || String(existing.order_status||'') === 'EXCHANGED' ||
+                (typeof localStorage !== 'undefined' && (localStorage.getItem('mmo_warranty_exchanged_' + cleanId) === 'true' || localStorage.getItem('mmo_warranty_exchanged_DH' + cleanId.replace(/^DH/i, '')) === 'true'))
+              );
+
+              if (isExchangedMerge) {
+                existing.status = "Đã Bảo Hành (Đã Đổi Trả 1-1)";
+                existing.statusText = "Đã Đổi Trả 1-1";
+                existing.isExchanged = true;
+                existing.hasComplaint = false;
+                existing.isWarranty = false;
+                if (o.credentials) existing.credentials = o.credentials;
+                if (o.replacementAccount) existing.replacementAccount = o.replacementAccount;
+                try {
+                  localStorage.removeItem("mmo_complaint_" + cleanId);
+                  localStorage.removeItem("mmo_complaint_DH" + cleanId.replace(/^DH/i, ''));
+                } catch(e) {}
+              } else if (o.status === "CANCELLED" || o.status === "REFUNDED" || o.isCancelled || o.isRefunded || String(o.statusText || "").toLowerCase().includes("hủy")) {
                 existing.status = "CANCELLED";
                 existing.statusText = o.statusText || "Đã hủy đơn";
                 existing.isCancelled = true;
@@ -25026,8 +25069,12 @@ function syncAllOpenViewsStock(changedProdId) {
             const credsMatch = m.text.match(/Tài khoản mới thay thế của bạn:\s*\n([\s\S]+?)(?:\nQuý khách|\nAdmin|$)/i);
             const replacementCreds = credsMatch ? credsMatch[1].trim() : "";
 
-            if (uOrders[oIdx].status !== "Đã Đổi Trả 1-Đổi-1" || (replacementCreds && !String(uOrders[oIdx].credentials || "").includes(replacementCreds))) {
-              uOrders[oIdx].status = "Đã Đổi Trả 1-Đổi-1";
+            if (uOrders[oIdx].status !== "Đã Bảo Hành (Đã Đổi Trả 1-1)" || !uOrders[oIdx].isExchanged || (replacementCreds && !String(uOrders[oIdx].credentials || "").includes(replacementCreds))) {
+              uOrders[oIdx].status = "Đã Bảo Hành (Đã Đổi Trả 1-1)";
+              uOrders[oIdx].statusText = "Đã Đổi Trả 1-1";
+              uOrders[oIdx].isExchanged = true;
+              uOrders[oIdx].hasComplaint = false;
+              uOrders[oIdx].isWarranty = false;
               uOrders[oIdx].exchangeStatus = "COMPLETED";
               if (replacementCreds) {
                 uOrders[oIdx].replacementAccount = replacementCreds;
@@ -25035,6 +25082,11 @@ function syncAllOpenViewsStock(changedProdId) {
                   uOrders[oIdx].credentials = (uOrders[oIdx].credentials ? (uOrders[oIdx].credentials + "\n--- TÀI KHOẢN MỚI ĐỔI TRẢ (1-ĐỔI-1) ---\n" + replacementCreds) : replacementCreds);
                 }
               }
+              try {
+                localStorage.removeItem("mmo_complaint_" + oId);
+                localStorage.removeItem("mmo_complaint_DH" + oId.replace(/^DH/i, ''));
+                localStorage.setItem("mmo_warranty_exchanged_" + oId, "true");
+              } catch(e) {}
               updated = true;
             }
           }
@@ -25047,6 +25099,14 @@ function syncAllOpenViewsStock(changedProdId) {
           const oIdx = uOrders.findIndex(o => (o.orderId === oId || o.id === oId));
           if (oIdx !== -1 && !String(uOrders[oIdx].status || "").includes("Hoàn Tiền")) {
             uOrders[oIdx].status = "Đã Hoàn Tiền";
+            uOrders[oIdx].statusText = "Đã Hoàn Tiền Ví";
+            uOrders[oIdx].isRefunded = true;
+            uOrders[oIdx].hasComplaint = false;
+            uOrders[oIdx].isWarranty = false;
+            try {
+              localStorage.removeItem("mmo_complaint_" + oId);
+              localStorage.removeItem("mmo_complaint_DH" + oId.replace(/^DH/i, ''));
+            } catch(e) {}
             updated = true;
           }
         }
@@ -25058,25 +25118,41 @@ function syncAllOpenViewsStock(changedProdId) {
         all.forEach(function(ao) {
           const aId = ao.orderId || ao.id;
           if (!aId) return;
-          const uIdx = uOrders.findIndex(o => (o.orderId === aId || o.id === aId));
+          const cleanAId = String(aId).replace(/#/g, "").trim();
+          const uIdx = uOrders.findIndex(o => (String(o.orderId || o.id || "").replace(/#/g, "").trim() === cleanAId));
           if (uIdx !== -1) {
             const uSt = String(uOrders[uIdx].status || "");
             const aSt = String(ao.status || "");
-            // Nếu đơn đã Hoàn Tiền hoặc Đã Đổi Trả thì không cho Khiếu Nại ghi đè lùi lại
-            const isCompletedWarranty = uSt.includes("Hoàn Tiền") || uSt.includes("Đổi Trả") || uSt.includes("Đã Bảo Hành");
-            if (!isCompletedWarranty && (aSt.includes("Đổi Trả") || aSt.includes("Hoàn Tiền") || aSt.includes("Bảo Hành"))) {
-              uOrders[uIdx].status = ao.status;
+            const isAoExchanged = Boolean(ao.isExchanged || ao.replacementAccount || aSt.includes("Đổi Trả") || aSt.includes("Đã Bảo Hành") || (typeof localStorage !== "undefined" && localStorage.getItem("mmo_warranty_exchanged_" + cleanAId) === "true"));
+            if (isAoExchanged) {
+              uOrders[uIdx].status = "Đã Bảo Hành (Đã Đổi Trả 1-1)";
+              uOrders[uIdx].statusText = "Đã Đổi Trả 1-1";
+              uOrders[uIdx].isExchanged = true;
+              uOrders[uIdx].hasComplaint = false;
+              uOrders[uIdx].isWarranty = false;
               if (ao.credentials) uOrders[uIdx].credentials = ao.credentials;
-              if (ao.refundedAt) uOrders[uIdx].refundedAt = ao.refundedAt;
+              if (ao.replacementAccount) uOrders[uIdx].replacementAccount = ao.replacementAccount;
+              try {
+                localStorage.removeItem("mmo_complaint_" + cleanAId);
+                localStorage.removeItem("mmo_complaint_DH" + cleanAId.replace(/^DH/i, ''));
+                localStorage.setItem("mmo_warranty_exchanged_" + cleanAId, "true");
+              } catch(e) {}
               updated = true;
-            } else if (aSt.includes("Hoàn Tiền") && !uSt.includes("Hoàn Tiền")) {
-              uOrders[uIdx].status = ao.status;
-              if (ao.refundedAt) uOrders[uIdx].refundedAt = ao.refundedAt;
-              updated = true;
-            } else if ((aSt.includes("Đổi Trả") || aSt.includes("Đã Bảo Hành")) && !uSt.includes("Đổi Trả") && !uSt.includes("Đã Bảo Hành") && !uSt.includes("Hoàn Tiền")) {
-              uOrders[uIdx].status = ao.status;
-              if (ao.credentials) uOrders[uIdx].credentials = ao.credentials;
-              updated = true;
+            } else {
+              const isCompletedWarranty = uSt.includes("Hoàn Tiền") || uSt.includes("Đổi Trả") || uSt.includes("Đã Bảo Hành");
+              if (!isCompletedWarranty && (aSt.includes("Đổi Trả") || aSt.includes("Hoàn Tiền") || aSt.includes("Bảo Hành"))) {
+                uOrders[uIdx].status = ao.status;
+                if (ao.credentials) uOrders[uIdx].credentials = ao.credentials;
+                if (ao.refundedAt) uOrders[uIdx].refundedAt = ao.refundedAt;
+                updated = true;
+              } else if (aSt.includes("Hoàn Tiền") && !uSt.includes("Hoàn Tiền")) {
+                uOrders[uIdx].status = ao.status;
+                uOrders[uIdx].isRefunded = true;
+                uOrders[uIdx].hasComplaint = false;
+                uOrders[uIdx].isWarranty = false;
+                if (ao.refundedAt) uOrders[uIdx].refundedAt = ao.refundedAt;
+                updated = true;
+              }
             }
           }
         });
@@ -25441,6 +25517,32 @@ function syncAllOpenViewsStock(changedProdId) {
         showToast("Không tìm thấy dữ liệu đơn hàng: " + cleanId, "warning");
         return;
       }
+      const isExchanged = Boolean(order.isExchanged) || Boolean(order.replacementAccount) ||
+        String(order.status || "").includes("Đổi Trả") || String(order.status || "").includes("Đã Bảo Hành") ||
+        String(order.statusText || "").includes("Đổi Trả") || String(poCreds).includes("TÀI KHOẢN MỚI ĐỔI TRẢ") ||
+        (typeof isOrderWarrantyOrExchange === "function" && isOrderWarrantyOrExchange(order)) ||
+        (typeof localStorage !== "undefined" && (
+          localStorage.getItem("mmo_warranty_exchanged_" + cleanId) === "true" ||
+          localStorage.getItem("mmo_warranty_exchanged_DH" + cleanId.replace(/^DH/i, "")) === "true"
+        ));
+
+      if (isExchanged) {
+        try {
+          localStorage.removeItem("mmo_complaint_" + cleanId);
+          localStorage.removeItem("mmo_complaint_DH" + cleanId.replace(/^DH/i, ""));
+          localStorage.removeItem("mmo_complaint_#" + cleanId);
+          localStorage.setItem("mmo_warranty_exchanged_" + cleanId, "true");
+        } catch(e) {}
+        order.hasComplaint = false;
+        order.isWarranty = false;
+        order.isExchanged = true;
+      }
+
+      if (order.replacementAccount && !poCreds.includes(order.replacementAccount.trim())) {
+        poCreds = poCreds ? (poCreds + "\n\n--- TÀI KHOẢN MỚI ĐỔI TRẢ (1-ĐỔI-1) ---\n" + order.replacementAccount.trim()) : order.replacementAccount.trim();
+        order.credentials = poCreds;
+      }
+
       if (poCreds) {
         poCreds = Array.from(new Set(String(poCreds).split("\n").map(function(s) { return s.trim(); }).filter(Boolean))).join("\n");
       }
@@ -25466,10 +25568,10 @@ function syncAllOpenViewsStock(changedProdId) {
       // Cập nhật tiêu đề Modal linh hoạt theo loại đơn
       const modalHeaderTitle = document.querySelector("#orderDeliveryModal .modal-title");
       if (modalHeaderTitle) {
-        if (isPreOrder) {
+        if (isExchanged) {
+          modalHeaderTitle.innerHTML = '<i class="fa-solid fa-arrows-rotate" style="color:#38bdf8;"></i> Bàn Giao Tài Khoản Đổi Trả (1-Đổi-1 Thành Công)!';
+        } else if (isPreOrder) {
           modalHeaderTitle.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đơn Hàng Đặt Trước Đã Bàn Giao Thành Công!';
-        } else if (String(order.status || "").includes("Đổi Trả") || String(poCreds).includes("TÀI KHOẢN MỚI ĐỔI TRẢ")) {
-          modalHeaderTitle.innerHTML = '<i class="fa-solid fa-rotate"></i> Bàn Giao Tài Khoản Đổi Trả Thành Công!';
         } else {
           modalHeaderTitle.innerHTML = '<i class="fa-solid fa-circle-check"></i> Mua Hàng &amp; Giao Tự Động Thành Công!';
         }
@@ -25477,9 +25579,19 @@ function syncAllOpenViewsStock(changedProdId) {
 
       // Hiển thị banner đổi trả nếu đơn đã được cấp tài khoản mới
       const noticeBanner = document.getElementById("dlvExchangeNotice");
-      const isExchanged = String(order.status || "").includes("Đổi Trả") || String(poCreds).includes("TÀI KHOẢN MỚI ĐỔI TRẢ");
       if (noticeBanner) {
         noticeBanner.style.display = isExchanged ? "block" : "none";
+      }
+
+      const dlvCard = document.querySelector("#orderDeliveryModal .modal-card");
+      if (dlvCard) {
+        if (isExchanged) {
+          dlvCard.style.borderColor = "#38bdf8";
+          dlvCard.style.boxShadow = "0 10px 40px rgba(56,189,248,0.25)";
+        } else {
+          dlvCard.style.borderColor = "#10b981";
+          dlvCard.style.boxShadow = "0 10px 40px rgba(16,185,129,0.25)";
+        }
       }
 
       const dlvModal = document.getElementById("orderDeliveryModal");
@@ -25823,6 +25935,31 @@ function syncAllOpenViewsStock(changedProdId) {
         return hasPreCode || hasPreText || o.type === "PRE_ORDER" || o.order_status === "PRE_ORDER" || Boolean(o.isPreOrder);
       };
 
+      // Helper kiểm tra đơn đã hoàn tất bảo hành đổi trả
+      const isExCheck = function(o) {
+        if (!o) return false;
+        const st = String(o.status || o.statusText || o.order_status || '').toLowerCase();
+        const cred = String(o.credentials || o.accounts || '').toLowerCase();
+        const cId = String(o.orderId || o.id || o.orderCode || '').replace(/#/g, '').trim();
+        return Boolean(o.isExchanged) || Boolean(o.replacementAccount) ||
+               st.includes('đổi trả') || st.includes('doi tra') ||
+               st.includes('1-đổi-1') || st.includes('1-doi-1') ||
+               st.includes('đổi 1-1') || st.includes('doi 1-1') ||
+               st.includes('đã bảo hành') || st.includes('da bao hanh') ||
+               st.includes('exchanged') ||
+               cred.includes('tài khoản mới đổi trả') ||
+               (typeof localStorage !== 'undefined' && (Boolean(localStorage.getItem('mmo_warranty_exchanged_' + cId)) || Boolean(localStorage.getItem('mmo_warranty_exchanged_DH' + cId.replace(/^DH/i, '')))));
+      };
+
+      const isCompPendingCheck = function(o) {
+        if (!o || isPreOrderCheck(o) || isExCheck(o)) return false;
+        const st = String(o.status || o.statusText || '').toLowerCase();
+        if (st.includes('hoàn tiền') || o.isRefunded || o.refundedAt) return false;
+        const cId = String(o.orderId || o.id || o.orderCode || '').replace(/#/g, '').trim();
+        if (typeof localStorage !== 'undefined' && (Boolean(localStorage.getItem('mmo_warranty_rejected_' + cId)) || Boolean(localStorage.getItem('mmo_warranty_rejected_DH' + cId.replace(/^DH/i, ''))))) return false;
+        return Boolean(o.hasComplaint) || Boolean(o.isWarranty) || st.includes('khiếu nại') || st.includes('bảo hành') || (typeof localStorage !== 'undefined' && (Boolean(localStorage.getItem('mmo_complaint_' + cId)) || Boolean(localStorage.getItem('mmo_complaint_DH' + cId.replace(/^DH/i, '')))));
+      };
+
       // Đếm số lượng đơn theo phân loại
       const countAll = orders.length;
       const countPre = orders.filter(function(o) {
@@ -25836,7 +25973,7 @@ function syncAllOpenViewsStock(changedProdId) {
       }).length;
       const countCompleted = orders.filter(function(o) {
         if (isPreOrderCheck(o)) return false;
-        return !isOrderWarrantyOrExchange(o);
+        return !isCompPendingCheck(o);
       }).length;
 
       const elCountAll = document.getElementById("profOrdersCountAll");
@@ -25859,7 +25996,7 @@ function syncAllOpenViewsStock(changedProdId) {
       } else if (profileOrdersActiveTab === "COMPLETED") {
         orders = orders.filter(function(o) {
           if (isPreOrderCheck(o)) return false;
-          return !isOrderWarrantyOrExchange(o);
+          return !isCompPendingCheck(o);
         });
       }
 
@@ -25931,8 +26068,23 @@ function syncAllOpenViewsStock(changedProdId) {
 
                 const isPreOrder = isPreOrderCheck(order);
                 const isRefunded = !isPreOrder && (stLow.includes('hoàn tiền') || stLow.includes('hoan tien') || stLow.includes('refund') || Boolean(order.refundedAt) || Boolean(order.isRefunded) || Boolean(order.refundAmount));
-                const isExchanged = !isPreOrder && !isRefunded && (stLow.includes('đổi trả') || stLow.includes('doi tra') || stLow.includes('1-đổi-1') || stLow.includes('1-doi-1') || stLow.includes('đổi 1-1') || stLow.includes('doi 1-1') || stLow.includes('đã bảo hành') || stLow.includes('da bao hanh') || credLow.includes('đổi trả') || credLow.includes('doi tra') || credLow.includes('tài khoản mới đổi trả') || Boolean(order.replacementAccount) || Boolean(order.isExchanged));
-                const isComplain = !isPreOrder && !isRefunded && !isExchanged && (stLow.includes('khiếu nại') || stLow.includes('khieu nai') || stLow.includes('bảo hành') || stLow.includes('bao hanh') || stLow.includes('warranty') || stLow.includes('complain') || Boolean(order.hasComplaint) || Boolean(order.isWarranty));
+                const isExchanged = !isPreOrder && !isRefunded && (
+                  Boolean(order.isExchanged) ||
+                  Boolean(order.replacementAccount) ||
+                  stLow.includes('đổi trả') || stLow.includes('doi tra') ||
+                  stLow.includes('1-đổi-1') || stLow.includes('1-doi-1') ||
+                  stLow.includes('đổi 1-1') || stLow.includes('doi 1-1') ||
+                  stLow.includes('đã bảo hành') || stLow.includes('da bao hanh') ||
+                  stLow.includes('exchanged') ||
+                  credLow.includes('đổi trả') || credLow.includes('doi tra') ||
+                  credLow.includes('tài khoản mới đổi trả') ||
+                  (typeof localStorage !== "undefined" && (Boolean(localStorage.getItem("mmo_warranty_exchanged_" + cleanOId)) || Boolean(localStorage.getItem("mmo_warranty_exchanged_DH" + cleanOId.replace(/^DH/i, "")))))
+                );
+                const isComplain = !isPreOrder && !isRefunded && !isExchanged && (
+                  (stLow.includes('khiếu nại') || stLow.includes('khieu nai') || Boolean(order.hasComplaint) || Boolean(order.isWarranty) || (typeof localStorage !== "undefined" && (Boolean(localStorage.getItem("mmo_complaint_" + cleanOId)) || Boolean(localStorage.getItem("mmo_complaint_DH" + cleanOId.replace(/^DH/i, "")))))) &&
+                  !(typeof localStorage !== "undefined" && (Boolean(localStorage.getItem("mmo_warranty_rejected_" + cleanOId)) || Boolean(localStorage.getItem("mmo_warranty_rejected_DH" + cleanOId.replace(/^DH/i, ""))))) &&
+                  !(typeof localStorage !== "undefined" && (Boolean(localStorage.getItem("mmo_warranty_exchanged_" + cleanOId)) || Boolean(localStorage.getItem("mmo_warranty_exchanged_DH" + cleanOId.replace(/^DH/i, "")))))
+                );
 
                 let statusBadgeHtml = '';
                 let actionBtnsHtml = '';
@@ -26108,9 +26260,23 @@ function syncAllOpenViewsStock(changedProdId) {
                     `;
                   } else if (isExchanged) {
                     statusBadgeHtml = `
-                      <span style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid #38bdf8; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                      <span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid #38bdf8; font-size:0.75rem; font-weight:800; padding:4px 9px; border-radius:5px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                         <i class="fa-solid fa-arrows-rotate"></i> Đã Đổi Trả 1-1
                       </span>
+                      <span style="color:#38bdf8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Hoàn tất bảo hành</span>
+                    `;
+                    actionBtnsHtml = `
+                      <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
+                        <button onclick="openOrderCredentialsModal('${cleanOId}')" style="background:#0b111e; color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Xem thông tin tài khoản (đã cập nhật acc đổi mới)">
+                          <i class="fa-solid fa-key" style="color:#38bdf8;"></i> Xem Acc
+                        </button>
+                        <button onclick="openOrderReviewModal('${cleanOId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#0b111e; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
+                          <i class="fa-solid fa-star" style="color:#fbbf24;"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
+                        </button>
+                        <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#94a3b8; border:1px solid rgba(148,163,184,0.3); font-weight:600; padding:6px 10px; border-radius:6px; font-size:0.74rem; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Hỗ trợ thêm nếu cần">
+                          <i class="fa-solid fa-headset" style="color:#94a3b8;"></i> Hỗ Trợ
+                        </button>
+                      </div>
                     `;
                   } else if (isComplain) {
                     statusBadgeHtml = `
@@ -26118,27 +26284,39 @@ function syncAllOpenViewsStock(changedProdId) {
                         <i class="fa-solid fa-shield-halved"></i> Cần Bảo Hành / Đổi Trả
                       </span>
                     `;
+                    actionBtnsHtml = `
+                      <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
+                        <button onclick="openOrderCredentialsModal('${cleanOId}')" style="background:#0b111e; color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Xem thông tin tài khoản đã nhận">
+                          <i class="fa-solid fa-key" style="color:#38bdf8;"></i> Xem Acc
+                        </button>
+                        <button onclick="openOrderReviewModal('${cleanOId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#0b111e; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
+                          <i class="fa-solid fa-star" style="color:#fbbf24;"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
+                        </button>
+                        <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
+                          <i class="fa-solid fa-shield-halved" style="color:#f87171;"></i> Khiếu Nại
+                        </button>
+                      </div>
+                    `;
                   } else {
                     statusBadgeHtml = `
                       <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid #10b981; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
                         <i class="fa-solid fa-circle-check"></i> Hoàn Thành
                       </span>
                     `;
+                    actionBtnsHtml = `
+                      <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
+                        <button onclick="openOrderCredentialsModal('${cleanOId}')" style="background:#0b111e; color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Xem thông tin tài khoản đã nhận">
+                          <i class="fa-solid fa-key" style="color:#38bdf8;"></i> Xem Acc
+                        </button>
+                        <button onclick="openOrderReviewModal('${cleanOId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#0b111e; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
+                          <i class="fa-solid fa-star" style="color:#fbbf24;"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
+                        </button>
+                        <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
+                          <i class="fa-solid fa-shield-halved" style="color:#f87171;"></i> Khiếu Nại
+                        </button>
+                      </div>
+                    `;
                   }
-
-                  actionBtnsHtml = `
-                    <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
-                      <button onclick="openOrderCredentialsModal('${cleanOId}')" style="background:#0b111e; color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Xem thông tin tài khoản đã nhận">
-                        <i class="fa-solid fa-key" style="color:#38bdf8;"></i> Xem Acc
-                      </button>
-                      <button onclick="openOrderReviewModal('${cleanOId}')" style="${order.reviewed ? 'background:rgba(251,191,36,0.15); color:#fbbf24; border:1px solid #fbbf24;' : 'background:#0b111e; color:#fbbf24; border:1px solid rgba(251,191,36,0.4);'} font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Đánh giá chất lượng sản phẩm">
-                        <i class="fa-solid fa-star" style="color:#fbbf24;"></i> ${order.reviewed ? 'Đã Đánh Giá' : 'Đánh Giá'}
-                      </button>
-                      <button onclick="handleComplainOrder('${cleanOId}')" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.4); font-weight:700; padding:6px 12px; border-radius:6px; font-size:0.76rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Yêu cầu bảo hành / khiếu nại">
-                        <i class="fa-solid fa-shield-halved" style="color:#f87171;"></i> Khiếu Nại
-                      </button>
-                    </div>
-                  `;
                 }
 
                 const curU = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
@@ -38063,45 +38241,57 @@ function getProductSchemaReviews(p, idx) {
         }
       }
 
-      if (o) {
-        o.status = "Khiếu Nại / Bảo Hành";
-        o.hasComplaint = true;
-        o.isWarranty = true;
-        if (typeof saveAllOrders === "function") saveAllOrders(all);
-      }
-      if (uo) {
-        uo.status = "Khiếu Nại / Bảo Hành";
-        uo.hasComplaint = true;
-        uo.isWarranty = true;
-        if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
-        if (typeof cancelAffiliateCommissionForOrder === "function") {
-          cancelAffiliateCommissionForOrder(orderId, "Admin hoàn tiền đơn hàng vào ví");
-        }
-      }
+      const isAlreadyExchanged = Boolean(foundOrder && (
+        foundOrder.isExchanged || foundOrder.replacementAccount ||
+        String(foundOrder.status || "").includes("Đổi Trả") || String(foundOrder.status || "").includes("Đã Bảo Hành") ||
+        String(foundOrder.statusText || "").includes("Đổi Trả") ||
+        (typeof localStorage !== "undefined" && (
+          localStorage.getItem("mmo_warranty_exchanged_" + cleanId) === "true" ||
+          localStorage.getItem("mmo_warranty_exchanged_DH" + cleanId.replace(/^DH/i, "")) === "true"
+        ))
+      ));
 
-      // Cập nhật đồng bộ toàn bộ các mảng lưu trữ đơn hàng
-      try {
-        ["mmo_all_orders", "mmo_orders", "mmo_user_orders"].forEach(function(k) {
-          const raw = localStorage.getItem(k);
-          if (!raw) return;
-          const parsed = JSON.parse(raw);
-          if (!Array.isArray(parsed)) return;
-          let modified = false;
-          parsed.forEach(function(it) {
-            if (it && (String(it.orderId || it.id || '').replace('#','').trim() === cleanId)) {
-              it.status = "Khiếu Nại / Bảo Hành";
-              it.hasComplaint = true;
-              it.isWarranty = true;
-              modified = true;
-            }
-          });
-          if (modified) localStorage.setItem(k, JSON.stringify(parsed));
-        });
-        if (typeof cancelAffiliateCommissionForOrder === "function") {
-          cancelAffiliateCommissionForOrder(cleanId, "Khách hàng khiếu nại / bảo hành đơn hàng");
+      if (!isAlreadyExchanged) {
+        if (o) {
+          o.status = "Khiếu Nại / Bảo Hành";
+          o.hasComplaint = true;
+          o.isWarranty = true;
+          if (typeof saveAllOrders === "function") saveAllOrders(all);
         }
-      } catch(syncErr) {
-        console.warn('Sync complain error:', syncErr);
+        if (uo) {
+          uo.status = "Khiếu Nại / Bảo Hành";
+          uo.hasComplaint = true;
+          uo.isWarranty = true;
+          if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
+          if (typeof cancelAffiliateCommissionForOrder === "function") {
+            cancelAffiliateCommissionForOrder(orderId, "Admin hoàn tiền đơn hàng vào ví");
+          }
+        }
+
+        // Cập nhật đồng bộ toàn bộ các mảng lưu trữ đơn hàng
+        try {
+          ["mmo_all_orders", "mmo_orders", "mmo_user_orders"].forEach(function(k) {
+            const raw = localStorage.getItem(k);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return;
+            let modified = false;
+            parsed.forEach(function(it) {
+              if (it && (String(it.orderId || it.id || '').replace('#','').trim() === cleanId)) {
+                it.status = "Khiếu Nại / Bảo Hành";
+                it.hasComplaint = true;
+                it.isWarranty = true;
+                modified = true;
+              }
+            });
+            if (modified) localStorage.setItem(k, JSON.stringify(parsed));
+          });
+          if (typeof cancelAffiliateCommissionForOrder === "function") {
+            cancelAffiliateCommissionForOrder(cleanId, "Khách hàng khiếu nại / bảo hành đơn hàng");
+          }
+        } catch(syncErr) {
+          console.warn('Sync complain error:', syncErr);
+        }
       }
 
       if (typeof renderProfileOrders === "function") renderProfileOrders();
@@ -38114,49 +38304,55 @@ function getProductSchemaReviews(p, idx) {
       const totalVal = foundOrder ? (foundOrder.total || foundOrder.totalPrice || foundOrder.totalAmount || 0) : 0;
       const creds = foundOrder ? (foundOrder.credentials || foundOrder.accounts || "") : "";
 
-      let msgText = "⚠️ KHIẾU NẠI & BẢO HÀNH ĐƠN HÀNG #" + cleanId;
+      let msgText = isAlreadyExchanged ? ("💬 HỖ TRỢ ĐƠN HÀNG ĐÃ ĐỔI TRẢ #" + cleanId) : ("⚠️ KHIẾU NẠI & BẢO HÀNH ĐƠN HÀNG #" + cleanId);
       if (pName) msgText += "\n📦 Sản phẩm: " + pName;
       if (vName && vName !== "Mặc định") msgText += "\n🏷️ Phân loại: " + vName;
       if (qty) msgText += "\n🔢 Số lượng: " + qty + " acc";
       if (totalVal > 0) msgText += "\n💰 Tổng tiền: " + formatVND(totalVal);
-      msgText += "\n❓ Lý do: Tài khoản gặp sự cố không đăng nhập được, yêu cầu Admin kiểm tra bảo hành và đổi trả 1-ĐỔI-1.";
+      if (isAlreadyExchanged) {
+        msgText += "\nℹ️ Tình trạng: Đơn hàng đã được Admin hỗ trợ đổi trả 1-1 thành công. Quý khách vui lòng nhập nội dung cần hỗ trợ thêm...";
+      } else {
+        msgText += "\n❓ Lý do: Tài khoản gặp sự cố không đăng nhập được, yêu cầu Admin kiểm tra bảo hành và đổi trả 1-ĐỔI-1.";
+      }
 
       // CẬP NHẬT ĐƠN HÀNG VÀO DANH SÁCH BẢO HÀNH & ĐỔI TRẢ
-      try {
-        localStorage.setItem("mmo_complaint_" + cleanId, "true");
-        let all = typeof getAllOrders === "function" ? getAllOrders() : [];
-        all.forEach(function(item) {
-          if (item && String(item.orderId || item.id || "").replace("#","").trim() === cleanId) {
-            item.hasComplaint = true;
-            item.isWarranty = true;
-            item.complaintTime = Date.now();
-            const curSt = String(item.status || "").toLowerCase();
-            if (!curSt.includes("đổi trả") && !curSt.includes("hoàn tiền") && !item.isExchanged && !item.isRefunded) {
-              item.status = "Khiếu Nại / Cần Bảo Hành";
-              item.statusText = "Khiếu Nại / Bảo Hành";
+      if (!isAlreadyExchanged) {
+        try {
+          localStorage.setItem("mmo_complaint_" + cleanId, "true");
+          let all = typeof getAllOrders === "function" ? getAllOrders() : [];
+          all.forEach(function(item) {
+            if (item && String(item.orderId || item.id || "").replace("#","").trim() === cleanId) {
+              item.hasComplaint = true;
+              item.isWarranty = true;
+              item.complaintTime = Date.now();
+              const curSt = String(item.status || "").toLowerCase();
+              if (!curSt.includes("đổi trả") && !curSt.includes("hoàn tiền") && !item.isExchanged && !item.isRefunded) {
+                item.status = "Khiếu Nại / Cần Bảo Hành";
+                item.statusText = "Khiếu Nại / Bảo Hành";
+              }
             }
-          }
-        });
-        if (typeof saveAllOrders === "function") saveAllOrders(all);
+          });
+          if (typeof saveAllOrders === "function") saveAllOrders(all);
 
-        let uOrders = typeof getUserOrders === "function" ? getUserOrders() : [];
-        uOrders.forEach(function(item) {
-          if (item && String(item.orderId || item.id || "").replace("#","").trim() === cleanId) {
-            item.hasComplaint = true;
-            item.isWarranty = true;
-            item.complaintTime = Date.now();
-            const curSt = String(item.status || "").toLowerCase();
-            if (!curSt.includes("đổi trả") && !curSt.includes("hoàn tiền") && !item.isExchanged && !item.isRefunded) {
-              item.status = "Khiếu Nại / Cần Bảo Hành";
-              item.statusText = "Khiếu Nại / Bảo Hành";
+          let uOrders = typeof getUserOrders === "function" ? getUserOrders() : [];
+          uOrders.forEach(function(item) {
+            if (item && String(item.orderId || item.id || "").replace("#","").trim() === cleanId) {
+              item.hasComplaint = true;
+              item.isWarranty = true;
+              item.complaintTime = Date.now();
+              const curSt = String(item.status || "").toLowerCase();
+              if (!curSt.includes("đổi trả") && !curSt.includes("hoàn tiền") && !item.isExchanged && !item.isRefunded) {
+                item.status = "Khiếu Nại / Cần Bảo Hành";
+                item.statusText = "Khiếu Nại / Bảo Hành";
+              }
             }
-          }
-        });
-        if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
+          });
+          if (typeof saveUserOrders === "function") saveUserOrders(uOrders);
 
-        if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
-        if (typeof renderProfileOrders === "function") renderProfileOrders();
-      } catch(eComp) {}
+          if (typeof renderAdminOrdersTable === "function") renderAdminOrdersTable();
+          if (typeof renderProfileOrders === "function") renderProfileOrders();
+        } catch(eComp) {}
+      }
 
       if (typeof toggleChatWidget === "function") toggleChatWidget(true);
       if (typeof sendChatMessage === "function") {
@@ -43529,12 +43725,24 @@ function getProductSchemaReviews(p, idx) {
       currentAdminOrderDetail.status = newStatus;
       currentAdminOrderDetail.statusText = "Đã Đổi Trả 1-1";
       currentAdminOrderDetail.isExchanged = true;
+      currentAdminOrderDetail.hasComplaint = false;
+      currentAdminOrderDetail.isWarranty = false;
       currentAdminOrderDetail.replacementAccount = newCreds;
-      currentAdminOrderDetail.credentials = (currentAdminOrderDetail.credentials ? (currentAdminOrderDetail.credentials + "\n--- TÀI KHOẢN MỚI ĐỔI TRẢ (1-ĐỔI-1) ---\n" + newCreds) : newCreds);
+      currentAdminOrderDetail.credentials = (currentAdminOrderDetail.credentials ? (currentAdminOrderDetail.credentials + "\n\n--- TÀI KHOẢN MỚI ĐỔI TRẢ (1-ĐỔI-1) ---\n" + newCreds) : newCreds);
       if (targetEmail) {
         currentAdminOrderDetail.email = targetEmail;
         currentAdminOrderDetail.userEmail = targetEmail;
       }
+
+      const cleanExId = String(orderId).replace("#", "").trim();
+      try {
+        localStorage.removeItem("mmo_complaint_" + orderId);
+        localStorage.removeItem("mmo_complaint_" + cleanExId);
+        localStorage.removeItem("mmo_complaint_DH" + cleanExId.replace(/^DH/i, ""));
+        localStorage.removeItem("mmo_complaint_#" + cleanExId);
+        localStorage.setItem("mmo_warranty_exchanged_" + cleanExId, "true");
+        localStorage.setItem("mmo_warranty_exchanged_" + orderId, "true");
+      } catch(e) {}
 
       let all = getAllOrders();
       const idx = all.findIndex(o => (o.orderId === orderId || o.id === orderId));
