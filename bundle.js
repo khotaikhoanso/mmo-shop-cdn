@@ -24787,6 +24787,9 @@ function syncAllOpenViewsStock(changedProdId) {
       const isPreOrder = cleanId.startsWith("PRE") || cleanId.startsWith("DH_PRE") || cleanId.startsWith("POD_") || (order && (order.type === "PRE_ORDER" || String(order.statusText || "").includes("đặt trước")));
 
       let poCreds = (order && (order.credentials || (Array.isArray(order.deliveredAccounts) && order.deliveredAccounts.length > 0 ? order.deliveredAccounts.join("\n") : "") || order.accountData)) || "";
+      if (poCreds) {
+        poCreds = Array.from(new Set(String(poCreds).split("\n").map(function(s) { return s.trim(); }).filter(Boolean))).join("\n");
+      }
 
       // NẾU CHƯA CÓ CREDENTIALS HOẶC LÀ ĐƠN ĐẶT TRƯỚC, TỰ ĐỘNG GỌI API TURSO ĐỂ TẢI DỮ LIỆU BÀN GIAO MỚI NHẤT
       if (!poCreds || isPreOrder) {
@@ -24810,7 +24813,8 @@ function syncAllOpenViewsStock(changedProdId) {
             const data = await res.json();
             const cOrder = data.order || data;
             if (cOrder) {
-              const accs = Array.isArray(cOrder.accounts) ? cOrder.accounts : (cOrder.credentials ? String(cOrder.credentials).split("\n").filter(Boolean) : []);
+              const rawAccs = Array.isArray(cOrder.accounts) ? cOrder.accounts : (cOrder.credentials ? String(cOrder.credentials).split("\n").filter(Boolean) : []);
+              const accs = Array.from(new Set(rawAccs.map(function(s) { return String(s).trim(); }).filter(Boolean)));
               if (accs.length > 0) {
                 poCreds = accs.join("\n");
                 if (order) {
@@ -24898,6 +24902,9 @@ function syncAllOpenViewsStock(changedProdId) {
       if (!order) {
         showToast("Không tìm thấy dữ liệu đơn hàng: " + cleanId, "warning");
         return;
+      }
+      if (poCreds) {
+        poCreds = Array.from(new Set(String(poCreds).split("\n").map(function(s) { return s.trim(); }).filter(Boolean))).join("\n");
       }
       order.credentials = poCreds;
       window.currentViewingDeliveryOrder = order;
@@ -41096,7 +41103,8 @@ function getProductSchemaReviews(p, idx) {
 
       const cleanId = String(orderId).replace(/#/g, "").trim();
       const cleanLower = cleanId.toLowerCase();
-      const lines = rawText.split("\n").map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+      const rawLines = rawText.split("\n").map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+      const lines = Array.from(new Set(rawLines));
       let preOrders = getPreOrders(true);
       let order = findPreOrderById(preOrders, cleanId);
       if (!order && Array.isArray(window._mmoInMemoryOrders)) {
@@ -41195,7 +41203,7 @@ function getProductSchemaReviews(p, idx) {
           const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) 
             ? MMO_WORKER_API.getAdminSecret() 
             : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
-          fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/fulfill", {
+          await fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/fulfill", {
             method: "POST",
             headers: { 
               "Content-Type": "application/json", 
@@ -41205,17 +41213,6 @@ function getProductSchemaReviews(p, idx) {
             body: JSON.stringify({ orderId: cleanId, accounts: lines }),
             keepalive: true
           }).catch(function(e) { console.warn("Turso fulfill error:", e); });
-
-          await fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
-            method: "POST",
-            headers: { 
-              "Content-Type": "application/json", 
-              "x-admin-token": sTok,
-              "Authorization": "Bearer " + sTok
-            },
-            body: JSON.stringify({ orders: [order] }),
-            keepalive: true
-          }).catch(function(e) { console.warn("Turso sync fulfill error:", e); });
         }
       } catch(eTurso) {}
 
