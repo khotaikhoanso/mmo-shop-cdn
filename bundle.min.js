@@ -24624,6 +24624,7 @@ function syncAllOpenViewsStock(changedProdId) {
             if (!cOrder) continue;
 
             const serverSt = String(cOrder.order_status || cOrder.status || "").toUpperCase();
+            const serverCancelledBy = String(cOrder.cancelledBy || "").toUpperCase();
             const accs = Array.isArray(cOrder.accounts) 
               ? cOrder.accounts 
               : (cOrder.credentials ? String(cOrder.credentials).split("\n").filter(Boolean) : []);
@@ -24637,7 +24638,15 @@ function syncAllOpenViewsStock(changedProdId) {
               updatedStatusText = "Đã giao hàng";
             } else if (serverSt === "PROCESSING" || String(cOrder.statusText || "").toLowerCase().includes("gom")) {
               updatedStatus = "PROCESSING";
-              updatedStatusText = "Đang gom hàng";
+              updatedStatusText = "Gom hàng";
+            } else if (serverSt === "CANCELLED_BY_ADMIN" || (serverSt === "CANCELLED" && serverCancelledBy === "ADMIN")) {
+              updatedStatus = "CANCELLED";
+              updatedStatusText = "Admin Hủy Đơn";
+              po.cancelledBy = "ADMIN";
+            } else if (serverSt === "CANCELLED_BY_USER" || (serverSt === "CANCELLED" && serverCancelledBy === "CUSTOMER")) {
+              updatedStatus = "CANCELLED";
+              updatedStatusText = "Người Dùng Hủy Đơn";
+              po.cancelledBy = "CUSTOMER";
             } else if (serverSt === "CANCELLED" || serverSt === "REFUNDED") {
               updatedStatus = "CANCELLED";
               updatedStatusText = "Đã hủy đơn";
@@ -24656,7 +24665,7 @@ function syncAllOpenViewsStock(changedProdId) {
               continue;
             }
 
-            if (curSt !== updatedStatus || (hasServerAccs && curAccsCount === 0)) {
+            if (curSt !== updatedStatus || (hasServerAccs && curAccsCount === 0) || (updatedStatus === "CANCELLED" && po.statusText !== updatedStatusText)) {
               po.status = updatedStatus;
               po.statusText = updatedStatusText;
               if (hasServerAccs) {
@@ -24667,6 +24676,7 @@ function syncAllOpenViewsStock(changedProdId) {
               if (updatedStatus === "CANCELLED") {
                 po.isCancelled = true;
                 po.isRefunded = true;
+                if (!po.cancelledBy) po.cancelledBy = serverCancelledBy || "CUSTOMER";
               }
 
               // Đồng bộ đối tượng vào toàn bộ các kho localStorage
@@ -24711,6 +24721,9 @@ function syncAllOpenViewsStock(changedProdId) {
           const profileView = document.getElementById("viewProfile");
           if (profileView && (profileView.classList.contains("active") || profileView.style.display !== "none")) {
             if (typeof renderProfileOrders === "function") renderProfileOrders();
+          }
+          if (typeof loadUserWalletFromCloud === "function") {
+            loadUserWalletFromCloud(true);
           }
         }
       } catch(eAll) {
@@ -25444,8 +25457,9 @@ function syncAllOpenViewsStock(changedProdId) {
                   if (isDonePreOrder) {
                     statusBadgeHtml = `
                       <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid #10b981; font-size:0.75rem; font-weight:700; padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
-                        <i class="fa-solid fa-circle-check"></i> Đã Giao Hàng
+                        <i class="fa-solid fa-circle-check"></i> Hoàn Thành
                       </span>
+                      <span style="color:#10b981; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Đã bàn giao sản phẩm</span>
                     `;
                     actionBtnsHtml = `
                       <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap; white-space:nowrap;">
@@ -25461,20 +25475,31 @@ function syncAllOpenViewsStock(changedProdId) {
                       </div>
                     `;
                   } else if (isCancelled || effectiveStatus === "CANCELLED") {
-                    statusBadgeHtml = `
-                      <span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-ban"></i> Đã Hủy / Hoàn Tiền
-                      </span>
-                    `;
+                    const byAdmin = (order.cancelledBy === "ADMIN") || (freshPO && freshPO.cancelledBy === "ADMIN") || rawStTxt.includes("admin hủy") || freshStTxt.includes("admin hủy");
+                    if (byAdmin) {
+                      statusBadgeHtml = `
+                        <span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                          <i class="fa-solid fa-ban"></i> Admin Hủy Đơn
+                        </span>
+                        <span style="color:#f87171; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Shop đã hủy &amp; hoàn tiền</span>
+                      `;
+                    } else {
+                      statusBadgeHtml = `
+                        <span style="background:rgba(148,163,184,0.2); color:#94a3b8; border:1px solid #64748b; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                          <i class="fa-solid fa-user-xmark"></i> Người Dùng Hủy Đơn
+                        </span>
+                        <span style="color:#94a3b8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Bạn đã hủy &amp; nhận lại tiền</span>
+                      `;
+                    }
                     actionBtnsHtml = `
-                      <span style="color:#94a3b8; font-size:0.74rem; font-weight:600;"><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Đã hoàn tiền</span>
+                      <span style="color:#10b981; font-size:0.74rem; font-weight:700;"><i class="fa-solid fa-circle-check"></i> Đã hoàn tiền</span>
                     `;
                   } else if (effectiveStatus === "PROCESSING") {
                     statusBadgeHtml = `
                       <span style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid #38bdf8; font-size:0.75rem; font-weight:800; padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
-                        <i class="fa-solid fa-boxes-packing"></i> Đang Gom Hàng
+                        <i class="fa-solid fa-boxes-packing"></i> Gom Hàng
                       </span>
-                      <span style="color:#38bdf8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Shop đang chuẩn bị acc</span>
+                      <span style="color:#38bdf8; font-size:0.7rem; display:block; margin-top:3px; white-space:nowrap;">Shop đang chuẩn bị hàng</span>
                     `;
                     const isAdmOrderUser = (typeof isAdminUser === "function" && isAdminUser(currentUser)) || (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_is_admin") === "1" || localStorage.getItem("mmo_admin_authenticated") === "true"));
                     actionBtnsHtml = isAdmOrderUser ? `
@@ -25507,7 +25532,7 @@ function syncAllOpenViewsStock(changedProdId) {
                         <button onclick="openAdminFulfillModal('${cleanOId}')" title="Admin bàn giao tài khoản và hoàn tất đơn ngay" style="background:#10b981; color:#0b111e; border:none; border-radius:6px; padding:6px 10px; cursor:pointer; font-size:0.76rem; font-weight:800; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
                           <i class="fa-solid fa-key"></i> Giao Acc
                         </button>
-                        <button onclick="cancelUserPreOrder('${cleanOId}')" title="Hủy đơn đặt trước" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.5); border-radius:6px; padding:6px 10px; cursor:pointer; font-size:0.76rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
+                        <button onclick="adminCancelAndRefundPreOrder('${cleanOId}')" title="Hủy đơn đặt trước" style="background:#0b111e; color:#f87171; border:1px solid rgba(239,68,68,0.5); border-radius:6px; padding:6px 10px; cursor:pointer; font-size:0.76rem; font-weight:700; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
                           <i class="fa-solid fa-ban" style="color:#ef4444;"></i> Hủy
                         </button>
                       </div>
@@ -40107,12 +40132,12 @@ function getProductSchemaReviews(p, idx) {
 
           if (isCancelled) {
             let cancelLabel = "Đã Hủy / Hoàn Tiền";
-            if (o.cancelledBy === "CUSTOMER" || rawStatusTxt.includes("khách")) {
-              cancelLabel = "Khách Hủy / Hoàn";
+            if (o.cancelledBy === "CUSTOMER" || rawStatusTxt.includes("khách") || rawStatusTxt.includes("người dùng")) {
+              cancelLabel = "Người Dùng Hủy Đơn";
             } else if (o.cancelledReason === "EXPIRED" || rawStatusTxt.includes("quá hạn")) {
               cancelLabel = "Quá Hạn (Đã Hoàn)";
-            } else if (o.cancelledBy === "ADMIN") {
-              cancelLabel = "Admin Hủy & Hoàn";
+            } else if (o.cancelledBy === "ADMIN" || rawStatusTxt.includes("admin")) {
+              cancelLabel = "Admin Hủy Đơn";
             }
             stBadge = "<span style='background:rgba(239,68,68,0.2); color:#f87171; border:1px solid #ef4444; font-weight:800; padding:2px 6px; border-radius:4px; font-size:0.7rem; display:inline-flex; align-items:center; gap:3px;'><i class='fa-solid fa-ban'></i> " + escapeHtml(cancelLabel) + "</span>";
             actions = '<div style="display:flex; gap:3px; justify-content:center; flex-wrap:nowrap;">' +
@@ -40640,6 +40665,17 @@ function getProductSchemaReviews(p, idx) {
           const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") 
             ? MMO_WORKER_API.getAdminSecret() 
             : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+          fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/confirm", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json", 
+              "x-admin-token": sTok,
+              "Authorization": "Bearer " + sTok
+            },
+            body: JSON.stringify({ orderId: cleanId }),
+            keepalive: true
+          }).catch(function(e) { console.warn("Turso confirm error:", e); });
+
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
             headers: { 
@@ -40845,8 +40881,34 @@ function getProductSchemaReviews(p, idx) {
 
       // Đồng bộ hoàn tiền lên Cloudflare Worker Turso SSOT
       try {
-        if (typeof syncUserBalanceToCloud === "function") {
-          syncUserBalanceToCloud(cleanUE, refAmt, "add", "Hoàn tiền hủy đơn đặt trước #" + cleanId, "REF_" + cleanId, finalBal);
+        if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) 
+            ? MMO_WORKER_API.getAdminSecret() 
+            : (localStorage.getItem("mmo_admin_secret") || "");
+          const sessionTok = localStorage.getItem("mmo_session_token") || "";
+          const cancelHdrs = { "Content-Type": "application/json" };
+          if (sTok) {
+            cancelHdrs["x-admin-token"] = sTok;
+            cancelHdrs["Authorization"] = "Bearer " + sTok;
+          } else if (sessionTok) {
+            cancelHdrs["x-session-token"] = sessionTok;
+            cancelHdrs["Authorization"] = "Bearer " + sessionTok;
+          }
+          fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/cancel", {
+            method: "POST",
+            headers: cancelHdrs,
+            body: JSON.stringify({ orderId: cleanId, cancelledBy: "CUSTOMER", reason: "Người dùng hủy đơn đặt trước #" + cleanId }),
+            keepalive: true
+          }).then(function(r) { return r.json(); }).then(function(resData) {
+            if (resData && resData.newBalance !== undefined && !isNaN(Number(resData.newBalance))) {
+              if (typeof currentUser !== "undefined" && currentUser) {
+                currentUser.balance = Number(resData.newBalance);
+                localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+                if (typeof updateWalletUI === "function") updateWalletUI();
+                if (typeof updateUserUI === "function") updateUserUI();
+              }
+            }
+          }).catch(function(e) { console.warn("Turso cancel user error:", e); });
         }
       } catch(eSyncCloud) {}
 
@@ -41133,6 +41195,17 @@ function getProductSchemaReviews(p, idx) {
           const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) 
             ? MMO_WORKER_API.getAdminSecret() 
             : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+          fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/fulfill", {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json", 
+              "x-admin-token": sTok,
+              "Authorization": "Bearer " + sTok
+            },
+            body: JSON.stringify({ orderId: cleanId, accounts: lines }),
+            keepalive: true
+          }).catch(function(e) { console.warn("Turso fulfill error:", e); });
+
           await fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
             headers: { 
@@ -41300,7 +41373,14 @@ function getProductSchemaReviews(p, idx) {
       // Phát sóng đa tab Realtime 0ms & Turso Sync
       try {
         if (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function") {
-          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function") ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "");
+          const sTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" && MMO_WORKER_API.getAdminSecret()) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+          fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/cancel", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-admin-token": sTok, "Authorization": "Bearer " + sTok },
+            body: JSON.stringify({ orderId: cleanId, cancelledBy: "ADMIN", reason: "Admin hủy đơn đặt trước và hoàn 100% tiền đơn #" + cleanId }),
+            keepalive: true
+          }).catch(function(e) { console.warn("Turso cancel admin error:", e); });
+
           fetch(MMO_WORKER_API.getApiUrl() + "/api/orders/sync", {
             method: "POST",
             headers: { "Content-Type": "application/json", "x-admin-token": sTok },
