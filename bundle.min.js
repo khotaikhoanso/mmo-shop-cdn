@@ -22497,6 +22497,7 @@ function syncAllOpenViewsStock(changedProdId) {
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed && typeof parsed === "object") {
+            const merged = Object.assign({}, defaultSettings, parsed);
             // Làm sạch triệt để tên sàn: Không bao giờ cho phép MUABANTAIKHOANMMO hay MMO SHOP cũ
             if (!merged.siteName || String(merged.siteName).toUpperCase().includes("MUABANTAIKHOANMMO") || String(merged.siteName).includes("MMO SHOP")) {
               merged.siteName = defaultSettings.siteName;
@@ -22531,6 +22532,9 @@ function syncAllOpenViewsStock(changedProdId) {
             }
             if (!merged.brandOgImage || !String(merged.brandOgImage).trim()) {
               merged.brandOgImage = defaultSettings.brandOgImage;
+            }
+            if (parsed.marqueeText !== undefined && parsed.marqueeText !== null) {
+              merged.marqueeText = parsed.marqueeText;
             }
             return merged;
           }
@@ -22928,7 +22932,9 @@ function syncAllOpenViewsStock(changedProdId) {
       if (document.getElementById("setHotline")) document.getElementById("setHotline").value = s.hotline || "0346508659";
       if (document.getElementById("setTelegram")) document.getElementById("setTelegram").value = s.telegram || "https://t.me/longnguyen1az";
       if (document.getElementById("setTelegramGroup")) document.getElementById("setTelegramGroup").value = s.telegramGroup || s.telegram || "https://t.me/longnguyen1az";
-      if (document.getElementById("setMarqueeText")) document.getElementById("setMarqueeText").value = s.marqueeText || "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Shop mua bán tài khoản MMO uy tín 24/7!";
+      if (document.getElementById("setMarqueeText")) {
+        document.getElementById("setMarqueeText").value = (s.marqueeText !== undefined && s.marqueeText !== null) ? s.marqueeText : "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Mua bán tài khoản MMO tự động 24/7!";
+      }
       if (document.getElementById("setGasUrl")) document.getElementById("setGasUrl").value = s.gasUrl || "";
 
       // Load AI Keys
@@ -23024,7 +23030,7 @@ function syncAllOpenViewsStock(changedProdId) {
         
         // Marquee text
         const marqueeInput = document.getElementById("setMarqueeText");
-        const marqueeText = marqueeInput ? marqueeInput.value.trim() : (curSettings.marqueeText || "🎉 Chào mừng bạn đến với KHO TÀI KHOẢN SỐ (khotaikhoanso.net) - Shop mua bán tài khoản MMO uy tín 24/7!");
+        const marqueeText = marqueeInput ? marqueeInput.value.trim() : (curSettings.marqueeText !== undefined ? curSettings.marqueeText : "");
 
         // Google Apps Script Web App URL
         const defaultGas = "";
@@ -23131,11 +23137,25 @@ function syncAllOpenViewsStock(changedProdId) {
           khotaikhoanso_settings: JSON.stringify(settings)
         };
         try {
-          fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/admin/settings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ settings: ktsPayload })
-          }).catch(function(eWorker) { console.warn("Worker save notice:", eWorker); });
+          const isKtsMain = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname.includes("khotaikhoanso.net"));
+          const workerApi = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+            ? MMO_WORKER_API.getApiUrl()
+            : (isKtsMain ? "https://mmo-shop-api.khotaikhoanso-net.workers.dev" : "");
+          const adminSec = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function")
+            ? MMO_WORKER_API.getAdminSecret()
+            : (localStorage.getItem("mmo_admin_secret") || "MMO_ADMIN_SECURE_TOKEN_2026");
+
+          if (workerApi) {
+            fetch(workerApi + "/api/admin/settings", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + adminSec,
+                "x-admin-token": adminSec
+              },
+              body: JSON.stringify({ settings: ktsPayload })
+            }).catch(function(eWorker) { console.warn("Worker save notice:", eWorker); });
+          }
         } catch(e) {}
 
         // 4. Phát sóng đa tab (BroadcastChannel)
