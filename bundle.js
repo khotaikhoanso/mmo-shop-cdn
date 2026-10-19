@@ -210,7 +210,12 @@ try {
   const _goodSub = "your-shop-api.workers.dev";
   const _curApi = localStorage.getItem("mmo_worker_api_url");
   if (!_curApi || _curApi.includes(_badSub) || _curApi.includes("turso.io") || _curApi.startsWith("libsql://")) {
-    localStorage.setItem("mmo_worker_api_url", "https://mmo-shop-api.khotaikhoanso-net.workers.dev");
+    const isMainKts = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname.includes("khotaikhoanso.net"));
+    if (isMainKts) {
+      localStorage.setItem("mmo_worker_api_url", "https://mmo-shop-api.khotaikhoanso-net.workers.dev");
+    } else {
+      localStorage.removeItem("mmo_worker_api_url");
+    }
   }
   const _curTurso = localStorage.getItem("mmo_turso_db_url");
   if (_curTurso && _curTurso.includes(_badSub)) {
@@ -261,53 +266,9 @@ function checkAndApplyNetworkUpdate() {
     if (typeof sanitizeSatelliteLegacyDom === "function") sanitizeSatelliteLegacyDom();
     if (typeof convertOutOfStockToPreOrder === "function") convertOutOfStockToPreOrder();
     
-    fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/v1/version?t=" + Date.now(), {
-      cache: "no-store",
-      headers: { "Pragma": "no-cache", "Cache-Control": "no-cache" }
-    }).then(function(res) {
-      return res.json();
-    }).then(function(data) {
-      if (data && data.version && data.version > MMO_CURRENT_CODE_VERSION) {
-        window._mmoHotReloadInProgress = true;
-        window._lastHotReloadTime = Date.now();
-        console.warn("[MMO Universal Update] Phát hiện phiên bản code mới: v" + data.version + " (Bản hiện tại: v" + MMO_CURRENT_CODE_VERSION + ")");
-        localStorage.setItem("mmo_network_code_version", data.version);
-        
-        // 1. Cập nhật CSS theme
-        var curCss = document.getElementById("mmoCdnThemeCss");
-        var newCssUrl = (data.theme_url || "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/theme.min.css");
-        if (curCss) {
-          curCss.href = newCssUrl;
-        } else {
-          var newL = document.createElement("link");
-          newL.id = "mmoCdnThemeCss";
-          newL.rel = "stylesheet";
-          newL.href = newCssUrl;
-          document.head.appendChild(newL);
-        }
-        
-        // 2. Nạp JS Bundle mới nhất
-        var existingNewScript = document.getElementById("mmoCdnBundleJs_latest");
-        if (existingNewScript) existingNewScript.remove();
-        
-        var newJsUrl = (data.bundle_url || "https://cdn.jsdelivr.net/gh/khotaikhoanso/mmo-shop-cdn@main/bundle.min.js");
-        var nextScript = document.createElement("script");
-        nextScript.id = "mmoCdnBundleJs_latest";
-        nextScript.src = newJsUrl;
-        nextScript.async = true;
-        nextScript.onload = function() {
-          console.log("[MMO Universal Update] Đã nạp thành công code mới v" + data.version + " trên blog này!");
-          if (typeof convertOutOfStockToPreOrder === "function") convertOutOfStockToPreOrder();
-          var _curP = new URLSearchParams(window.location.search).get("prod");
-          if (_curP && typeof openProductDetailById === "function") {
-            openProductDetailById(_curP);
-          } else if (typeof initMMOApplication === "function") {
-            initMMOApplication();
-          }
-        };
-        document.body.appendChild(nextScript);
-      }
-    }).catch(function(err) {});
+    // [DISABLED REMOTE CODE SYNC] Ngắt kết nối đồng bộ ngầm từ xa chống ghi đè dữ liệu ảnh và sản phẩm
+    const isMainKtsDomain = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname.includes("khotaikhoanso.net"));
+    if (!isMainKtsDomain) return;
   } catch (e) {}
 }
 window.checkAndApplyNetworkUpdate = checkAndApplyNetworkUpdate;
@@ -12699,17 +12660,7 @@ if (typeof productOrId === "object") {
         }
       }
 
-      // B. [ƯU TIÊN TUYỆT ĐỐI #1]: Cập nhật thời gian thực từ ảnh trực tiếp của sản phẩm
-      let directImg = prodObj ? (prodObj.image || prodObj.image_url || prodObj.imageUrl || "") : "";
-      if (directImg && typeof directImg === "string" && directImg.trim() !== "") {
-        let trimmed = directImg.trim();
-        if (trimmed.startsWith("data:image/")) return trimmed;
-        if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) && trimmed.indexOf("img_17914936") === -1 && trimmed.indexOf("nfv4rln") === -1 && trimmed.indexOf("placeholder") === -1 && trimmed.indexOf("nGs8RDv.jpg") === -1) {
-          return trimmed;
-        }
-      }
-
-      // C. [ƯU TIÊN #2]: Ảnh do Admin của shop lưu trong localStorage
+      // [ƯU TIÊN TUYỆT ĐỐI #1]: Ảnh do Admin của shop lưu trong localStorage (Bảo vệ dữ liệu không bị nguồn ngoài đè)
       if (pId) {
         try {
           const customSaved = localStorage.getItem("mmo_custom_img_" + pId) ||
@@ -12723,6 +12674,16 @@ if (typeof productOrId === "object") {
             }
           }
         } catch(e) {}
+      }
+
+      // [ƯU TIÊN #2]: Cập nhật từ ảnh trực tiếp của sản phẩm (nếu chưa có ảnh tùy chỉnh)
+      let directImg = prodObj ? (prodObj.image || prodObj.image_url || prodObj.imageUrl || "") : "";
+      if (directImg && typeof directImg === "string" && directImg.trim() !== "") {
+        let trimmed = directImg.trim();
+        if (trimmed.startsWith("data:image/")) return trimmed;
+        if ((trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) && trimmed.indexOf("img_17914936") === -1 && trimmed.indexOf("nfv4rln") === -1 && trimmed.indexOf("placeholder") === -1 && trimmed.indexOf("nGs8RDv.jpg") === -1) {
+          return trimmed;
+        }
       }
 
       return "https://iili.io/nGs8AOJ.png";
@@ -14393,20 +14354,26 @@ if (typeof productOrId === "object") {
 
       getApiUrl: function() {
         if (typeof window !== "undefined" && window.MMO_SHOP_CONFIG && window.MMO_SHOP_CONFIG.WORKER_API_URL) {
-          const cfg = String(window.MMO_SHOP_CONFIG.WORKER_API_URL).trim().replace(/\/+$/, "");
-          if (cfg.includes("khotaikhoanso")) {
-            return cfg;
-          }
+          return String(window.MMO_SHOP_CONFIG.WORKER_API_URL).trim().replace(/\/+$/, "");
         }
-        return "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        var localApi = (typeof localStorage !== "undefined" && localStorage.getItem("mmo_worker_api_url")) || "";
+        if (localApi && (localApi.startsWith("http://") || localApi.startsWith("https://"))) {
+          return localApi.trim().replace(/\/+$/, "");
+        }
+        // Chỉ fallback về mmo-shop-api nếu đang chạy trên chính domain khotaikhoanso.net
+        if (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname.includes("khotaikhoanso.net")) {
+          return "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        }
+        return "";
       },
 
       setApiUrl: function(url) {
         let clean = String(url || "").trim().replace(/\/+$/, "");
-        if (!clean.includes("khotaikhoanso")) {
-          clean = "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        if (clean && (clean.startsWith("http://") || clean.startsWith("https://"))) {
+          localStorage.setItem("mmo_worker_api_url", clean);
+        } else {
+          localStorage.removeItem("mmo_worker_api_url");
         }
-        localStorage.setItem("mmo_worker_api_url", clean);
       },
 
       getAdminSecret: function() {
@@ -15038,6 +15005,8 @@ if (typeof productOrId === "object") {
       }
       if (!res || !Array.isArray(res.products)) {
         try {
+          const isKtsMain = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname.includes("khotaikhoanso.net"));
+          if (!isKtsMain) return;
           const directFetch = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/products", {
             cache: "no-store",
             headers: { "Cache-Control": "no-cache" }
@@ -15108,12 +15077,11 @@ if (typeof productOrId === "object") {
           const localCustomImg = (typeof localStorage !== "undefined") ? (localStorage.getItem("mmo_custom_img_" + tp.id) || localStorage.getItem("mmo_custom_img_" + String(tp.id).toUpperCase())) : "";
 
           let targetImage = "";
-          if (isLocallyInFlight && localCustomImg && !localCustomImg.includes("img_17914936") && !localCustomImg.includes("nGs8RDv.jpg")) {
+          // [NGẮT KẾT NỐI ĐỒNG BỘ ẢNH BÊN NGOÀI]: Ưu tiên tuyệt đối ảnh tùy chỉnh của shop (localCustomImg)
+          if (localCustomImg && !localCustomImg.includes("img_17914936") && !localCustomImg.includes("placeholder") && !localCustomImg.includes("nGs8RDv.jpg")) {
             targetImage = localCustomImg;
           } else if (tpImg && !tpImg.includes("img_17914936") && !tpImg.includes("placeholder") && !tpImg.includes("nGs8RDv.jpg")) {
             targetImage = tpImg;
-          } else if (localCustomImg && !localCustomImg.includes("img_17914936") && !localCustomImg.includes("placeholder") && !localCustomImg.includes("nGs8RDv.jpg")) {
-            targetImage = localCustomImg;
           } else {
             targetImage = (typeof resolveProductImage === "function") ? resolveProductImage(tp) : "https://iili.io/nGs8AOJ.png";
           }
@@ -15174,21 +15142,23 @@ if (typeof productOrId === "object") {
             apiMapping: tp.apiMapping || null
           };
 
-          // Cache ảnh để load tức thì
+          // Cache ảnh để load tức thì (CHỈ LƯU NẾU CHƯA CÓ ẢNH TÙY CHỈNH)
           if (targetImage && !targetImage.includes("img_17914936")) {
             try {
-              localStorage.setItem("mmo_custom_img_" + cleanProd.id, targetImage);
-              localStorage.setItem("mmo_custom_img_" + String(cleanProd.id).toUpperCase(), targetImage);
-              if (cleanProd.slug) localStorage.setItem("mmo_custom_img_" + cleanProd.slug, targetImage);
-              if (typeof KTS_PROD_TO_IILI !== "undefined") {
-                KTS_PROD_TO_IILI[cleanProd.id] = targetImage;
-                KTS_PROD_TO_IILI[String(cleanProd.id).toUpperCase()] = targetImage;
-                if (cleanProd.slug) KTS_PROD_TO_IILI[cleanProd.slug] = targetImage;
-              }
-              if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
-                KTS_KNOWN_CDN_MAP[cleanProd.id] = targetImage;
-                KTS_KNOWN_CDN_MAP[String(cleanProd.id).toUpperCase()] = targetImage;
-                if (cleanProd.slug) KTS_KNOWN_CDN_MAP[cleanProd.slug] = targetImage;
+              if (!localCustomImg) {
+                localStorage.setItem("mmo_custom_img_" + cleanProd.id, targetImage);
+                localStorage.setItem("mmo_custom_img_" + String(cleanProd.id).toUpperCase(), targetImage);
+                if (cleanProd.slug) localStorage.setItem("mmo_custom_img_" + cleanProd.slug, targetImage);
+                if (typeof KTS_PROD_TO_IILI !== "undefined") {
+                  KTS_PROD_TO_IILI[cleanProd.id] = targetImage;
+                  KTS_PROD_TO_IILI[String(cleanProd.id).toUpperCase()] = targetImage;
+                  if (cleanProd.slug) KTS_PROD_TO_IILI[cleanProd.slug] = targetImage;
+                }
+                if (typeof KTS_KNOWN_CDN_MAP !== "undefined") {
+                  KTS_KNOWN_CDN_MAP[cleanProd.id] = targetImage;
+                  KTS_KNOWN_CDN_MAP[String(cleanProd.id).toUpperCase()] = targetImage;
+                  if (cleanProd.slug) KTS_KNOWN_CDN_MAP[cleanProd.slug] = targetImage;
+                }
               }
             } catch(eCacheImg) {}
           }
@@ -22608,9 +22578,14 @@ function syncAllOpenViewsStock(changedProdId) {
     async function uploadBase64ToCdn(dataUrl, name) {
       if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) return dataUrl;
       try {
+        const isKts = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname.includes("khotaikhoanso.net"));
+        const workerApi = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+          ? MMO_WORKER_API.getApiUrl()
+          : (isKts ? "https://mmo-shop-api.khotaikhoanso-net.workers.dev" : "");
+        if (!workerApi) return dataUrl;
         const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
         const tId = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch(e){} }, 5000) : null;
-        const res = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/upload-image", {
+        const res = await fetch(workerApi + "/api/upload-image", {
           method: "POST",
           signal: ctrl ? ctrl.signal : undefined,
           headers: { "Content-Type": "application/json" },
@@ -22844,6 +22819,8 @@ function syncAllOpenViewsStock(changedProdId) {
 
     async function syncSettingsFromCloud() {
       try {
+        const isKtsMain = (typeof window !== "undefined" && window.location && window.location.hostname && window.location.hostname.includes("khotaikhoanso.net"));
+        if (!isKtsMain) return; // Cách ly hoàn toàn cấu hình thương hiệu, không kéo từ web khác sang
         const res = await fetch("https://mmo-shop-api.khotaikhoanso-net.workers.dev/api/admin/settings");
         if (!res.ok) return;
         const data = await res.json();
@@ -27412,7 +27389,8 @@ function syncAllOpenViewsStock(changedProdId) {
               // CẬP NHẬT ẢNH TỪ CLOUD WORKER (Ưu tiên tuyệt đối ảnh Live từ Turso Database SSOT)
               const serverImg = (wp.image || wp.image_url || wp.imageUrl || "").trim();
               const savedAdminImg = (localStorage.getItem("mmo_custom_img_" + p.id) || (p.slug ? localStorage.getItem("mmo_custom_img_" + p.slug) : "") || "").trim();
-              const finalImgToUse = serverImg || savedAdminImg || (p.image || "").trim();
+              // [BẢO VỆ ẢNH SẢN PHẨM]: Ưu tiên tuyệt đối ảnh Admin đã sửa/tải lên trên máy, không để server đè
+              const finalImgToUse = savedAdminImg || (p.image || "").trim() || serverImg;
               if (finalImgToUse && typeof finalImgToUse === "string" && finalImgToUse.trim() !== "") {
                 const low = finalImgToUse.toLowerCase();
                 if (!low.includes("placeholder")) {
