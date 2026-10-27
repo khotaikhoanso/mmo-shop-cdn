@@ -21,6 +21,75 @@ try {
   }
 } catch(eCss) {}
 
+try {
+  if (typeof document !== "undefined" && !document.getElementById("kts-coupon-style")) {
+    const cTag = document.createElement("style");
+    cTag.id = "kts-coupon-style";
+    cTag.innerHTML = `
+      .coupon-box-wrap {
+        display: inline-flex !important;
+        align-items: center !important;
+        background: #111827 !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        height: 44px !important;
+        box-sizing: border-box !important;
+        transition: all 0.2s ease !important;
+        flex: 1 1 auto !important;
+        min-width: 210px !important;
+        max-width: 250px !important;
+      }
+      .coupon-box-wrap:focus-within {
+        border-color: #06b6d4 !important;
+        box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2) !important;
+      }
+      #dtlCouponInput {
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        color: #f8fafc !important;
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        padding: 0 8px 0 12px !important;
+        min-width: 90px !important;
+        width: 100% !important;
+        flex: 1 1 auto !important;
+        height: 100% !important;
+        box-sizing: border-box !important;
+      }
+      #dtlCouponInput::placeholder {
+        color: #64748b !important;
+        font-weight: 500 !important;
+      }
+      .coupon-apply-btn {
+        background: rgba(6, 182, 212, 0.15) !important;
+        border: none !important;
+        border-left: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #22d3ee !important;
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+        padding: 0 12px !important;
+        height: 100% !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        white-space: nowrap !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+        min-width: 76px !important;
+        box-sizing: border-box !important;
+      }
+      .coupon-apply-btn:hover {
+        background: #06b6d4 !important;
+        color: #ffffff !important;
+      }
+    `;
+    document.head.appendChild(cTag);
+  }
+} catch(eCouponCss) {}
+
 // =========================================================================
 // [AUTO-MIGRATION & STORAGE PURGE CHO V4.3.81]:
 // Tự động làm sạch sản phẩm rác, zombie phone farm và khôi phục thương hiệu chuẩn
