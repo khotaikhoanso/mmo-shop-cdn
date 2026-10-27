@@ -6008,12 +6008,16 @@ if (typeof productOrId === "object") {
         const modal = document.getElementById("adminUserDetailModal");
         const curEmailEl = document.getElementById("admDetailUserEmail");
         if (modal && modal.style.display === "flex" && curEmailEl && (curEmailEl.innerText || "").toLowerCase().trim() === cleanEmail) {
+          const txCountElCheck = document.getElementById("admDetailTxCount");
+          if (txCountElCheck && txCountElCheck.innerText && (txCountElCheck.innerText.includes("Turso DB") || txCountElCheck.innerText.includes("SSOT") || txCountElCheck.innerText.includes("Live"))) {
+            return; // Đã có dữ liệu chuẩn xác SSOT từ Turso DB, tuyệt đối không ghi đè
+          }
           const updatedTxRes = getUserComprehensiveTransactions(cleanEmail);
           const allTx = updatedTxRes.transactions;
           const txCountEl = document.getElementById("admDetailTxCount");
           const balanceEl = document.getElementById("admDetailUserBalance");
           const tbody = document.getElementById("admDetailUserTxTableBody");
-          if (txCountEl) txCountEl.innerText = allTx.length + " giao dịch";
+          if (txCountEl) txCountEl.innerText = "Đang kết nối Turso DB...";
           const finalModalBal = authoritativeBal;
           if (balanceEl) balanceEl.innerText = formatVND(finalModalBal);
           if (tbody && allTx.length > 0) {
@@ -6716,7 +6720,7 @@ if (typeof productOrId === "object") {
                     } else {
                       typeHtml = '<span class="badge-trust" style="font-size:0.72rem; color:#38bdf8; border-color:rgba(56,189,248,0.3); background:rgba(56,189,248,0.1);"><i class="fa-solid fa-wallet"></i> Nạp tiền ví</span>';
                     }
-                    const balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter))) ? formatVND(Math.max(0, tx.balanceAfter)) : "-";
+                    const balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter)) && Number(tx.balanceAfter) > 0) ? formatVND(tx.balanceAfter) : "-";
                     return '<tr>' +
                       '<td style="font-size:0.75rem; color:#94a3b8; white-space:nowrap;">' + (tx.time || tx.date || '') + '</td>' +
                       '<td>' + typeHtml + '</td>' +
@@ -6791,9 +6795,10 @@ if (typeof productOrId === "object") {
 
       const tbody = document.getElementById("admDetailUserTxTableBody");
       if (tbody) {
-        if (allTx.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải sổ cái giao dịch từ máy chủ Turso DB...</td></tr>';
+        if (false && allTx.length === 0) {
           tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:24px; color:#64748b;">Thành viên này chưa có giao dịch nào phát sinh.</td></tr>';
-        } else {
+        } else if (false) {
           tbody.innerHTML = allTx.map(tx => {
             let amt = Number(tx.amount) || 0;
             const tLow = String(tx.type || "").toLowerCase();
@@ -33450,9 +33455,44 @@ function syncAllOpenViewsStock(changedProdId) {
         return;
       }
 
+      // Tự động nạp sổ cái Live Turso DB cho thành viên đăng nhập
+      if (!window._liveTursoBalanceLogsByEmail) window._liveTursoBalanceLogsByEmail = {};
+      if (!window._fetchingLiveUserWallet && (!window._liveTursoBalanceLogsByEmail[cleanEmail] || (Date.now() - (window._liveTursoBalanceLogsByEmail[cleanEmail].ts || 0) > 30000))) {
+        window._fetchingLiveUserWallet = true;
+        try {
+          const workerApiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+            ? MMO_WORKER_API.getApiUrl()
+            : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+          const userTok = localStorage.getItem("mmo_session_token") || localStorage.getItem("mmo_user_token") || localStorage.getItem("mmo_admin_secret") || "";
+          fetch(workerApiUrl + "/api/user/wallet?email=" + encodeURIComponent(cleanEmail), {
+            headers: userTok ? { "Authorization": "Bearer " + userTok, "x-session-token": userTok } : {},
+            cache: "no-store"
+          })
+          .then(r => r.json())
+          .then(wRes => {
+            window._fetchingLiveUserWallet = false;
+            if (wRes && wRes.success && Array.isArray(wRes.transactions) && wRes.transactions.length > 0) {
+              window._liveTursoBalanceLogsByEmail[cleanEmail] = {
+                ts: Date.now(),
+                transactions: wRes.transactions,
+                balance: wRes.balance
+              };
+              if (wRes.balance !== undefined && !isNaN(Number(wRes.balance)) && currentUser) {
+                currentUser.balance = Number(wRes.balance);
+                try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
+              }
+              if (typeof renderUserBalanceLogs === "function") renderUserBalanceLogs();
+            }
+          })
+          .catch(() => { window._fetchingLiveUserWallet = false; });
+        } catch(eW) { window._fetchingLiveUserWallet = false; }
+      }
+
+      const cachedLiveLogs = (window._liveTursoBalanceLogsByEmail && window._liveTursoBalanceLogsByEmail[cleanEmail]) ? window._liveTursoBalanceLogsByEmail[cleanEmail].transactions : null;
+
       if (typeof getUserComprehensiveTransactions === "function") {
         const res = getUserComprehensiveTransactions(cleanEmail);
-        const allLogs = res.transactions;
+        const allLogs = (cachedLiveLogs && cachedLiveLogs.length > 0) ? cachedLiveLogs : res.transactions;
 
         if (res && res.currentBalance !== undefined) {
           const profBalanceEl = document.getElementById("profDisplayBalance") || document.getElementById("profBalanceDisplay");
@@ -33501,7 +33541,7 @@ function syncAllOpenViewsStock(changedProdId) {
             ? '<span style="color:#10b981; font-weight:800;">+' + formatVND(amt) + '</span>' 
             : '<span style="color:#ef4444; font-weight:800;">-' + formatVND(Math.abs(amt)) + '</span>';
 
-          let balAfterStr = (tx.balanceAfter !== null && tx.balanceAfter !== undefined && !isNaN(Number(tx.balanceAfter))) ? formatVND(Math.max(0, tx.balanceAfter)) : "-";
+          let balAfterStr = (tx.balanceAfter !== null && tx.balanceAfter !== undefined && !isNaN(Number(tx.balanceAfter)) && Number(tx.balanceAfter) > 0) ? formatVND(tx.balanceAfter) : "-";
 
           let typeHtml = "";
           if (isRefund) {
@@ -33784,7 +33824,7 @@ function syncAllOpenViewsStock(changedProdId) {
           : '<span style="color:#ef4444; font-weight:800;">' + formatVND(amt) + '</span>';
         
         const rowBal = tx.computedRowBal;
-        let balAfterStr = (rowBal !== null && !isNaN(rowBal)) ? formatVND(Math.max(0, rowBal)) : "-";
+        let balAfterStr = (rowBal !== null && !isNaN(rowBal) && Number(rowBal) > 0) ? formatVND(rowBal) : "-";
 
         const tLow = String(tx.type || "").toLowerCase();
         const nLow = String(tx.note || "").toLowerCase();
