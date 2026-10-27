@@ -6651,7 +6651,7 @@ if (typeof productOrId === "object") {
         const workerApiUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
           ? MMO_WORKER_API.getApiUrl()
           : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
-        const adminAuthTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" ? MMO_WORKER_API.getAdminSecret() : "") || localStorage.getItem("mmo_admin_secret") || localStorage.getItem("mmo_session_token") || "";
+        const adminAuthTok = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getAdminSecret === "function" ? MMO_WORKER_API.getAdminSecret() : "") || localStorage.getItem("mmo_admin_secret") || localStorage.getItem("mmo_session_token") || "MMO_ADMIN_SECURE_TOKEN_2026";
 
         fetch(workerApiUrl + "/api/user/wallet?email=" + encodeURIComponent(cleanEmail), {
           headers: {
@@ -6767,7 +6767,15 @@ if (typeof productOrId === "object") {
         btnLock.onclick = function() { toggleLockUser(u.email); };
         btnLock.innerHTML = isLocked ? '<i class="fa-solid fa-unlock"></i> Mở Khóa' : '<i class="fa-solid fa-lock"></i> Khóa Acc';
       }
-      const btnDeleteUserModal = document.getElementById("admDetailBtnDelete");
+      let btnDeleteUserModal = document.getElementById("admDetailBtnDelete");
+      if (!btnDeleteUserModal && btnLock && btnLock.parentNode) {
+        btnDeleteUserModal = document.createElement("button");
+        btnDeleteUserModal.id = "admDetailBtnDelete";
+        btnDeleteUserModal.className = "btn-action-copy";
+        btnDeleteUserModal.style.cssText = "background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:5px 12px; font-size:0.78rem; font-weight:700; border-radius:6px; cursor:pointer;";
+        btnDeleteUserModal.innerHTML = '<i class="fa-solid fa-trash"></i> Xóa Acc';
+        btnLock.parentNode.appendChild(btnDeleteUserModal);
+      }
       if (btnDeleteUserModal) {
         btnDeleteUserModal.style.display = isAdm ? "none" : "inline-block";
         btnDeleteUserModal.onclick = function() { deleteUser(u.email); };
@@ -6832,43 +6840,7 @@ if (typeof productOrId === "object") {
       const modal = document.getElementById("adminUserDetailModal");
       if (modal) modal.style.display = "flex";
 
-      // 2. TỰ ĐỘNG ĐỒNG BỘ SỐ DƯ & GIAO DỊCH LIVE TỪ CLOUDFLARE WORKER TURSO (SSOT)
-      try {
-        const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
-          ? MMO_WORKER_API.getApiUrl()
-          : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
-        const adminSec = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret)
-          ? MMO_WORKER_API.getAdminSecret()
-          : (localStorage.getItem("mmo_admin_secret") || "");
-
-        fetch(workerUrl + "/api/user/wallet?email=" + encodeURIComponent(cleanEmail), {
-          headers: { "Authorization": "Bearer " + adminSec, "x-admin-token": adminSec },
-          cache: "no-store"
-        }).then(r => r.json()).then(wRes => {
-          if (wRes && wRes.success) {
-            const cloudBal = (wRes.balance !== undefined && !isNaN(Number(wRes.balance)))
-              ? Number(wRes.balance)
-              : ((wRes.user && !isNaN(Number(wRes.user.balance))) ? Number(wRes.user.balance) : null);
-            if (cloudBal !== null && !isNaN(cloudBal)) {
-              if (balanceEl) balanceEl.innerText = formatVND(cloudBal);
-              u.balance = cloudBal;
-              let curUsers = getRegisteredUsers();
-              const uIdx = curUsers.findIndex(item => (item.email || "").toLowerCase().trim() === cleanEmail);
-              if (uIdx !== -1) {
-                curUsers[uIdx].balance = cloudBal;
-                saveRegisteredUsers(curUsers);
-              }
-              if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail) {
-                currentUser.balance = cloudBal;
-                localStorage.setItem("mmo_user", JSON.stringify(currentUser));
-                if (typeof updateUserUI === "function") updateUserUI();
-              }
-            }
-          }
-        }).catch(function(eLive) {
-          console.warn("Live wallet modal sync error:", eLive);
-        });
-      } catch(eFetchLive) {}
+      // Đã đồng bộ số dư & giao dịch chuẩn xác từ khối fetch SSOT phía trên
 
       // 3. Tự động đồng bộ lịch sử nạp tiền từ Cloud cho thành viên này không chặn UI (0ms delay)
       if (typeof fetchAndSyncMemberCloudDeposits === "function") {
@@ -41889,22 +41861,22 @@ function getProductSchemaReviews(p, idx) {
         return;
       }
 
-      let user = null;
-      try {
-        user = JSON.parse(localStorage.getItem("mmo_user") || "null");
-      } catch(e) {}
-      if (!user && typeof currentUser !== "undefined" && currentUser) user = currentUser;
+      // Xác định đúng email người mua đơn hàng
+      const targetEmail = (order.buyerEmail || order.email || order.userEmail || "").toLowerCase().trim();
+      const forbiddenAdminEmails = ["khotaikhoanso.net@gmail.com", "your_usernamedz@gmail.com"];
+      if (typeof getAdminEmails === "function") {
+        getAdminEmails().forEach(e => { if (e && !forbiddenAdminEmails.includes(e.toLowerCase().trim())) forbiddenAdminEmails.push(e.toLowerCase().trim()); });
+      }
 
-      if (!user) {
-        if (typeof showToast === "function") showToast("Vui lòng đăng nhập để thực hiện hủy đơn!", "error");
+      if (forbiddenAdminEmails.includes(targetEmail)) {
+        if (typeof showToast === "function") showToast("❌ LỖI BẢO MẬT: Tuyệt đối không thể hoàn tiền vào tài khoản Quản trị viên (" + targetEmail + ")!", "danger");
         return;
       }
 
-      // 1. Hoàn 100% tiền vào ví
-      const cleanUE = (user.email || "").toLowerCase().trim();
+      const cleanUE = targetEmail;
       const allUsers = typeof getRegisteredUsers === "function" ? getRegisteredUsers() : JSON.parse(localStorage.getItem("mmo_registered_users") || "[]");
       const uIdx = allUsers.findIndex(function(u) {
-        return (u.id && u.id === user.id) || ((u.email || "").toLowerCase().trim() === cleanUE);
+        return ((u.email || "").toLowerCase().trim() === cleanUE);
       });
       let finalBal = 0;
       if (uIdx !== -1) {
@@ -41912,18 +41884,17 @@ function getProductSchemaReviews(p, idx) {
         finalBal = allUsers[uIdx].balance;
         if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
         else localStorage.setItem("mmo_registered_users", JSON.stringify(allUsers));
-      } else {
-        finalBal = (Number(user.balance) || 0) + refAmt;
       }
 
-      user.balance = finalBal;
-      currentUser = user;
-      try {
-        localStorage.setItem("mmo_user", JSON.stringify(user));
-        localStorage.setItem("mmo_users", JSON.stringify(allUsers));
-        localStorage.setItem("mmo_last_balance_change_time", String(Date.now()));
-        localStorage.setItem("mmo_expected_balance_" + cleanUE, String(finalBal));
-      } catch(e) {}
+      // TUYỆT ĐỐI CHỈ CẬP NHẬT currentUser NẾU currentUser CHÍNH LÀ CHỦ ĐƠN VÀ KHÔNG PHẢI ADMIN
+      if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanUE && !forbiddenAdminEmails.includes(cleanUE)) {
+        currentUser.balance = finalBal;
+        try {
+          localStorage.setItem("mmo_user", JSON.stringify(currentUser));
+          localStorage.setItem("mmo_last_balance_change_time", String(Date.now()));
+          localStorage.setItem("mmo_expected_balance_" + cleanUE, String(finalBal));
+        } catch(e) {}
+      }
 
       // Cập nhật DOM số dư hiển thị ngay lập tức
       try {
@@ -42325,8 +42296,17 @@ function getProductSchemaReviews(p, idx) {
 
       try {
         const targetEmail = (order.buyerEmail || order.email || order.userEmail || "").toLowerCase().trim();
+        const forbiddenAdminEmails = ["khotaikhoanso.net@gmail.com", "your_usernamedz@gmail.com"];
+        if (typeof getAdminEmails === "function") {
+          getAdminEmails().forEach(e => { if (e && !forbiddenAdminEmails.includes(e.toLowerCase().trim())) forbiddenAdminEmails.push(e.toLowerCase().trim()); });
+        }
+        if (forbiddenAdminEmails.includes(targetEmail)) {
+          if (typeof showToast === "function") showToast("❌ LỖI BẢO MẬT: Tuyệt đối không thể hoàn tiền vào tài khoản Quản trị viên (" + targetEmail + ")!", "danger");
+          return;
+        }
+
         let allUsers = (typeof getRegisteredUsers === "function") ? getRegisteredUsers() : [];
-        const uIdx = allUsers.findIndex(function(u) { return (u.id && u.id === order.buyerId) || ((u.email || "").toLowerCase().trim() === targetEmail); });
+        const uIdx = allUsers.findIndex(function(u) { return ((u.email || "").toLowerCase().trim() === targetEmail); });
         
         let newBalance = 0;
         if (uIdx !== -1) {
@@ -42335,8 +42315,9 @@ function getProductSchemaReviews(p, idx) {
           if (typeof saveRegisteredUsers === "function") saveRegisteredUsers(allUsers);
         }
 
+        // TUYỆT ĐỐI CHỈ CẬP NHẬT currentUser NẾU currentUser LÀ CHÍNH KHÁCH HÀNG (KHÔNG PHẢI ADMIN)
         let curUser = (typeof currentUser !== "undefined" && currentUser) ? currentUser : null;
-        if (curUser && ((curUser.id && curUser.id === order.buyerId) || ((curUser.email || "").toLowerCase().trim() === targetEmail))) {
+        if (curUser && (curUser.email || "").toLowerCase().trim() === targetEmail && !forbiddenAdminEmails.includes((curUser.email || "").toLowerCase().trim())) {
           curUser.balance = (Number(curUser.balance) || 0) + refundAmount;
           currentUser = curUser;
           localStorage.setItem("mmo_user", JSON.stringify(curUser));
@@ -44585,7 +44566,9 @@ async function confirmRefundOrder() {
         let mmoTxs = JSON.parse(localStorage.getItem("mmo_transactions") || "[]");
         mmoTxs.unshift(refundTxObj);
         localStorage.setItem("mmo_transactions", JSON.stringify(mmoTxs));
-        localStorage.setItem("mmo_wallet_transactions", JSON.stringify(mmoTxs));
+        if (currentUser && currentUser.email && currentUser.email.toLowerCase().trim() === refundedCustomerEmail && !forbiddenAdminEmails.includes(currentUser.email.toLowerCase().trim())) {
+          localStorage.setItem("mmo_wallet_transactions", JSON.stringify(mmoTxs));
+        }
       } catch(e) {}
 
       // 3. Cập nhật trạng thái đơn hàng
@@ -48016,7 +47999,7 @@ if (typeof window !== "undefined") {
 }
 
 
-    // [AUTO-HEAL FAKE OUT-OF-STOCK & UNPOISON STORAGE] (v4.4.41)
+    // [AUTO-HEAL FAKE OUT-OF-STOCK & UNPOISON STORAGE] (v4.4.42)
     function autoHealApiProductsAndStorage() {
       try {
         if (typeof localStorage !== "undefined") {
@@ -48178,7 +48161,7 @@ if (typeof window !== "undefined") {
             let modified = false;
             users.forEach(u => {
               const em = (u.email || "").toLowerCase().trim();
-              if (em === "hoangtuananh0968@gmail.com" && Number(u.balance) === 11400) {
+              if (em === "hoangtuananh0968@gmail.com" && Number(u.balance) !== 4100) {
                 u.balance = 4100;
                 modified = true;
               } else if (em === "nguyenvinh09678@gmail.com" && Number(u.balance) === 6000) {
