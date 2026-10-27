@@ -6051,7 +6051,7 @@ if (typeof productOrId === "object") {
                 typeHtml = '<span class="badge-trust" style="font-size:0.72rem; color:#38bdf8; border-color:rgba(56,189,248,0.3); background:rgba(56,189,248,0.1);"><i class="fa-solid fa-wallet"></i> Nạp tiền ví</span>';
               }
 
-              let balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter))) ? formatVND(Math.max(0, tx.balanceAfter)) : "-";
+              let balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter)) && Number(tx.balanceAfter) > 0) ? formatVND(tx.balanceAfter) : "-";
               let displayNote = formatTransactionDisplayNote(tx, isPurchase, isRefund);
 
               return '<tr>' +
@@ -6356,9 +6356,9 @@ if (typeof productOrId === "object") {
       rawLogs.forEach(item => {
         const amt = Number(item.amount) || 0;
         const rawStr = ((item.orderId || '') + ' ' + (item.note || '') + ' ' + (item.id || '')).trim();
-        const dhMatch = rawStr.match(/(DH\d+|NAP[\d\w_]+|ORD[\d\w_]+|ADM[\d\w_]+)/i);
+        const dhMatch = rawStr.match(/(DH\d+|NAP[\d\w_]+|ORD[\d\w_]+|ADM[\d\w_]+|PRE[\d\w_]+)/i);
         const extractedCode = dhMatch ? dhMatch[1].toUpperCase() : '';
-        const oId = extractedCode || String(item.orderId || item.id || '').replace(/^REFUND_|^ORD_|^DEP_/, '').trim();
+        const oId = extractedCode || String(item.orderId || item.id || '').replace(/^REFUND_|^ORD_|^DEP_/, '').split('_')[0].trim();
         const oIdUp = oId.toUpperCase();
         const tLow = String(item.type || "").toLowerCase();
         const nLow = String(item.note || "").toLowerCase();
@@ -6526,13 +6526,21 @@ if (typeof productOrId === "object") {
 
       // 2. TÁI ĐỒNG BỘ TOÀN BỘ SỔ CÁI BIẾN ĐỘNG SỐ DƯ (Bank Ledger Reconciliation)
       // Chạy lùi từ giao dịch mới nhất về cũ nhất:
-      // - Giao dịch mới nhất có Số Dư Sau = Số Dư Khả Dụng hiện tại
-      // - Giao dịch trước đó = Số Dư Sau của giao dịch kế tiếp trừ đi số tiền biến động
+      // - Bảo toàn 100% balanceAfter thực tế đã có từ Turso DB SSOT (không bao giờ gán đè)
+      // - Chỉ suy diễn lùi khi chưa có balanceAfter và runningBack > 0
       if (allLogs.length > 0) {
         let runningBack = curBal;
         for (let i = allLogs.length - 1; i >= 0; i--) {
-          allLogs[i].balanceAfter = Math.max(0, runningBack);
-          runningBack = runningBack - (Number(allLogs[i].amount) || 0);
+          const exBal = allLogs[i].balanceAfter;
+          if (exBal !== undefined && exBal !== null && !isNaN(Number(exBal)) && Number(exBal) > 0) {
+            runningBack = Number(exBal) - (Number(allLogs[i].amount) || 0);
+          } else if (runningBack > 0) {
+            allLogs[i].balanceAfter = runningBack;
+            runningBack = runningBack - (Number(allLogs[i].amount) || 0);
+          } else {
+            // Không bao giờ ép số dư sau về 0đ gây hiểu lầm cho người dùng
+            allLogs[i].balanceAfter = null;
+          }
         }
       }
 
@@ -6820,7 +6828,7 @@ if (typeof productOrId === "object") {
               typeHtml = '<span class="badge-trust" style="font-size:0.72rem; color:#38bdf8; border-color:rgba(56,189,248,0.3); background:rgba(56,189,248,0.1);"><i class="fa-solid fa-wallet"></i> Nạp tiền ví</span>';
             }
 
-            let balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter))) ? formatVND(Math.max(0, tx.balanceAfter)) : "-";
+            let balAfterStr = (tx.balanceAfter !== undefined && tx.balanceAfter !== null && !isNaN(Number(tx.balanceAfter)) && Number(tx.balanceAfter) > 0) ? formatVND(tx.balanceAfter) : "-";
 
             let displayNote = (typeof formatTransactionDisplayNote === "function")
               ? formatTransactionDisplayNote(tx, isPurchase, isRefund)
