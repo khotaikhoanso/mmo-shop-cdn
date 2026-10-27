@@ -28320,14 +28320,14 @@ function syncAllOpenViewsStock(changedProdId) {
               return;
             } else {
               const errMsg = wData.message || "";
-              const isOutOfStock = /hết hàng|không đủ|out of stock|tồn kho|số lượng|không khả dụng/i.test(errMsg);
-              if (isOutOfStock) {
+              const isMaintenanceOrOutOfStock = wData.code === "PRODUCT_MAINTENANCE_PREORDER" || wData.isOutOfStock || /hết hàng|không đủ|out of stock|tồn kho|số lượng|không khả dụng|bảo trì|hết tiền|nguồn/i.test(errMsg);
+              if (isApiOnDemand || isMaintenanceOrOutOfStock) {
                 if (isApiOnDemand) {
                   restoreBtn(400);
                   if (typeof markApiProductOutOfStock === "function") {
-                    markApiProductOutOfStock(p, vIdx, errMsg);
+                    markApiProductOutOfStock(p, vIdx, "Sản phẩm đang bảo trì hoặc tạm thời hết hàng");
                   }
-                  showToast("⚠️ " + (errMsg || "Kho hàng tạm thời không đủ số lượng tài khoản!") + " Đang chuyển sang Đặt Trước...", "warning");
+                  showToast("⚠️ Sản phẩm đang bảo trì hoặc tạm thời hết hàng. Đang chuyển sang Đặt Trước...", "warning");
                   if (typeof openPreOrderModal === "function") {
                     setTimeout(() => openPreOrderModal(p, vIdx), 600);
                   }
@@ -28338,13 +28338,16 @@ function syncAllOpenViewsStock(changedProdId) {
                 }
               } else if (wData.code === "RATE_LIMIT_EXCEEDED" || (wRes && wRes.status === 429) || (errMsg && /quá nhanh|rate limit/i.test(errMsg))) {
                 restoreBtn(400);
-                showToast("⚠️ " + (errMsg || "Hệ thống đang xử lý, vui lòng thử lại sau giây lát!"), "warning");
+                showToast("⚠️ Hệ thống đang xử lý, vui lòng thử lại sau giây lát!", "warning");
                 return;
               } else if (!isApiOnDemand) {
                 console.warn("[MMO Checkout] Worker báo lỗi, chuyển sang xuất kho nội bộ an toàn:", errMsg);
               } else {
                 restoreBtn(400);
-                showToast("⚠️ " + (errMsg || "Lỗi xử lý đơn hàng!"), "danger");
+                showToast("⚠️ Sản phẩm đang bảo trì hoặc tạm thời hết hàng. Đang chuyển sang Đặt Trước...", "warning");
+                if (typeof openPreOrderModal === "function") {
+                  setTimeout(() => openPreOrderModal(p, vIdx), 600);
+                }
                 return;
               }
             }
