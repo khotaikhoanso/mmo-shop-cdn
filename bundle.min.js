@@ -2420,26 +2420,48 @@ if (typeof productOrId === "object") {
         return;
       }
 
-      // Hiển thị toàn bộ thành viên không giới hạn (Unlimited Members Display)
-      const pageUsers = users;
-
+      // Phân trang chuẩn xác 10 thành viên 1 trang cho danh sách không giới hạn (10 Members Per Page)
       const rootEmail = (typeof ROOT_ADMIN_EMAIL !== "undefined" ? ROOT_ADMIN_EMAIL : "khotaikhoanso.net@gmail.com").toLowerCase().trim();
+      const forbiddenAdminEmails = ["khotaikhoanso.net@gmail.com", "your_usernamedz@gmail.com"];
+
+      // Chuẩn hóa số dư & role Quản Trị Viên cho admin
+      users.forEach(u => {
+        const emailLower = (u.email || "").toLowerCase().trim();
+        const isAdm = (emailLower === rootEmail || forbiddenAdminEmails.includes(emailLower) || (typeof isAdminUser === "function" && isAdminUser(u)) || u.role === "Quản Trị Viên");
+        if (isAdm) {
+          u.balance = 0;
+          u.role = "Quản Trị Viên";
+        }
+      });
+
+      // Cập nhật lại tổng số dư sau khi đã loại trừ số dư ảo của admin
+      const validTotalBal = users.reduce((sum, u) => sum + (Number(u.balance) || 0), 0);
+      if (balEl) balEl.innerText = formatVND(validTotalBal);
+
+      const ADM_USERS_PER_PAGE = 10;
+      const totalItems = users.length;
+      const totalPages = Math.ceil(totalItems / ADM_USERS_PER_PAGE) || 1;
+      let curPage = (typeof paginationState !== "undefined" && paginationState.admUsers) ? paginationState.admUsers : 1;
+      if (curPage > totalPages) curPage = totalPages;
+      if (curPage < 1) curPage = 1;
+      if (typeof paginationState !== "undefined") paginationState.admUsers = curPage;
+
+      const pageUsers = users.slice((curPage - 1) * ADM_USERS_PER_PAGE, curPage * ADM_USERS_PER_PAGE);
 
       tbody.innerHTML = pageUsers.map(u => {
         const emailLower = (u.email || "").toLowerCase().trim();
         const isCurrent = currentUser && (currentUser.email || "").toLowerCase().trim() === emailLower;
-        let uBal = Number(u.balance) || 0;
-        if (typeof getUserComprehensiveTransactions === "function") {
+        const isAdm = (emailLower === rootEmail || forbiddenAdminEmails.includes(emailLower) || (typeof isAdminUser === "function" && isAdminUser(u)) || u.role === "Quản Trị Viên");
+        
+        let uBal = isAdm ? 0 : (Number(u.balance) || 0);
+        if (!isAdm && typeof getUserComprehensiveTransactions === "function") {
           const comp = getUserComprehensiveTransactions(emailLower);
           if (comp && (comp.currentBalance > 0 || comp.transactions.length > 0)) {
             uBal = comp.currentBalance;
             u.balance = uBal;
           }
         }
-        const displayBalance = (isCurrent && currentUser && currentUser.balance !== undefined) 
-          ? Number(currentUser.balance) 
-          : uBal;
-        const isAdm = (emailLower === rootEmail || emailLower === "khotaikhoanso.net@gmail.com" || (typeof isAdminUser === "function" && isAdminUser(u)) || u.role === "Quản Trị Viên");
+        const displayBalance = isAdm ? 0 : ((isCurrent && currentUser && currentUser.balance !== undefined) ? Number(currentUser.balance) : uBal);
         const roleHtml = isAdm ? '<span class="badge-trust" style="font-size:0.7rem; background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.4);">Quản Trị Viên</span>' : '<span class="badge-verified" style="font-size:0.7rem;">' + (u.role || "Thành Viên") + '</span>';
         
         const isLocked = (typeof isUserLocked === "function") ? isUserLocked(u.email) : !!u.isLocked;
@@ -2483,9 +2505,8 @@ if (typeof productOrId === "object") {
         '</tr>';
       }).join("");
 
-      const pagEl = document.getElementById("admUsersPagination");
-      if (pagEl) {
-        pagEl.innerHTML = '<div style="text-align:center; padding:12px 0; font-size:0.8rem; color:#64748b; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="fa-solid fa-users" style="color:#38bdf8;"></i> Đang hiển thị toàn bộ <strong>' + users.length + '</strong> thành viên (Không giới hạn)</div>';
+      if (typeof renderPaginationUI === "function") {
+        renderPaginationUI("admUsersPagination", curPage, totalItems, "changeAdmUsersPage", ADM_USERS_PER_PAGE);
       }
     }
     window.renderAdminUsersTable = renderAdminUsersTable;
@@ -35699,9 +35720,10 @@ function syncAllOpenViewsStock(changedProdId) {
     window.changeAdmPreOrdersPage = changeAdmPreOrdersPage;
 
 function changeAdmUsersPage(p) {
-      paginationState.admUsers = p;
+      paginationState.admUsers = parseInt(p, 10) || 1;
       renderAdminUsersTable();
     }
+    window.changeAdmUsersPage = changeAdmUsersPage;
 
     function changeAdmWithdrawPage(p) {
       paginationState.admWithdraw = p;
