@@ -6003,7 +6003,8 @@ if (typeof productOrId === "object") {
           : { transactions: [], currentBalance: localBal };
 
         // BẢO VỆ TUYỆT ĐỐI SỐ DƯ: Lấy số dư chuẩn xác từ lịch sử giao dịch thực tế
-        let authoritativeBal = res.currentBalance;
+        const fAdmins = ["khotaikhoanso.net@gmail.com", "your_usernamedz@gmail.com"];
+        let authoritativeBal = (fAdmins.includes(cleanEmail) || (typeof isAdminUser === "function" && isAdminUser({ email: cleanEmail }))) ? 0 : res.currentBalance;
         if (cloudBal !== null && !isNaN(cloudBal)) {
           if (cloudBal > authoritativeBal && (typeof res.totalDeposited === "undefined" || res.totalDeposited === 0)) {
             authoritativeBal = cloudBal;
@@ -6558,7 +6559,13 @@ if (typeof productOrId === "object") {
       } else if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === cleanEmail && currentUser.balance !== undefined) {
         curBal = Number(currentUser.balance) || 0;
       }
-      if (runningBal > 0 && curBal < runningBal && totalSpent === 0) {
+      const fAdminsComp = ["khotaikhoanso.net@gmail.com", "your_usernamedz@gmail.com"];
+      const isTargetAdminComp = fAdminsComp.includes(cleanEmail) || (typeof isAdminUser === "function" && isAdminUser({ email: cleanEmail }));
+      if (isTargetAdminComp) {
+        curBal = 0;
+        runningBal = 0;
+        totalDeposited = 0;
+      } else if (runningBal > 0 && curBal < runningBal && totalSpent === 0) {
         curBal = runningBal;
       }
 
@@ -24579,12 +24586,20 @@ function syncAllOpenViewsStock(changedProdId) {
                     try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
                     if (typeof updateUserUI === "function") updateUserUI();
                   } else if (curLocalBal > tursoBal && tursoBal === 0) {
-                    // Local có số dư dương (ví dụ vừa nạp SePay) nhưng Turso = 0 -> Sync số dư lên Turso
-                    fetch(apiUrl + "/api/user/sync", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "x-admin-token": ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "")) },
-                      body: JSON.stringify({ email: cleanUserMail, balance: curLocalBal })
-                    }).catch(() => {});
+                    const fAdminsSync = ["khotaikhoanso.net@gmail.com", "your_usernamedz@gmail.com"];
+                    if (fAdminsSync.includes(cleanUserMail) || (currentUser && (currentUser.role === "Quản Trị Viên" || currentUser.role === "ADMIN"))) {
+                      // Admin tuyệt đối không bao giờ sync số dư dương lên Turso nếu Turso = 0
+                      currentUser.balance = 0;
+                      try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
+                      if (typeof updateUserUI === "function") updateUserUI();
+                    } else {
+                      // Local có số dư dương (ví dụ vừa nạp SePay) nhưng Turso = 0 -> Sync số dư lên Turso
+                      fetch(apiUrl + "/api/user/sync", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "x-admin-token": ((typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getAdminSecret) ? MMO_WORKER_API.getAdminSecret() : (localStorage.getItem("mmo_admin_secret") || "")) },
+                        body: JSON.stringify({ email: cleanUserMail, balance: curLocalBal })
+                      }).catch(() => {});
+                    }
                   } else if (tursoBal !== curLocalBal && tursoBal > 0 && !isRecentChange) {
                     currentUser.balance = tursoBal;
                     try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
@@ -33414,11 +33429,16 @@ function syncAllOpenViewsStock(changedProdId) {
       if (typeof getUserComprehensiveTransactions === "function") {
         const res = getUserComprehensiveTransactions(cleanEmail);
         const rawTxs = res.transactions || [];
+        const fAdminsHist = ["khotaikhoanso.net@gmail.com", "your_usernamedz@gmail.com"];
+        const isHistAdmin = fAdminsHist.includes(cleanEmail) || (typeof isAdminUser === "function" && isAdminUser({ email: cleanEmail }));
         allHistory = rawTxs.filter(tx => {
           const t = String(tx.type || "").toLowerCase();
           const n = String(tx.note || "").toLowerCase();
           const id = String(tx.orderId || tx.id || "").toLowerCase();
           if (id === "nap_131154") return false;
+          if (isHistAdmin && (t.includes("hoàn tiền") || n.includes("hoàn tiền") || id.includes("579980") || id.includes("609306") || id.includes("pre_test") || t.includes("thủ công") || id.startsWith("adm_") || id.startsWith("sync_"))) {
+            return false;
+          }
           // TUYỆT ĐỐI KHÔNG HIỂN THỊ ĐƠN MUA HÀNG TRONG LỊCH SỬ NẠP / RÚT TIỀN
           if (t.includes("mua hàng") || id.startsWith("ord") || Number(tx.amount) < 0) return false;
           const isDeposit = id.startsWith("nap") || id.startsWith("dep") || id.startsWith("adm") || id.startsWith("dh") || t.includes("nạp") || t.includes("sepay") || t.includes("vietqr") || ((n.includes("nạp") || n.includes("đã cộng")) && !n.includes("mua sp") && !n.includes("thanh toán"));
@@ -48245,20 +48265,29 @@ if (typeof window !== "undefined") {
         if (storedUser) {
           const u = JSON.parse(storedUser);
           const uEm = (u && u.email ? u.email : "").toLowerCase().trim();
-          if (forbiddenAdminEmails.includes(uEm)) {
-            // 1. Dọn dẹp mmo_transactions & mmo_wallet_transactions
-            ["mmo_transactions", "mmo_wallet_transactions"].forEach(k => {
+          const isUAdmin = forbiddenAdminEmails.includes(uEm) || u.role === "Quản Trị Viên" || u.role === "ADMIN";
+          if (isUAdmin) {
+            // 1. Dọn dẹp triệt để mmo_transactions, mmo_wallet_transactions, mmo_deposits, mmo_transaction_history, mmo_balance_logs
+            ["mmo_transactions", "mmo_wallet_transactions", "mmo_deposits", "mmo_transaction_history", "mmo_balance_logs"].forEach(k => {
               const raw = localStorage.getItem(k);
               if (raw) {
                 let txs = JSON.parse(raw);
                 if (Array.isArray(txs)) {
                   const cleaned = txs.filter(t => {
+                    if (!t) return false;
                     const tm = (t.userEmail || t.email || "").toLowerCase().trim();
-                    const tt = String(t.type || "").toLowerCase();
-                    const tn = String(t.note || "").toLowerCase();
-                    const to = String(t.orderId || t.id || "");
-                    const isBadRefund = (tm === uEm) && (tt.includes("hoàn tiền") || tn.includes("hoàn tiền") || to.includes("579980") || tn.includes("579980"));
-                    return !isBadRefund;
+                    if (tm === uEm) {
+                      const tt = String(t.type || "").toLowerCase();
+                      const tn = String(t.note || t.content || t.reason || "").toLowerCase();
+                      const to = String(t.orderId || t.id || "");
+                      const isBadRefund = tt.includes("hoàn tiền") || tn.includes("hoàn tiền") || 
+                        to.includes("579980") || tn.includes("579980") || 
+                        to.includes("609306") || tn.includes("609306") || 
+                        to.includes("PRE_TEST") || tn.includes("PRE_TEST") || 
+                        tt.includes("thủ công") || to.startsWith("ADM_") || to.startsWith("SYNC_");
+                      return !isBadRefund;
+                    }
+                    return true;
                   });
                   if (cleaned.length !== txs.length) {
                     localStorage.setItem(k, JSON.stringify(cleaned));
@@ -48267,7 +48296,7 @@ if (typeof window !== "undefined") {
               }
             });
 
-            // 2. Sửa lại mmo_all_orders & mmo_orders cho đơn DH579980 nếu bị gán nhầm sang Admin
+            // 2. Trả lại quyền sở hữu đơn hàng cho đúng khách hàng (579980 -> phihungsama, 609306 -> hoangtuananh)
             ["mmo_all_orders", "mmo_orders"].forEach(k => {
               const raw = localStorage.getItem(k);
               if (raw) {
@@ -48283,6 +48312,19 @@ if (typeof window !== "undefined") {
                         o.userName = "phihungsama";
                         changed = true;
                       }
+                    } else if (oId.includes("609306")) {
+                      if ((o.email || "").toLowerCase().trim() === uEm || (o.userEmail || "").toLowerCase().trim() === uEm) {
+                        o.email = "hoangtuananh0968@gmail.com";
+                        o.userEmail = "hoangtuananh0968@gmail.com";
+                        o.userName = "hoangtuananh0968";
+                        changed = true;
+                      }
+                    } else if (oId.includes("PRE_TEST")) {
+                      if ((o.email || "").toLowerCase().trim() === uEm || (o.userEmail || "").toLowerCase().trim() === uEm) {
+                        o.email = "testuser@gmail.com";
+                        o.userEmail = "testuser@gmail.com";
+                        changed = true;
+                      }
                     }
                   });
                   if (changed) {
@@ -48292,15 +48334,34 @@ if (typeof window !== "undefined") {
               }
             });
 
-            // 3. Khôi phục số dư Admin về đúng số dư chuẩn từ máy chủ Turso DB (2.000 đ)
-            if (Number(u.balance) > 2000 && !u.balanceManuallyUpdated) {
-              u.balance = 2000;
-              localStorage.setItem("mmo_user", JSON.stringify(u));
-              if (typeof currentUser !== "undefined" && currentUser) {
-                currentUser.balance = 2000;
-              }
-              if (typeof updateUserUI === "function") updateUserUI();
+            // 3. Khôi phục số dư Admin về đúng số dư chuẩn xác tuyệt đối là 0đ (và role Quản Trị Viên)
+            u.balance = 0;
+            u.role = "Quản Trị Viên";
+            localStorage.setItem("mmo_user", JSON.stringify(u));
+            if (typeof currentUser !== "undefined" && currentUser && (currentUser.email || "").toLowerCase().trim() === uEm) {
+              currentUser.balance = 0;
+              currentUser.role = "Quản Trị Viên";
             }
+            const regRaw = localStorage.getItem("mmo_registered_users");
+            if (regRaw) {
+              try {
+                let regUsers = JSON.parse(regRaw);
+                if (Array.isArray(regUsers)) {
+                  regUsers.forEach(ru => {
+                    if ((ru.email || "").toLowerCase().trim() === uEm) {
+                      ru.balance = 0;
+                      ru.role = "Quản Trị Viên";
+                    }
+                  });
+                  localStorage.setItem("mmo_registered_users", JSON.stringify(regUsers));
+                }
+              } catch(e) {}
+            }
+            if (typeof updateUserUI === "function") updateUserUI();
+            const elBal = document.getElementById("profDisplayBalance") || document.getElementById("profBalanceDisplay");
+            if (elBal) elBal.innerText = "0 đ";
+            const elHdr = document.getElementById("headerWalletBalance");
+            if (elHdr) elHdr.innerText = "0 đ";
           }
         }
       } catch(e) {}
