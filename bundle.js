@@ -18787,7 +18787,15 @@ function syncAllOpenViewsStock(changedProdId) {
 
     function toggleShowApiKey() {
       const inp = document.getElementById("apiSourceKeyInput");
-      if (inp) inp.type = inp.type === "password" ? "text" : "password";
+      if (inp) {
+        if (inp.style.webkitTextSecurity === "none") {
+          inp.style.webkitTextSecurity = "disc";
+          inp.style.textSecurity = "disc";
+        } else {
+          inp.style.webkitTextSecurity = "none";
+          inp.style.textSecurity = "none";
+        }
+      }
     }
     window.toggleShowApiKey = toggleShowApiKey;
 
