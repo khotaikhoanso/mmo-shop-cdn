@@ -29190,6 +29190,17 @@ function syncAllOpenViewsStock(changedProdId) {
 
     let _searchDebounceTimer = null;
     function handleSearchInput(e) {
+      const input = document.getElementById("searchInput");
+      if (input && input.value) {
+        const val = input.value.trim();
+        // Chống browser autofill nhầm email cá nhân vào ô tìm kiếm sản phẩm
+        if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val) || val.includes("@gmail.com") || val.includes("@outlook.com") || val.includes("@hotmail.com")) {
+          input.value = "";
+          closeHeroSearchDropdown();
+          return;
+        }
+      }
+
       if (e && e.key === "Enter") {
         triggerSearch();
         return;
@@ -29206,7 +29217,6 @@ function syncAllOpenViewsStock(changedProdId) {
       }, 50);
 
       // Nếu người dùng xóa trắng ô tìm kiếm thì tự động cập nhật lại lưới sản phẩm
-      const input = document.getElementById("searchInput");
       if (input && !input.value.trim()) {
         closeHeroSearchDropdown();
         renderProductGrid();
@@ -29268,6 +29278,35 @@ function syncAllOpenViewsStock(changedProdId) {
       renderProductGrid();
     }
     window.clearHeroSearch = clearHeroSearch;
+
+    // CHỐNG BROWSER AUTOFILL TỰ ĐỘNG ĐIỀN EMAIL VÀO THANH TÌM KIẾM
+    function purgeAutofilledEmailFromSearch() {
+      const searchInputs = [
+        document.getElementById("searchInput"),
+        document.getElementById("allProdSearchInp"),
+        document.getElementById("searchProductInput")
+      ];
+      searchInputs.forEach(inp => {
+        if (!inp) return;
+        const val = (inp.value || "").trim();
+        if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val) || val.includes("@gmail.com") || val.includes("@outlook.com") || val.includes("@hotmail.com") || (typeof currentUser !== "undefined" && currentUser && currentUser.email && val.toLowerCase() === currentUser.email.toLowerCase())) {
+          inp.value = "";
+          inp.setAttribute("readonly", "readonly");
+          setTimeout(function() { inp.removeAttribute("readonly"); }, 150);
+        }
+      });
+    }
+    window.purgeAutofilledEmailFromSearch = purgeAutofilledEmailFromSearch;
+
+    if (typeof window !== "undefined") {
+      [20, 100, 250, 500, 1000, 2000, 4000].forEach(delay => {
+        setTimeout(purgeAutofilledEmailFromSearch, delay);
+      });
+      if (typeof document !== "undefined") {
+        document.addEventListener("DOMContentLoaded", purgeAutofilledEmailFromSearch);
+      }
+      window.addEventListener("load", purgeAutofilledEmailFromSearch);
+    }
 
     // Đóng dropdown tìm kiếm khi click ngoài hoặc nhấn Escape
     if (typeof document !== "undefined") {
