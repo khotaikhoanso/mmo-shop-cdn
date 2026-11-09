@@ -9610,7 +9610,7 @@ if (typeof productOrId === "object") {
           });
         }
 
-        const effectiveFinalPrice = effectivePrice || (oldProd ? oldProd.price : 20000);
+        const effectiveFinalPrice = (oldProd && oldProd.price) ? oldProd.price : (effectivePrice || 0);
         const generatedSlug = (oldProd && oldProd.slug) || (typeof generateCleanKtsSlug === "function" ? generateCleanKtsSlug(name, actualTargetId) : ("kts-" + String(actualTargetId).toLowerCase()));
         const prodData = {
           id: actualTargetId,
@@ -28346,8 +28346,37 @@ function syncAllOpenViewsStock(changedProdId) {
           return;
         }
 
+        if (currentUser && currentUser.email) {
+          let em = String(currentUser.email).trim().toLowerCase();
+          if (em.includes('@,')) em = em.split('@,')[1] || em;
+          currentUser.email = em.replace(/[^a-zA-Z0-9@_\.\-]/g, '').trim().toLowerCase();
+        }
         const cleanEmail = String(currentUser.email).toLowerCase().trim();
-        const curBal = Number(currentUser.balance) || 0;
+        let curBal = Number(currentUser.balance) || 0;
+
+        // BẢO VỆ ĐỒNG BỘ SỐ DƯ SSOT TỪ TURSO DB:
+        // Nếu số dư lưu trên client nhỏ hơn đơn hàng, tự động tra cứu Turso DB theo thời gian thực
+        if (curBal < totalCost) {
+          try {
+            const workerUrl = (typeof MMO_WORKER_API !== "undefined" && typeof MMO_WORKER_API.getApiUrl === "function")
+              ? MMO_WORKER_API.getApiUrl()
+              : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+            const sessionTok = (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_session_token") || localStorage.getItem("mmo_admin_secret"))) || "";
+            const profHeaders = {};
+            if (sessionTok) profHeaders["Authorization"] = "Bearer " + sessionTok;
+            const pRes = await fetch(workerUrl + "/api/user/profile?email=" + encodeURIComponent(cleanEmail), { headers: profHeaders });
+            const pData = await pRes.json();
+            if (pData && pData.success && pData.data && !isNaN(Number(pData.data.balance))) {
+              curBal = Number(pData.data.balance);
+              currentUser.balance = curBal;
+              try { localStorage.setItem("mmo_user", JSON.stringify(currentUser)); } catch(e) {}
+              const hBal = document.getElementById("headerUserBalance") || document.getElementById("navUserBalance");
+              if (hBal) hBal.innerText = formatVND(curBal);
+            }
+          } catch(eBal) {
+            console.warn('[MMO Buy] Lỗi đồng bộ số dư trước khi thanh toán:', eBal);
+          }
+        }
 
         // NẾU SỐ DƯ VÍ KHÔNG ĐỦ: CHUYỂN HƯỚNG SANG NẠP TIỀN
         if (curBal < totalCost) {
@@ -28849,7 +28878,7 @@ function syncAllOpenViewsStock(changedProdId) {
   window._pendingDirectOrder = null;
 
   function openDirectPaymentModal(orderData) {
-    const cost = (orderData && orderData.totalCost) ? Number(orderData.totalCost) : 20000;
+    const cost = (orderData && (orderData.totalCost !== undefined ? Number(orderData.totalCost) : (orderData.amount !== undefined ? Number(orderData.amount) : 0))) || 0;
     const curBal = (currentUser && Number(currentUser.balance)) || 0;
     const missing = Math.max(10000, cost - curBal);
     window._targetDepositAmount = missing;
