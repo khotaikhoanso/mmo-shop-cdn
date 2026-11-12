@@ -32932,9 +32932,15 @@ function syncAllOpenViewsStock(changedProdId) {
         const workerUrl = (typeof MMO_WORKER_API !== "undefined" && MMO_WORKER_API.getApiUrl)
           ? MMO_WORKER_API.getApiUrl()
           : "https://mmo-shop-api.khotaikhoanso-net.workers.dev";
+        const authTok = (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_session_token") || localStorage.getItem("mmo_admin_secret") || "")) || "";
+        const depHeaders = { "Content-Type": "application/json" };
+        if (authTok) {
+          depHeaders["Authorization"] = "Bearer " + authTok;
+          depHeaders["x-session-token"] = authTok;
+        }
         fetch(workerUrl + "/api/deposit/create", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: depHeaders,
           body: JSON.stringify({
             orderId: depositOrderCode,
             amount: cleanAmount,
@@ -32987,8 +32993,29 @@ function syncAllOpenViewsStock(changedProdId) {
         })());
         const uEmail = (activeUser && activeUser.email) ? activeUser.email : "";
         const checkUrl = workerUrl + "/api/deposit/check?orderId=" + encodeURIComponent(currentCode) + (uEmail ? "&email=" + encodeURIComponent(uEmail) : "");
-        const chkRes = await fetch(checkUrl, { cache: "no-store" })
+        let chkRes = await fetch(checkUrl, { cache: "no-store" })
           .then(r => r.json()).catch(() => null);
+
+        // Đối soát trực tiếp SePay API v2 nếu đơn chưa ghi nhận PAID
+        if (!chkRes || (!chkRes.is_paid && chkRes.payment_status !== "PAID" && chkRes.order_status !== "COMPLETED")) {
+          try {
+            const authTok = (typeof localStorage !== "undefined" && (localStorage.getItem("mmo_session_token") || localStorage.getItem("mmo_admin_secret") || "")) || "";
+            const recHeaders = { "Content-Type": "application/json" };
+            if (authTok) {
+              recHeaders["Authorization"] = "Bearer " + authTok;
+              recHeaders["x-session-token"] = authTok;
+            }
+            const recRes = await fetch(workerUrl + "/api/deposit/reconcile", {
+              method: "POST",
+              headers: recHeaders,
+              body: JSON.stringify({ orderId: currentCode, email: uEmail })
+            }).then(r => r.json()).catch(() => null);
+            if (recRes && (recRes.is_paid || recRes.success) && recRes.balance !== undefined) {
+              chkRes = recRes;
+            }
+          } catch(eRec) {}
+        }
+
         if (chkRes && (chkRes.is_paid || chkRes.payment_status === "PAID" || chkRes.order_status === "COMPLETED")) {
           paymentDetected = true;
           detectedAmount = Number(chkRes.amount) || detectedAmount;
